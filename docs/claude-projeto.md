@@ -24,9 +24,10 @@ Contexto e regras:
 
 Como trabalhar comigo:
 - Uma issue por sessão. Se a issue for grande demais para 60 min, proponha como dividir antes de codar.
+- As issues são agrupadas em pacotes (tabela em docs/plano.md); cada pacote vira um único PR. Nunca sugira abrir PR para uma issue isolada: cada PR consome CI e análise do SonarQube.
 - Antes de codar, confirme em 3–5 linhas o plano da sessão (arquivos que vou mexer e testes).
 - Entregue código completo dos arquivos alterados, com testes pytest.
-- Termine sempre com: comandos para rodar os checks, mensagem de commit e o texto do PR com "Closes #N".
+- Termine sempre com: comandos para rodar os checks e a mensagem de commit da issue. Só quando for a última issue do pacote, gere também o texto do PR com uma linha "Closes #N" para cada issue do pacote.
 - Se eu descobrir algo novo durante o uso, ajude a escrever a issue no formato de história com critérios de aceite.
 - Não invente decisões de produto que contradigam docs/contexto.md; se achar que uma deve mudar, diga e explique.
 ```
@@ -51,12 +52,12 @@ Atualize o conhecimento do projeto quando esses arquivos mudarem bastante (por e
 **Começo (2 min)** — cole no chat do projeto:
 
 ```text
-Sessão de hoje: issue #N — <título>.
+Sessão de hoje: issue #N — <título> (pacote PX, <primeira|intermediária|última> issue do pacote).
 <cole aqui o corpo da issue>
 Tenho <30|60> minutos. Me passe o plano da sessão e depois o código.
 ```
 
-**Durante:** crie a branch `issue-N-descricao`, aplique o código, rode:
+**Durante:** na primeira issue do pacote, crie a branch `pacote-N-descricao`; nas seguintes, continue nela. Aplique o código e rode os checks localmente:
 
 ```bash
 cd backend
@@ -64,10 +65,10 @@ ruff check . && ruff format --check . && python manage.py makemigrations --check
 python manage.py runserver   # e abra no celular/desktop
 ```
 
-**Fim (5 min):** commit, PR com `Closes #N`, CI verde, merge. Se não terminou, comente na issue onde parou: amanhã você cola esse comentário no começo da sessão.
+**Fim (5 min):** um commit por issue (`feat: … (#N)`) e `git push` da branch, **sem abrir PR**: push sem PR não roda CI. Comente na issue o que ficou pronto ou onde parou; amanhã você cola esse comentário no começo da sessão. **Na última issue do pacote:** abra um único PR com uma linha `Closes #N` por issue, espere a CI verde e faça o merge.
 
 **Toda sexta (10 min):** revise o marco atual no GitHub. O que aprendeu usando o Prumo vira issue nova ou muda a ordem do `docs/plano.md`.
 
 ## 5. Alternativa: Claude Code
 
-Se preferir que o Claude edite os arquivos direto, abra o repositório no Claude Code e peça: *"implemente a issue #N seguindo o CLAUDE.md e o docs/plano.md; abra o PR quando os checks passarem"*. O `CLAUDE.md` já carrega as convenções automaticamente.
+Se preferir que o Claude edite os arquivos direto, abra o repositório no Claude Code e peça: *"implemente a issue #N seguindo o CLAUDE.md e o docs/plano.md; faça o commit na branch do pacote e só abra o PR se for a última issue do pacote"*. O `CLAUDE.md` já carrega as convenções automaticamente.

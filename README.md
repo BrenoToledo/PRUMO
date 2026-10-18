@@ -18,7 +18,7 @@ O ciclo do produto: **capturar → clarificar → priorizar → planejar → exe
 
 ## Como contribuir (um pouco por dia)
 
-Pegue a próxima issue da tabela do marco atual em [`docs/plano.md`](docs/plano.md), crie uma branch `issue-N-descricao`, implemente, rode os checks e abra o PR com `Closes #N`. Cada issue cabe em 30–60 minutos.
+Pegue a próxima issue do pacote atual em [`docs/plano.md`](docs/plano.md), implemente na branch do pacote (`pacote-N-descricao`), rode os checks localmente e faça um commit por issue. Cada issue cabe em 30–60 minutos; o PR é um só por pacote (2–4 issues), para economizar CI e análises do SonarQube.
 
 ## Estrutura
 

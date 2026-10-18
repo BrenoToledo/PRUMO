@@ -1,6 +1,6 @@
 # Plano de desenvolvimento
 
-Plano de produto do Prumo, feito no papel de PO para um ritmo de **um pouco por dia**: cada história cabe em uma sessão de 30 a 60 minutos e entrega algo que dá para ver funcionando. As issues do GitHub são a fonte da verdade; este arquivo explica a ordem e o porquê.
+Plano de produto do Prumo, feito no papel de PO para um ritmo de **um pouco por dia**: cada história cabe em uma sessão de 30 a 60 minutos e entrega algo que dá para ver funcionando. As histórias são agrupadas em pacotes de 2–4, e cada pacote vira um único PR (veja [Pacotes](#pacotes-um-pr-para-várias-histórias)). As issues do GitHub são a fonte da verdade; este arquivo explica a ordem e o porquê.
 
 ## Estratégia
 
@@ -94,14 +94,41 @@ Uma história está pronta quando:
 - [ ] `ruff check .`, `ruff format --check .` e `makemigrations --check` passam (a CI confere);
 - [ ] tela nova foi aberta no celular (390 px) e no desktop;
 - [ ] `docs/api.md` foi atualizado se a API mudou;
-- [ ] o PR fecha a issue (`Closes #N`) e foi mesclado na `main`.
+- [ ] o commit da história está na branch do pacote, e a issue está marcada no checklist do PR (o PR do pacote fecha todas com `Closes #N`).
+
+## Pacotes: um PR para várias histórias
+
+Cada PR dispara a CI (GitHub Actions) e a análise do SonarQube Cloud. Para não gastar execuções com PRs minúsculos, **as histórias são agrupadas em pacotes**: você trabalha uma história por dia, com um commit por história, e abre **um único PR quando o pacote inteiro estiver pronto** (em geral a cada 2–4 sessões).
+
+| Pacote | Histórias | Entrega ao final |
+| --- | --- | --- |
+| P1 · Entrada | #1, #2, #3 | Login, layout, captura e caixa de entrada |
+| P2 · Do item ao plano | #4, #5 | Clarificar e ver o plano de hoje |
+| P3 · Execução | #6, #7 | **Foco e fim do bloco: ciclo completo no computador** |
+| P4 · No ar | #9, #10 | **Deploy no homelab e uso no celular** |
+| P5 · Acabamento R1 | #8, #11, #12 | Tarefas leves, “por que esta prioridade”, perfil |
+| P6 · Imprevistos | #13, #14, #15 | Meu dia quebrou, sair do foco, distrações |
+| P7 · Fechar o dia | #17, #19, #16 | Revisão diária, editar/adiar/cancelar, pausa |
+| P8 · Organização | #18, #20, #21 | Lista rápida, projetos, áreas |
+| P9 · Desktop | #22, #23 | Preparar foco e Hoje no desktop |
+
+R3 em diante: defina os pacotes ao refinar as issues, mirando 2–4 histórias por PR.
+
+Regras para economizar CI:
+
+- **Não abra o PR antes da hora.** Faça `git push` da branch todo dia (backup): push em branch sem PR não roda CI. Se quiser abrir o PR cedo para acompanhar, abra como **rascunho** (draft); a CI só roda quando ele for marcado como pronto.
+- **Rode os checks localmente** antes de cada commit (`ruff check .`, `ruff format --check .`, `makemigrations --check`, `pytest`). A CI só confirma.
+- **Mudanças só em `docs/`, `design/` ou `*.md`** não disparam a CI. Pequenos ajustes de documentação podem ir junto do próximo pacote.
+- Correção depois do review: junte todos os ajustes num commit só e faça um push.
+- Exceção: um bug que bloqueia o uso diário pode ir num PR próprio (hotfix).
 
 ## Como trabalhar a cada dia
 
-1. Abra a próxima issue da tabela do marco atual.
-2. Crie uma branch: `git switch -c issue-N-descricao-curta`.
+1. Pegue a próxima história do pacote atual.
+2. No primeiro dia do pacote, crie a branch: `git switch -c pacote-N-descricao` (ex.: `pacote-1-entrada`). Nos dias seguintes, continue nela.
 3. Implemente com ajuda do Claude (veja [claude-projeto.md](claude-projeto.md)).
-4. Rode os checks, faça commit e abra o PR com `Closes #N`.
-5. CI verde → merge. Se a sessão acabar no meio, deixe um comentário na issue com onde parou.
+4. Rode os checks localmente e faça **um commit por história**: `feat: captura rápida por texto (#2)`. Dê `git push` (sem abrir PR).
+5. Comente na issue o que ficou pronto ou onde parou.
+6. Pacote completo → abra **um PR** com uma linha `Closes #N` para cada história, CI verde → merge.
 
 Achou algo novo durante o uso? Crie uma issue com o modelo *História de usuário* e coloque no marco certo (ou sem marco, para triar na revisão semanal).
