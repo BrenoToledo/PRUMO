@@ -1,0 +1,24 @@
+{% extends "web/base.html" %}
+{% block titulo %}Entrar{% endblock %}
+{% block corpo %}
+<main class="login">
+  <form class="login__card" method="post" action="{% url 'web:login' %}">
+    {% csrf_token %}
+    <h1 class="login__marca">Prumo</h1>
+    <p class="login__sub">Entre para ver o seu dia.</p>
+    {% if form.errors %}
+      <p class="erro" role="alert">Usuário ou senha incorretos.</p>
+    {% endif %}
+    <div class="campo">
+      <label for="id_username">Usuário</label>
+      <input id="id_username" name="username" type="text" autocomplete="username" autocapitalize="none" required autofocus value="{{ form.username.value|default:'' }}">
+    </div>
+    <div class="campo">
+      <label for="id_password">Senha</label>
+      <input id="id_password" name="password" type="password" autocomplete="current-password" required>
+    </div>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="botao botao--primario" type="submit">Entrar</button>
+  </form>
+</main>
+{% endblock %}

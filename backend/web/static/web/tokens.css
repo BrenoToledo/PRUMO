@@ -1,0 +1,76 @@
+/* Tokens do design system do Prumo (especificação, seção 7.1). */
+:root {
+  color-scheme: light dark;
+
+  --primaria: #0F766E;
+  --primaria-suave: #CCFBF1;
+  --fundo: #FAFAF7;
+  --superficie: #FFFFFF;
+  --borda: #E5E4DF;
+  --texto: #1C1C1A;
+  --texto-secundario: #6B6A65;
+  --texto-na-primaria: #FFFFFF;
+
+  --prioridade-critica: #DC2626;
+  --prioridade-alta: #EA580C;
+  --prioridade-media: #CA8A04;
+  --prioridade-baixa: #64748B;
+  --sucesso: #16A34A;
+  --aviso: #D97706;
+  --info: #2563EB;
+
+  --area-trabalho: #3B82F6;
+  --area-educacao: #EC4899;
+  --area-saude: #10B981;
+  --area-familia: #F59E0B;
+  --area-religiao: #8B5CF6;
+  --area-financas: #84CC16;
+  --area-casa: #F97316;
+  --area-pessoal: #06B6D4;
+
+  --fonte: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: 600 28px/34px var(--fonte);
+  --titulo: 600 20px/28px var(--fonte);
+  --subtitulo: 600 16px/24px var(--fonte);
+  --corpo: 400 16px/24px var(--fonte);
+  --legenda: 400 13px/18px var(--fonte);
+  --micro: 500 11px/16px var(--fonte);
+
+  --e1: 4px;
+  --e2: 8px;
+  --e3: 12px;
+  --e4: 16px;
+  --e6: 24px;
+  --e8: 32px;
+  --e12: 48px;
+
+  --raio-campo: 8px;
+  --raio-card: 12px;
+  --raio-chip: 999px;
+  --transicao: 150ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primaria: #2DD4BF;
+    --primaria-suave: #134E4A;
+    --fundo: #121413;
+    --superficie: #1B1E1D;
+    --borda: #2A2E2C;
+    --texto: #ECECE8;
+    --texto-secundario: #9A9C98;
+    --texto-na-primaria: #121413;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --corpo: 400 15px/22px var(--fonte);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transicao: 0ms;
+  }
+}

@@ -1,0 +1,13 @@
+{% extends "web/base.html" %}
+{% block titulo %}Entrada{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Entrada</h1>
+  </div>
+  {% include "web/_botao_sair.html" %}
+</header>
+<div class="vazio">
+  <p>Sua caixa de entrada está vazia.</p>
+</div>
+{% endblock %}
