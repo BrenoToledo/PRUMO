@@ -13,8 +13,12 @@ O ciclo do produto: **capturar → clarificar → priorizar → planejar → exe
 | Especificação | Documento completo: conceitos, problema, funcionamento, requisitos (RF01–RF40, RNF01–RNF14), fases e rascunho do MVP |
 | Design | 39 telas (35 mobile, 4 desktop) e protótipo navegável em [`design/`](design/) |
 | Backend | Núcleo do MVP em Django: modelo de dados, motor de prioridade, plano do dia em blocos, modo foco, "meu dia quebrou", revisão diária e API REST, com testes |
-| Frontend (PWA) | Próxima etapa ([`frontend/`](frontend/)) |
-| IA, MCP e integrações | Próximas etapas ([roadmap](docs/roadmap.md)) |
+| Interface web | **Em andamento: R1 · Uso diário mínimo** (Django templates + HTMX, [ADR 0001](docs/adr/0001-interface-web-com-django-templates-e-htmx.md)) |
+| IA, MCP e integrações | Releases R3, R4 e fases seguintes ([plano](docs/plano.md)) |
+
+## Como contribuir (um pouco por dia)
+
+Pegue a próxima issue da tabela do marco atual em [`docs/plano.md`](docs/plano.md), crie uma branch `issue-N-descricao`, implemente, rode os checks e abra o PR com `Closes #N`. Cada issue cabe em 30–60 minutos.
 
 ## Estrutura
 
@@ -27,9 +31,9 @@ backend/        API Django + DRF (núcleo do MVP)
     models.py         modelo de dados do MVP
     views.py, urls.py API REST
     tests/            testes do motor, do planejamento e da API
-frontend/       PWA React + TypeScript (próxima etapa)
+frontend/       reservado para um cliente React futuro (ver ADR 0001)
 design/         protótipo FigCraft, imagens das telas e o roteiro que gera o arquivo
-docs/           arquitetura, prioridade, API e roadmap
+docs/           contexto, plano, especificação, ADRs, arquitetura, prioridade e API
 ```
 
 ## Rodando o backend
@@ -58,8 +62,11 @@ ruff check .      # lint
 
 ## Documentação
 
+- **[Plano de desenvolvimento](docs/plano.md)**: releases, ordem das issues e Definição de Pronto
+- **[Contexto do produto](docs/contexto.md)**: resumo, glossário e decisões
+- **[Usar como Projeto do Claude](docs/claude-projeto.md)**: instruções e rotina diária
+- [Especificação completa](docs/especificacao.md)
 - [Arquitetura](docs/arquitetura.md)
 - [Motor de prioridade](docs/prioridade.md)
 - [API](docs/api.md)
-- [Roadmap e próximos passos](docs/roadmap.md)
 - [Design e protótipo](design/README.md)
