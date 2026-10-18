@@ -90,3 +90,8 @@ def test_tokens_tem_tema_claro_e_escuro():
     assert "vendor/inter-latin-wght-normal.woff2" in css
     assert finders.find("web/vendor/inter-latin-wght-normal.woff2")
     assert finders.find("web/vendor/htmx-2.0.4.min.js")
+
+
+@pytest.mark.parametrize("nome", ["web:hoje", "web:entrada"])
+def test_telas_so_aceitam_get(logado, nome):
+    assert logado.post(reverse(nome)).status_code == 405
