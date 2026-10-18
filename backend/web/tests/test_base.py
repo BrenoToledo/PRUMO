@@ -57,7 +57,8 @@ def test_layout_tem_navegacao_tokens_e_htmx(logado):
     html = logado.get("/").content.decode()
     assert 'name="viewport"' in html
     assert "web/tokens.css" in html
-    assert "htmx.org@" in html  # versão fixa
+    assert "web/vendor/htmx-2.0.4.min.js" in html  # versão fixa, servida localmente
+    assert "googleapis" not in html and "unpkg" not in html
     assert 'href="' + reverse("web:hoje") + '"' in html
     assert 'href="' + reverse("web:entrada") + '"' in html
     for aba in ("Projetos", "Pessoas", "Revisão"):
@@ -86,3 +87,6 @@ def test_tokens_tem_tema_claro_e_escuro():
     assert "prefers-color-scheme: dark" in css
     assert "--primaria: #2DD4BF" in css
     assert "Inter" in css
+    assert "vendor/inter-latin-wght-normal.woff2" in css
+    assert finders.find("web/vendor/inter-latin-wght-normal.woff2")
+    assert finders.find("web/vendor/htmx-2.0.4.min.js")

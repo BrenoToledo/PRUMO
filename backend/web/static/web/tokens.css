@@ -1,4 +1,13 @@
 /* Tokens do design system do Prumo (especificação, seção 7.1). */
+
+/* Inter servida localmente (sem CDN externo: privacidade e uso instalado no celular). Licença: vendor/inter-LICENSE.txt */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("vendor/inter-latin-wght-normal.woff2") format("woff2");
+}
 :root {
   color-scheme: light dark;
 
@@ -28,13 +37,13 @@
   --area-casa: #F97316;
   --area-pessoal: #06B6D4;
 
-  --fonte: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --display: 600 28px/34px var(--fonte);
-  --titulo: 600 20px/28px var(--fonte);
-  --subtitulo: 600 16px/24px var(--fonte);
-  --corpo: 400 16px/24px var(--fonte);
-  --legenda: 400 13px/18px var(--fonte);
-  --micro: 500 11px/16px var(--fonte);
+  /* Escala tipográfica: tamanho / altura de linha / peso */
+  --display-tam: 28px; --display-alt: 34px; --display-peso: 600;
+  --titulo-tam: 20px; --titulo-alt: 28px; --titulo-peso: 600;
+  --subtitulo-tam: 16px; --subtitulo-alt: 24px; --subtitulo-peso: 600;
+  --corpo-tam: 16px; --corpo-alt: 24px; --corpo-peso: 400;
+  --legenda-tam: 13px; --legenda-alt: 18px; --legenda-peso: 400;
+  --micro-tam: 11px; --micro-alt: 16px; --micro-peso: 500;
 
   --e1: 4px;
   --e2: 8px;
@@ -65,7 +74,8 @@
 
 @media (min-width: 1024px) {
   :root {
-    --corpo: 400 15px/22px var(--fonte);
+    --corpo-tam: 15px;
+    --corpo-alt: 22px;
   }
 }
 

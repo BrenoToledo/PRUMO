@@ -6,12 +6,9 @@
   <meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#121413" media="(prefers-color-scheme: dark)">
   <title>{% block titulo %}Prumo{% endblock %} · Prumo</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="{% static 'web/tokens.css' %}">
   <link rel="stylesheet" href="{% static 'web/app.css' %}">
-  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" defer></script>
+  <script src="{% static 'web/vendor/htmx-2.0.4.min.js' %}" defer></script>
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 {% block corpo %}
