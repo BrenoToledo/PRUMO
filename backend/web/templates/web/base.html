@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="{% static 'web/tokens.css' %}">
   <link rel="stylesheet" href="{% static 'web/app.css' %}">
   <script src="{% static 'web/vendor/htmx-2.0.4.min.js' %}" defer></script>
+  <script src="{% static 'web/app.js' %}" defer></script>
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 {% block corpo %}
@@ -55,6 +56,22 @@
       {% block conteudo %}{% endblock %}
     </main>
   </div>
+
+  <button id="abrir-captura" class="captura__botao" type="button" aria-label="Capturar" aria-haspopup="dialog" aria-controls="folha-captura" title="Capturar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+  <dialog id="folha-captura" class="captura__folha" aria-labelledby="titulo-captura">
+    <div class="captura__topo">
+      <h2 id="titulo-captura">Capturar</h2>
+      <form method="dialog">
+        <button class="captura__fechar" type="submit" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </form>
+    </div>
+    {% include "web/_form_captura.html" %}
+  </dialog>
 {% endblock %}
+<div id="aviso" class="aviso" role="status" aria-live="polite" hidden>{% for m in messages %}{% if forloop.first %}{{ m }}{% endif %}{% endfor %}</div>
 </body>
 </html>

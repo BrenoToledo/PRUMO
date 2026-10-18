@@ -1,0 +1,61 @@
+// Comportamentos pequenos da interface: folha de captura, Enter para salvar e aviso temporário.
+(function () {
+  "use strict";
+
+  function aviso(texto) {
+    const el = document.getElementById("aviso");
+    if (!el) return;
+    el.textContent = texto;
+    el.hidden = false;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(function () { el.hidden = true; }, 2500);
+  }
+
+  function campo() {
+    return document.getElementById("id_texto");
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const folha = document.getElementById("folha-captura");
+    const abrir = document.getElementById("abrir-captura");
+    if (folha && abrir) {
+      abrir.addEventListener("click", function () {
+        folha.showModal();
+        const c = campo();
+        if (c) c.focus();
+      });
+      folha.addEventListener("click", function (e) {
+        if (e.target === folha) folha.close(); // toque fora da folha
+      });
+    }
+
+    // Enter salva; Shift+Enter quebra a linha.
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.target === campo()) {
+        e.preventDefault();
+        e.target.form.requestSubmit();
+      }
+    });
+
+    document.body.addEventListener("capturado", function (e) {
+      if (folha) folha.close();
+      aviso(e.detail.mensagem);
+    });
+
+    const inicial = document.getElementById("aviso");
+    if (inicial && inicial.textContent.trim()) aviso(inicial.textContent.trim());
+  });
+
+  // Erro de validação (422) também troca o formulário, para mostrar a mensagem.
+  document.addEventListener("htmx:beforeSwap", function (e) {
+    if (e.detail.xhr.status === 422) {
+      e.detail.shouldSwap = true;
+      e.detail.isError = false;
+    }
+  });
+  document.addEventListener("htmx:afterSwap", function () {
+    const folha = document.getElementById("folha-captura");
+    const c = campo();
+    if (folha && folha.open && c) c.focus();
+  });
+})();
