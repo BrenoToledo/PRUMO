@@ -1,0 +1,407 @@
+"""Regras de negócio que tocam o banco. As views só chamam estas funções."""
+
+from __future__ import annotations
+
+from collections import defaultdict
+from datetime import date, datetime, timedelta
+
+from django.db import transaction
+from django.utils import timezone
+
+from . import planejamento as plan
+from . import prioridade as motor
+from .models import (
+    Area,
+    Bloco,
+    Esforco,
+    EventoTarefa,
+    ItemCaptura,
+    Perfil,
+    Revisao,
+    Tarefa,
+    TarefaPessoa,
+)
+
+AREAS_PADRAO = [
+    ("Trabalho", "#3B82F6"),
+    ("Educação", "#EC4899"),
+    ("Saúde", "#10B981"),
+    ("Família", "#F59E0B"),
+    ("Pessoal", "#06B6D4"),
+]
+DIAS_UTEIS = {0, 1, 2, 3, 4}  # seg a sex
+JANELA_REPLANEJAMENTO_DIAS = 14
+STATUS_ABERTOS = (Bloco.Status.PLANEJADO, Bloco.Status.EM_FOCO)
+
+
+# --------------------------------------------------------------------------- perfil e jornada
+def criar_padroes(usuario) -> Perfil:
+    perfil, criado = Perfil.objects.get_or_create(usuario=usuario)
+    if criado:
+        Area.objects.bulk_create(
+            [Area(usuario=usuario, nome=n, cor=c, ordem=i) for i, (n, c) in enumerate(AREAS_PADRAO)]
+        )
+    return perfil
+
+
+def perfil_de(usuario) -> Perfil:
+    try:
+        return usuario.perfil
+    except Perfil.DoesNotExist:
+        return criar_padroes(usuario)
+
+
+def jornada_de(perfil: Perfil) -> plan.Jornada:
+    return plan.Jornada(
+        inicio=perfil.inicio_trabalho,
+        fim=perfil.fim_trabalho,
+        duracao_bloco_min=perfil.duracao_bloco_min,
+        folga_diaria=perfil.folga_diaria,
+        pico_energia=perfil.pico_energia,
+    )
+
+
+def hoje() -> date:
+    return timezone.localdate()
+
+
+def _limites_do_dia(dia: date) -> tuple[datetime, datetime]:
+    tz = timezone.get_current_timezone()
+    ini = datetime.combine(dia, datetime.min.time(), tzinfo=tz)
+    return ini, ini + timedelta(days=1)
+
+
+def _blocos_do_dia(usuario, dia: date):
+    ini, fim = _limites_do_dia(dia)
+    return Bloco.objects.filter(usuario=usuario, inicio_planejado__gte=ini, inicio_planejado__lt=fim)
+
+
+def evento(tarefa: Tarefa, tipo: str, **dados) -> EventoTarefa:
+    return EventoTarefa.objects.create(tarefa=tarefa, tipo=tipo, dados=dados)
+
+
+# --------------------------------------------------------------------------- capacidade e prioridade
+def capacidade_do_dia(usuario, dia: date) -> int:
+    if dia.weekday() not in DIAS_UTEIS:
+        return 0
+    return plan.capacidade_blocos(jornada_de(perfil_de(usuario)))
+
+
+def blocos_livres_ate(usuario, ate: date, *, excluir_tarefa: Tarefa | None = None, desde: date | None = None) -> int:
+    """Blocos ainda livres de `desde` (hoje) até `ate`, descontando os já planejados de outras tarefas."""
+    desde = desde or hoje()
+    if ate < desde:
+        return 0
+    ini, _ = _limites_do_dia(desde)
+    _, fim = _limites_do_dia(ate)
+    ocupados = Bloco.objects.filter(
+        usuario=usuario, status__in=STATUS_ABERTOS, inicio_planejado__gte=ini, inicio_planejado__lt=fim
+    )
+    if excluir_tarefa is not None:
+        ocupados = ocupados.exclude(tarefa=excluir_tarefa)
+    por_dia: dict[date, int] = defaultdict(int)
+    for b in ocupados.only("inicio_planejado"):
+        por_dia[timezone.localtime(b.inicio_planejado).date()] += 1
+    total, dia = 0, desde
+    while dia <= ate:
+        total += max(0, capacidade_do_dia(usuario, dia) - por_dia[dia])
+        dia += timedelta(days=1)
+    return total
+
+
+def avaliar_tarefa(tarefa: Tarefa, *, referencia: date | None = None) -> motor.Avaliacao:
+    referencia = referencia or hoje()
+    perfil = perfil_de(tarefa.usuario)
+    tem_prazo = tarefa.prazo is not None
+    livres = (
+        blocos_livres_ate(tarefa.usuario, tarefa.prazo, excluir_tarefa=tarefa, desde=referencia) if tem_prazo else None
+    )
+    parada = (referencia - timezone.localtime(tarefa.criada_em).date()).days / 7
+    return motor.avaliar(
+        tarefa.respostas_importancia or {},
+        blocos_livres_ate_prazo=livres,
+        blocos_restantes=tarefa.blocos_restantes,
+        tem_prazo=tem_prazo,
+        prazo_rigido=tarefa.prazo_rigido,
+        semanas_parada=parada,
+        peso_importancia=perfil.peso_importancia,
+        peso_urgencia=perfil.peso_urgencia,
+    )
+
+
+def recalcular_prioridade(tarefa: Tarefa, *, salvar: bool = True) -> motor.Avaliacao:
+    av = avaliar_tarefa(tarefa)
+    tarefa.importancia, tarefa.urgencia, tarefa.prioridade = av.importancia, av.urgencia, av.prioridade
+    tarefa.explicacao_prioridade = av.explicacao[:300]
+    if salvar:
+        tarefa.save(update_fields=["importancia", "urgencia", "prioridade", "explicacao_prioridade"])
+    return av
+
+
+# --------------------------------------------------------------------------- captura e clarificação
+def capturar(usuario, texto: str, origem: str = ItemCaptura.Origem.TEXTO, transcricao: str = "") -> ItemCaptura:
+    texto = texto.strip()
+    if not texto:
+        raise ValueError("a captura precisa de texto")
+    return ItemCaptura.objects.create(usuario=usuario, texto=texto, origem=origem, transcricao=transcricao)
+
+
+@transaction.atomic
+def clarificar(item: ItemCaptura, dados: dict, pessoas: list[tuple] | None = None) -> Tarefa:
+    """Transforma um item da caixa de entrada em tarefa (o quê, próxima ação e área são obrigatórios)."""
+    if item.status != ItemCaptura.Status.PENDENTE:
+        raise ValueError("este item já foi processado")
+    tarefa = Tarefa(usuario=item.usuario, item_origem=item, **dados)
+    tarefa.full_clean(exclude=["usuario", "item_origem"])
+    tarefa.save()
+    for pessoa, relacao in pessoas or []:
+        TarefaPessoa.objects.create(tarefa=tarefa, pessoa=pessoa, relacao=relacao)
+    recalcular_prioridade(tarefa)
+    item.status = ItemCaptura.Status.CLARIFICADO
+    item.save(update_fields=["status"])
+    evento(tarefa, EventoTarefa.Tipo.CRIADA, origem=item.origem)
+    return tarefa
+
+
+@transaction.atomic
+def para_lista_rapida(item: ItemCaptura, area: Area, minutos: int = 5) -> Tarefa:
+    """Itens de menos de 10 minutos pulam a triagem e viram tarefas leves."""
+    if minutos > 10:
+        raise ValueError("a lista rápida é para itens de até 10 minutos")
+    tarefa = Tarefa.objects.create(
+        usuario=item.usuario,
+        item_origem=item,
+        area=area,
+        titulo=item.texto[:200],
+        proxima_acao=item.texto[:300],
+        esforco=Esforco.BAIXO,
+        minutos_estimados=minutos,
+    )
+    item.status = ItemCaptura.Status.LISTA_RAPIDA
+    item.save(update_fields=["status"])
+    evento(tarefa, EventoTarefa.Tipo.CRIADA, origem=item.origem, lista_rapida=True)
+    return tarefa
+
+
+def descartar(item: ItemCaptura) -> None:
+    item.status = ItemCaptura.Status.DESCARTADO
+    item.save(update_fields=["status"])
+
+
+# --------------------------------------------------------------------------- plano do dia
+def tarefas_leves(usuario):
+    return Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA, esforco=Esforco.BAIXO)
+
+
+@transaction.atomic
+def gerar_plano_do_dia(usuario, dia: date | None = None) -> plan.Plano:
+    """Refaz os blocos ainda não iniciados do dia a partir das prioridades atuais."""
+    dia = dia or hoje()
+    _blocos_do_dia(usuario, dia).filter(status=Bloco.Status.PLANEJADO).delete()
+    ja_feitos = _blocos_do_dia(usuario, dia).exclude(status=Bloco.Status.PLANEJADO).count()
+    abertas = list(Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA).exclude(esforco=Esforco.BAIXO))
+    for t in abertas:
+        recalcular_prioridade(t)
+    candidatas = [
+        plan.Candidata(t.id, t.prioridade, t.esforco, t.blocos_restantes, t.prazo, t.prazo_rigido) for t in abertas
+    ]
+    jornada = jornada_de(perfil_de(usuario))
+    if dia.weekday() not in DIAS_UTEIS:
+        return plan.Plano(capacidade=0, nao_couberam=[c.id for c in candidatas])
+    resultado = plan.montar_plano_do_dia(
+        dia,
+        jornada,
+        candidatas,
+        minutos_ocupados=ja_feitos * (jornada.duracao_bloco_min + plan.INTERVALO_ENTRE_BLOCOS_MIN),
+        tz=timezone.get_current_timezone(),
+    )
+    por_id = {t.id: t for t in abertas}
+    for slot in resultado.slots:
+        Bloco.objects.create(
+            usuario=usuario, tarefa=por_id[slot.tarefa_id], inicio_planejado=slot.inicio, fim_planejado=slot.fim
+        )
+        evento(por_id[slot.tarefa_id], EventoTarefa.Tipo.PLANEJADA, inicio=slot.inicio.isoformat())
+    return resultado
+
+
+def plano_do_dia(usuario, dia: date | None = None) -> dict:
+    dia = dia or hoje()
+    blocos = list(_blocos_do_dia(usuario, dia).select_related("tarefa", "tarefa__area"))
+    cap = capacidade_do_dia(usuario, dia)
+    ativos = [b for b in blocos if b.status != Bloco.Status.ADIADO]
+    return {
+        "dia": dia,
+        "capacidade": cap,
+        "planejados": len(ativos),
+        "ocupacao": round(len(ativos) / cap, 2) if cap else 0.0,
+        "folga_diaria": perfil_de(usuario).folga_diaria,
+        "blocos": blocos,
+        "tarefas_leves": list(tarefas_leves(usuario)[:10]),
+    }
+
+
+# --------------------------------------------------------------------------- execução dos blocos
+def iniciar_bloco(bloco: Bloco) -> Bloco:
+    if bloco.status != Bloco.Status.PLANEJADO:
+        raise ValueError("só um bloco planejado pode ser iniciado")
+    bloco.status, bloco.inicio_real = Bloco.Status.EM_FOCO, timezone.now()
+    bloco.save(update_fields=["status", "inicio_real"])
+    evento(bloco.tarefa, EventoTarefa.Tipo.INICIADA, bloco=bloco.id)
+    return bloco
+
+
+@transaction.atomic
+def concluir_bloco(
+    bloco: Bloco, resultado: str, *, blocos_restantes: int | None = None, nova_proxima_acao: str = ""
+) -> Bloco:
+    if bloco.status != Bloco.Status.EM_FOCO:
+        raise ValueError("só um bloco em foco pode ser concluído")
+    if resultado not in Bloco.Resultado.values:
+        raise ValueError(f"resultado inválido: {resultado}")
+    bloco.status, bloco.fim_real, bloco.resultado = Bloco.Status.CONCLUIDO, timezone.now(), resultado
+    bloco.save(update_fields=["status", "fim_real", "resultado"])
+    tarefa = bloco.tarefa
+    if resultado != Bloco.Resultado.NAO_AVANCOU:
+        tarefa.blocos_feitos += 1
+    if blocos_restantes is not None:
+        tarefa.blocos_estimados = tarefa.blocos_feitos + max(0, blocos_restantes)
+    if nova_proxima_acao:
+        tarefa.proxima_acao = nova_proxima_acao[:300]
+    if resultado == Bloco.Resultado.CONCLUIU:
+        tarefa.status, tarefa.concluida_em = Tarefa.Status.CONCLUIDA, timezone.now()
+        tarefa.blocos.filter(status=Bloco.Status.PLANEJADO).delete()
+    tarefa.save()
+    evento(
+        tarefa,
+        EventoTarefa.Tipo.CONCLUIDA if resultado == Bloco.Resultado.CONCLUIU else EventoTarefa.Tipo.BLOCO,
+        bloco=bloco.id,
+        resultado=resultado,
+        minutos=bloco.minutos_focados,
+    )
+    if tarefa.status == Tarefa.Status.ABERTA:
+        recalcular_prioridade(tarefa)
+    return bloco
+
+
+def sair_do_bloco(bloco: Bloco, motivo: str) -> Bloco:
+    if bloco.status != Bloco.Status.EM_FOCO:
+        raise ValueError("só um bloco em foco pode ser interrompido")
+    bloco.status, bloco.fim_real, bloco.motivo = Bloco.Status.INTERROMPIDO, timezone.now(), motivo[:120]
+    bloco.save(update_fields=["status", "fim_real", "motivo"])
+    evento(bloco.tarefa, EventoTarefa.Tipo.INTERROMPIDA, bloco=bloco.id, motivo=motivo, minutos=bloco.minutos_focados)
+    return bloco
+
+
+# --------------------------------------------------------------------------- meu dia quebrou
+@transaction.atomic
+def meu_dia_quebrou(usuario, *, blocos_uteis: int, motivo: str = "", dia: date | None = None) -> dict:
+    """Mantém hoje o que cabe e move o resto para os próximos dias livres, sem culpa."""
+    dia = dia or hoje()
+    pendentes_qs = _blocos_do_dia(usuario, dia).filter(status=Bloco.Status.PLANEJADO).select_related("tarefa")
+    por_tarefa: dict[int, list[Bloco]] = defaultdict(list)
+    for b in pendentes_qs:
+        por_tarefa[b.tarefa_id].append(b)
+    tarefas = {t.id: t for t in Tarefa.objects.filter(id__in=por_tarefa)}
+    pendentes = [
+        plan.Pendente(tid, tarefas[tid].prioridade, len(bs), tarefas[tid].prazo, tarefas[tid].prazo_rigido)
+        for tid, bs in por_tarefa.items()
+    ]
+    livres = {}
+    for i in range(1, JANELA_REPLANEJAMENTO_DIAS + 1):
+        d = dia + timedelta(days=i)
+        livres[d] = max(
+            0, capacidade_do_dia(usuario, d) - _blocos_do_dia(usuario, d).filter(status__in=STATUS_ABERTOS).count()
+        )
+    fica, movidos = plan.replanejar(dia, pendentes, blocos_uteis, livres)
+
+    manter = defaultdict(int)
+    for m in fica:
+        manter[m.tarefa_id] += m.blocos
+    for tid, bs in por_tarefa.items():
+        for b in bs[manter[tid] :]:
+            b.delete()
+
+    jornada = jornada_de(perfil_de(usuario))
+    passo = timedelta(minutes=jornada.duracao_bloco_min + plan.INTERVALO_ENTRE_BLOCOS_MIN)
+    duracao = timedelta(minutes=jornada.duracao_bloco_min)
+    tz = timezone.get_current_timezone()
+    em_risco = []
+    for m in movidos:
+        t = tarefas[m.tarefa_id]
+        for _ in range(m.blocos):
+            n = _blocos_do_dia(usuario, m.para).count()
+            ini = datetime.combine(m.para, jornada.inicio, tzinfo=tz) + passo * n
+            Bloco.objects.create(usuario=usuario, tarefa=t, inicio_planejado=ini, fim_planejado=ini + duracao)
+        t.adiamentos += 1
+        t.save(update_fields=["adiamentos"])
+        evento(t, EventoTarefa.Tipo.REPLANEJADA, para=m.para.isoformat(), blocos=m.blocos, motivo=motivo)
+        if m.em_risco:
+            pessoas = [
+                v.pessoa.nome
+                for v in t.vinculos.filter(relacao=TarefaPessoa.Relacao.DEPENDE_DE_MIM).select_related("pessoa")
+            ]
+            em_risco.append(
+                {"tarefa": t.id, "titulo": t.titulo, "nova_data": m.para, "prazo": t.prazo, "pessoas": pessoas}
+            )
+    return {
+        "fica_hoje": [{"tarefa": m.tarefa_id, "blocos": m.blocos} for m in fica],
+        "movidos": [
+            {
+                "tarefa": m.tarefa_id,
+                "titulo": tarefas[m.tarefa_id].titulo,
+                "blocos": m.blocos,
+                "para": m.para,
+                "em_risco": m.em_risco,
+            }
+            for m in movidos
+        ],
+        "expectativas_em_risco": em_risco,
+    }
+
+
+# --------------------------------------------------------------------------- revisão diária
+def resumo_revisao_diaria(usuario, dia: date | None = None) -> dict:
+    dia = dia or hoje()
+    blocos = list(_blocos_do_dia(usuario, dia).select_related("tarefa"))
+    ini, fim = _limites_do_dia(dia)
+    feitos = [b for b in blocos if b.status == Bloco.Status.CONCLUIDO]
+    distracoes = ItemCaptura.objects.filter(
+        usuario=usuario, origem=ItemCaptura.Origem.FOCO, criado_em__gte=ini, criado_em__lt=fim
+    )
+    imprevistos = (
+        EventoTarefa.objects.filter(
+            tarefa__usuario=usuario, tipo=EventoTarefa.Tipo.REPLANEJADA, em__gte=ini, em__lt=fim
+        )
+        .values("dados__motivo")
+        .distinct()
+        .count()
+    )
+    revisao = Revisao.objects.filter(usuario=usuario, tipo=Revisao.Tipo.DIARIA, data=dia).first()
+    return {
+        "dia": dia,
+        "blocos_planejados": len(blocos),
+        "blocos_feitos": len(feitos),
+        "minutos_focados": sum(b.minutos_focados for b in blocos),
+        "imprevistos": imprevistos,
+        "distracoes": [d.texto for d in distracoes],
+        "planejado_vs_real": [
+            {"tarefa": b.tarefa.titulo, "inicio": b.inicio_planejado, "status": b.status, "resultado": b.resultado}
+            for b in blocos
+        ],
+        "revisao": revisao,
+    }
+
+
+def salvar_revisao_diaria(
+    usuario, *, dia: date | None = None, atencao: str = "", intencao_amanha: str = "", notas: str = ""
+) -> Revisao:
+    dia = dia or hoje()
+    resumo = resumo_revisao_diaria(usuario, dia)
+    metricas = {k: resumo[k] for k in ("blocos_planejados", "blocos_feitos", "minutos_focados", "imprevistos")}
+    revisao, _ = Revisao.objects.update_or_create(
+        usuario=usuario,
+        tipo=Revisao.Tipo.DIARIA,
+        data=dia,
+        defaults={"atencao": atencao, "intencao_amanha": intencao_amanha, "notas": notas, "metricas": metricas},
+    )
+    return revisao

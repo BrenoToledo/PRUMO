@@ -1,0 +1,18 @@
+[project]
+name = "prumo-backend"
+version = "0.1.0"
+description = "Backend do Prumo: gerenciador de tarefas e atenção com IA"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["nucleo/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "DJ"]
