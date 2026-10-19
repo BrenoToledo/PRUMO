@@ -1,0 +1,12 @@
+<form id="form-sair" class="foco__form-sair" method="post" action="{% url 'web:sair_do_bloco' bloco.pk %}"
+      hx-post="{% url 'web:sair_do_bloco' bloco.pk %}" hx-target="this" hx-swap="outerHTML">
+  {% csrf_token %}
+  <fieldset class="foco__motivos">
+    <legend class="foco__rotulo">Motivo</legend>
+    {% for opcao in form_sair.motivo %}
+    <label class="foco__pilula"><input type="radio" name="motivo" value="{{ opcao.data.value }}"{% if opcao.data.selected %} checked{% endif %}> {{ opcao.choice_label }}</label>
+    {% endfor %}
+  </fieldset>
+  {% if form_sair.motivo.errors %}<p class="erro" role="alert">{{ form_sair.motivo.errors.0 }}</p>{% endif %}
+  <button class="botao foco__largo" type="submit">Sair e registrar</button>
+</form>

@@ -1,0 +1,41 @@
+<form id="form-fim" class="fim__form" method="post" action="{% url 'web:concluir_bloco' bloco.pk %}"
+      hx-post="{% url 'web:concluir_bloco' bloco.pk %}" hx-target="this" hx-swap="outerHTML">
+  {% csrf_token %}
+  <fieldset class="fim__opcoes">
+    <legend class="fim__pergunta">Como ficou a tarefa?</legend>
+    {% for opcao in form_fim.resultado %}
+    <label class="fim__opcao">
+      <input type="radio" name="resultado" value="{{ opcao.data.value }}"{% if opcao.data.selected %} checked{% endif %}>
+      <span class="fim__opcao-texto">
+        <span>{{ opcao.choice_label }}</span>
+        {% if opcao.data.value == "avancou" %}<span class="fim__opcao-dica">Diga quantos blocos ainda faltam</span>
+        {% elif opcao.data.value == "nao_avancou" %}<span class="fim__opcao-dica">Sem culpa: o bloco fica registrado</span>{% endif %}
+      </span>
+    </label>
+    {% endfor %}
+  </fieldset>
+
+  <div class="fim__restantes" data-contador>
+    <label for="id_blocos_restantes">Blocos restantes</label>
+    <div class="fim__contador">
+      <button class="fim__passo" type="button" data-passo="-1" aria-label="Menos um bloco">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+      </button>
+      <input id="id_blocos_restantes" name="blocos_restantes" type="number" inputmode="numeric" min="0" max="{{ max_restantes }}"
+             value="{{ form_fim.blocos_restantes.value|default_if_none:'' }}">
+      <button class="fim__passo" type="button" data-passo="1" aria-label="Mais um bloco">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="campo">
+    <label for="id_nova_proxima_acao">Nova próxima ação (opcional)</label>
+    <input id="id_nova_proxima_acao" name="nova_proxima_acao" type="text" maxlength="300"
+           placeholder="{{ tarefa.proxima_acao }}" value="{{ form_fim.nova_proxima_acao.value|default_if_none:'' }}">
+  </div>
+
+  {% if form_fim.errors %}<p class="erro" role="alert">{{ form_fim.primeiro_erro }}</p>{% endif %}
+
+  <button class="botao botao--primario foco__largo fim__salvar" type="submit">Salvar e voltar</button>
+</form>
