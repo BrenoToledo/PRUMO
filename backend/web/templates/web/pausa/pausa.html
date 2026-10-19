@@ -1,0 +1,37 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}{{ relogio }} · Pausa{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/foco.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/pausa.css' %}">{% endblock %}
+{% block corpo %}
+<main class="foco pausa">
+  <header class="foco__topo">
+    <p class="foco__rotulo">Pausa · {{ bloco.tarefa.titulo }}</p>
+  </header>
+
+  <nav class="pausa__duracoes" aria-label="Duração da pausa">
+    {% for d in duracoes %}<a class="pausa__duracao" href="?min={{ d }}"{% if d == minutos %} aria-current="true"{% endif %}>{{ d }} min</a>{% endfor %}
+  </nav>
+
+  <div class="pausa__timer" data-pausa data-termino="{{ termino }}" data-duracao="{{ duracao }}" data-agora="{{ agora }}">
+    <span class="pausa__icone" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2M10 2v2M14 2v2"/></svg>
+    </span>
+    <p class="pausa__tempo" role="timer"><span class="foco__numeros" data-tempo>{{ relogio }}</span></p>
+    <p class="foco__legenda" data-legenda aria-live="polite">restantes de {{ minutos }} min · pausa antes do cansaço</p>
+  </div>
+
+  <section class="foco__caixa pausa__sugestoes" aria-labelledby="titulo-sugestoes">
+    <h1 id="titulo-sugestoes" class="pausa__titulo">Para descansar de verdade</h1>
+    <ul>{% for s in sugestoes %}<li>{{ s }}</li>{% endfor %}</ul>
+  </section>
+
+  <p class="pausa__aviso">Evite redes sociais e vídeos: estimulam em vez de descansar a atenção.</p>
+
+  <div class="foco__acoes">
+    <a class="botao" href="{% url 'web:foco' %}?fim=1">Encerrar bloco</a>
+    <a class="botao botao--primario" href="{% url 'web:foco' %}" data-voltar>Voltar ao foco</a>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}<script src="{% static 'web/telas/pausa.js' %}" defer></script>{% endblock %}
