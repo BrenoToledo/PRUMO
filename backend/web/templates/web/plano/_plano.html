@@ -55,17 +55,4 @@
 </div>
 {% endif %}
 
-{% if plano.tarefas_leves %}
-<div class="plano__secao">
-  <h2 class="plano__titulo">Tarefas leves</h2>
-  <span class="plano__nota">esforço baixo · fim do dia</span>
-</div>
-<ul class="plano__leves">
-  {% for tarefa in plano.tarefas_leves %}
-  <li class="leve">
-    <span class="leve__titulo">{{ tarefa.titulo }}</span>
-    {% if tarefa.minutos_estimados %}<span class="leve__tempo">{{ tarefa.minutos_estimados }} min</span>{% endif %}
-  </li>
-  {% endfor %}
-</ul>
-{% endif %}
+{% include "web/tarefas/_tarefas_leves.html" with tarefas_leves=plano.tarefas_leves %}

@@ -208,6 +208,11 @@ def tarefas_leves(usuario) -> QuerySet[Tarefa]:
     return Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA, esforco=Esforco.BAIXO)
 
 
+def tem_tarefas_para_planejar(usuario) -> bool:
+    """Há tarefas abertas que o plano em blocos usa (as leves ficam para o fim do dia)?"""
+    return Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA).exclude(esforco=Esforco.BAIXO).exists()
+
+
 @transaction.atomic
 def gerar_plano_do_dia(usuario, dia: date | None = None) -> plan.Plano:
     """Refaz os blocos ainda não iniciados do dia a partir das prioridades atuais."""
