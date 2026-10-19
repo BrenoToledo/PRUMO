@@ -1,0 +1,11 @@
+<div class="clarificacao__campo">
+  <label class="clarificacao__rotulo" for="{{ campo.id_for_label }}">{{ campo.label }}{% if not campo.field.required %} <span class="clarificacao__opcional">(opcional)</span>{% endif %}</label>
+  <input id="{{ campo.id_for_label }}" name="{{ campo.html_name }}"
+         type="{% if campo.name == 'prazo' %}date{% elif campo.name == 'blocos_estimados' %}number{% else %}text{% endif %}"
+         {% if campo.value is not None %}value="{{ campo.value|stringformat:'s' }}"{% endif %}
+         {% if campo.field.required %}required{% endif %}
+         {% if campo.name == 'blocos_estimados' %}min="1" max="50" inputmode="numeric" placeholder="1"{% endif %}
+         {% if campo.field.max_length %}maxlength="{{ campo.field.max_length }}"{% endif %}
+         {% if campo.errors %}aria-invalid="true" aria-describedby="erro-{{ campo.name }}"{% endif %}>
+  {% if campo.errors %}<p id="erro-{{ campo.name }}" class="erro" role="alert">{{ campo.errors|join:" " }}</p>{% endif %}
+</div>

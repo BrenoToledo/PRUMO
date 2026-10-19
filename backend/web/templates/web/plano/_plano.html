@@ -1,0 +1,71 @@
+{% if resultado %}<p class="plano__resultado" role="status">{{ resultado }}</p>{% endif %}
+<section class="capacidade" aria-labelledby="titulo-capacidade">
+  <div class="capacidade__linha">
+    <h2 id="titulo-capacidade" class="capacidade__titulo">Capacidade do dia</h2>
+    <span class="capacidade__valor">{{ plano.planejados }} de {{ plano.capacidade }} blocos · {{ ocupacao_pct }}%</span>
+  </div>
+  <div class="capacidade__barra" role="progressbar" aria-labelledby="titulo-capacidade"
+       aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ barra_pct }}">
+    <span class="capacidade__preenchido" style="width: {{ barra_pct }}%"></span>
+  </div>
+  <p class="capacidade__folga">{{ folga_pct }}% do dia livre para imprevistos</p>
+</section>
+
+<div class="plano__secao">
+  <h2 class="plano__titulo">Blocos de foco</h2>
+  {% if not fim_de_semana and not sem_tarefas %}
+    {% if tem_planejados %}
+    <details class="plano__refazer"{% if pedir_confirmacao %} open{% endif %}>
+      <summary class="botao botao--pequeno">Refazer plano</summary>
+      <form class="plano__confirmar" method="post" action="{% url 'web:gerar_plano' %}"
+            hx-post="{% url 'web:gerar_plano' %}" hx-target="#plano">
+        {% csrf_token %}
+        <input type="hidden" name="confirmar" value="1">
+        <p><strong>Refazer o plano?</strong> Os blocos ainda não iniciados serão montados de novo pelas prioridades atuais.</p>
+        <button class="botao botao--primario botao--pequeno" type="submit">Refazer</button>
+      </form>
+    </details>
+    {% else %}
+    <form method="post" action="{% url 'web:gerar_plano' %}" hx-post="{% url 'web:gerar_plano' %}" hx-target="#plano">
+      {% csrf_token %}
+      <button class="botao botao--primario botao--pequeno" type="submit">Gerar plano</button>
+    </form>
+    {% endif %}
+  {% endif %}
+</div>
+
+{% if plano.blocos %}
+<ol class="plano__blocos">
+  {% for bloco in plano.blocos %}<li>{% include "web/plano/_card_bloco.html" %}</li>{% endfor %}
+</ol>
+{% elif fim_de_semana %}
+<div class="vazio">
+  <p class="vazio__titulo">Fim de semana.</p>
+  <p>Sem blocos de foco no sábado e no domingo. O plano volta na segunda.</p>
+</div>
+{% elif sem_tarefas %}
+<div class="vazio">
+  <p class="vazio__titulo">Nenhuma tarefa para planejar.</p>
+  <p>Os blocos saem das tarefas abertas. <a href="{% url 'web:entrada' %}">Clarifique itens da entrada</a> para montar o dia.</p>
+</div>
+{% else %}
+<div class="vazio">
+  <p class="vazio__titulo">Nada planejado ainda.</p>
+  <p>Gere o plano para distribuir as tarefas mais prioritárias nos blocos de hoje.</p>
+</div>
+{% endif %}
+
+{% if plano.tarefas_leves %}
+<div class="plano__secao">
+  <h2 class="plano__titulo">Tarefas leves</h2>
+  <span class="plano__nota">esforço baixo · fim do dia</span>
+</div>
+<ul class="plano__leves">
+  {% for tarefa in plano.tarefas_leves %}
+  <li class="leve">
+    <span class="leve__titulo">{{ tarefa.titulo }}</span>
+    {% if tarefa.minutos_estimados %}<span class="leve__tempo">{{ tarefa.minutos_estimados }} min</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}

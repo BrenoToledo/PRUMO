@@ -1,0 +1,1 @@
+<span class="chip-prioridade chip-prioridade--{{ tarefa.faixa }}" title="Prioridade {{ tarefa.prioridade }} de 100">{{ tarefa.prioridade }} · {% if tarefa.faixa == "critica" %}Crítica{% elif tarefa.faixa == "alta" %}Alta{% elif tarefa.faixa == "media" %}Média{% else %}Baixa{% endif %}</span>

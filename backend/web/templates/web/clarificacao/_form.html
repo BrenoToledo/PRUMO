@@ -1,0 +1,45 @@
+{% load web_extras %}<form id="clarificacao" class="clarificacao" method="post" action="{% url 'web:clarificar' item.pk %}" novalidate
+      hx-post="{% url 'web:clarificar' item.pk %}" hx-target="#clarificacao" hx-swap="outerHTML">
+  {% csrf_token %}
+  <p class="clarificacao__origem">Capturado {{ item.criado_em|idade }}: <q>{{ item.texto }}</q></p>
+  {% if form.non_field_errors %}<p class="erro" role="alert">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+
+  {% include "web/clarificacao/_campo.html" with campo=form.titulo %}
+  {% include "web/clarificacao/_campo.html" with campo=form.proxima_acao %}
+
+  <fieldset class="clarificacao__campo"{% if form.area.errors %} aria-describedby="erro-area"{% endif %}>
+    <legend class="clarificacao__rotulo">Área</legend>
+    <div class="clarificacao__areas">
+      {% for area in form.fields.area.queryset %}
+      <label class="clarificacao__area" style="--cor-area: {{ area.cor }}">
+        <input type="radio" name="area" value="{{ area.pk }}" required{% if form.area.value|stringformat:"s" == area.pk|stringformat:"s" %} checked{% endif %}>
+        <span>{{ area.nome }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% if form.area.errors %}<p id="erro-area" class="erro" role="alert">{{ form.area.errors|join:" " }}</p>{% endif %}
+  </fieldset>
+
+  <div class="clarificacao__linha">
+    {% include "web/clarificacao/_campo.html" with campo=form.prazo %}
+    {% include "web/clarificacao/_campo.html" with campo=form.blocos_estimados %}
+  </div>
+
+  <label class="clarificacao__check">
+    <input type="checkbox" name="prazo_rigido"{% if form.prazo_rigido.value %} checked{% endif %}>
+    Prazo rígido (não dá para passar da data)
+  </label>
+
+  <div class="clarificacao__campo"{% if form.esforco.errors %} aria-describedby="erro-esforco"{% endif %}>
+    <label class="clarificacao__rotulo" for="id_esforco">Esforço</label>
+    <select id="id_esforco" name="esforco">
+      {% for valor, rotulo in form.fields.esforco.choices %}<option value="{{ valor }}"{% if form.esforco.value == valor %} selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+    </select>
+    {% if form.esforco.errors %}<p id="erro-esforco" class="erro" role="alert">{{ form.esforco.errors|join:" " }}</p>{% endif %}
+  </div>
+
+  <div class="clarificacao__acoes">
+    <a class="botao" href="{% url 'web:entrada' %}">Voltar</a>
+    <button class="botao botao--primario" type="submit">Criar tarefa</button>
+  </div>
+</form>

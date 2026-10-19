@@ -1,14 +1,16 @@
 {% extends "web/base.html" %}
+{% load static %}
 {% block titulo %}Hoje{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/plano.css' %}">{% endblock %}
 {% block conteudo %}
 <header class="cabecalho">
   <div>
-    <p class="data">{% now "l, j \d\e F" %}</p>
+    <p class="data">{{ plano.dia|date:"l, j \d\e F" }}</p>
     <h1>Hoje</h1>
   </div>
   {% include "web/_botao_sair.html" %}
 </header>
-<div class="vazio">
-  <p>Nada planejado para hoje ainda.</p>
+<div id="plano" class="plano">
+  {% include "web/plano/_plano.html" %}
 </div>
 {% endblock %}
