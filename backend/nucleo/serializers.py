@@ -4,6 +4,7 @@ from . import prioridade as motor
 from .models import (
     Area,
     Bloco,
+    EventoTarefa,
     ItemCaptura,
     Perfil,
     Pessoa,
@@ -142,6 +143,15 @@ class TarefaSerializer(DoUsuarioMixin, serializers.ModelSerializer):
             "criada_em",
             "concluida_em",
         ]
+
+
+class EventoTarefaSerializer(serializers.ModelSerializer):
+    """Uma linha do histórico da tarefa (M18)."""
+
+    class Meta:
+        model = EventoTarefa
+        fields = ["tipo", "em", "dados"]
+        read_only_fields = fields
 
 
 class ClarificarSerializer(DoUsuarioMixin, serializers.Serializer):
