@@ -266,6 +266,7 @@ class EventoTarefa(models.Model):
         BLOCO = "bloco", "Bloco concluído"
         ADIADA = "adiada", "Adiada"
         CONCLUIDA = "concluida", "Concluída"
+        REABERTA = "reaberta", "Reaberta"
         INTERROMPIDA = "interrompida", "Interrompida"
         REPLANEJADA = "replanejada", "Replanejada"
 

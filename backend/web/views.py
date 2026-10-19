@@ -18,12 +18,6 @@ AVISO_CAPTURA = "Salvo na entrada"
 
 @require_GET
 @login_required
-def hoje(request):
-    return render(request, "web/hoje.html", {"aba": "hoje"})
-
-
-@require_GET
-@login_required
 def entrada(request):
     itens = [(item, ListaRapidaForm(request.user)) for item in services.caixa_de_entrada(request.user)]
     return render(request, "web/entrada.html", {"aba": "entrada", "itens": itens})
