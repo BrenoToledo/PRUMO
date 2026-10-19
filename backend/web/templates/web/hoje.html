@@ -2,7 +2,8 @@
 {% load static %}
 {% block titulo %}Hoje{% endblock %}
 {% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/plano.css' %}">
-<link rel="stylesheet" href="{% static 'web/telas/tarefas.css' %}">{% endblock %}
+<link rel="stylesheet" href="{% static 'web/telas/tarefas.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/revisao.css' %}">{% endblock %}
 {% block conteudo %}
 <header class="cabecalho">
   <div>
@@ -16,6 +17,10 @@
     {% include "web/_botao_sair.html" %}
   </div>
 </header>
+{% if intencao %}<section class="intencao" aria-labelledby="titulo-intencao">
+  <h2 id="titulo-intencao" class="intencao__rotulo">Intenção de hoje</h2>
+  <p class="intencao__texto">{{ intencao }}</p>
+</section>{% endif %}
 <div id="plano" class="plano">
   {% include "web/plano/_plano.html" %}
 </div>

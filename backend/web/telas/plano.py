@@ -33,6 +33,7 @@ def _contexto(usuario, **extra) -> dict:
         "sem_tarefas": not blocos and not services.tem_tarefas_para_planejar(usuario),
         "tem_planejados": bool(planejados),
         "proximo_id": planejados[0].pk if planejados and not em_foco else None,
+        "intencao": services.intencao_do_dia(usuario),  # da revisão de ontem (#17)
         **extra,
     }
 

@@ -33,6 +33,7 @@ AREAS_PADRAO = [
 ]
 DIAS_UTEIS = {0, 1, 2, 3, 4}  # seg a sex
 JANELA_REPLANEJAMENTO_DIAS = 14
+JANELA_INTENCAO_DIAS = 7  # a intenção de sexta ainda vale na segunda (e depois de um feriado)
 STATUS_ABERTOS = (Bloco.Status.PLANEJADO, Bloco.Status.EM_FOCO)
 
 
@@ -470,8 +471,20 @@ def salvar_revisao_diaria(
 
 
 def intencao_do_dia(usuario, dia: date | None = None) -> str:
-    """A intenção escrita na última revisão diária antes de `dia` (topo de Hoje)."""
-    raise NotImplementedError
+    """A intenção escrita na última revisão diária antes de `dia` (topo de Hoje), olhando até uma semana atrás."""
+    dia = dia or hoje()
+    revisao = (
+        Revisao.objects.filter(
+            usuario=usuario,
+            tipo=Revisao.Tipo.DIARIA,
+            data__lt=dia,
+            data__gte=dia - timedelta(days=JANELA_INTENCAO_DIAS),
+        )
+        .exclude(intencao_amanha="")
+        .order_by("-data")
+        .first()
+    )
+    return revisao.intencao_amanha if revisao else ""
 
 
 # --------------------------------------------------------------------------- adiar e cancelar
