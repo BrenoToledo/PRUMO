@@ -1,0 +1,122 @@
+<div id="detalhe-tarefa" class="detalhe">
+  <a class="voltar" href="{% url 'web:hoje' %}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+    Tarefa
+  </a>
+  <h1 class="detalhe__titulo">{{ tarefa.titulo }}</h1>
+  <p class="chips">
+    <span class="chip chip--area" style="--cor-area: {{ tarefa.area.cor }}">{{ tarefa.area.nome }}</span>
+    <span class="chip chip--{{ avaliacao.faixa }}">{{ avaliacao.rotulo }}</span>
+    {% if tarefa.status != "aberta" %}<span class="chip">{{ tarefa.get_status_display }}</span>{% endif %}
+  </p>
+
+  <section class="cartao" aria-labelledby="rotulo-acao">
+    <h2 id="rotulo-acao" class="rotulo">Próxima ação</h2>
+    <p class="detalhe__acao">{{ tarefa.proxima_acao }}</p>
+  </section>
+
+  <dl class="cartao fatos">
+    <div class="fatos__linha">
+      <dt>Prazo</dt>
+      <dd>{% if tarefa.prazo %}{{ tarefa.prazo|date:"j b" }} · {% if tarefa.prazo_rigido %}rígido{% else %}flexível{% endif %}{% else %}sem prazo{% endif %}</dd>
+    </div>
+    <div class="fatos__linha">
+      <dt>Projeto</dt>
+      <dd>{{ tarefa.projeto.nome|default:"nenhum" }}</dd>
+    </div>
+    {% if vinculos %}<div class="fatos__linha">
+      <dt>Pessoas</dt>
+      <dd>{% for v in vinculos %}{{ v.pessoa.nome }} · {{ v.get_relacao_display|lower }}{% if not forloop.last %}; {% endif %}{% endfor %}</dd>
+    </div>{% endif %}
+    <div class="fatos__linha">
+      <dt>Histórico</dt>
+      <dd>{% if tarefa.adiamentos %}adiada {{ tarefa.adiamentos }} vez{{ tarefa.adiamentos|pluralize:"es" }} · {% endif %}criada {{ tarefa.criada_em|date:"j b" }}</dd>
+    </div>
+  </dl>
+
+  <div class="cartao blocos">
+    <p class="blocos__linha"><span>Blocos</span><span>{{ tarefa.blocos_feitos }} de {{ tarefa.blocos_estimados }} feitos</span></p>
+    <progress class="barra" value="{{ tarefa.blocos_feitos }}" max="{{ tarefa.blocos_estimados }}" aria-label="Blocos feitos">{{ tarefa.blocos_feitos }} de {{ tarefa.blocos_estimados }}</progress>
+  </div>
+
+  <details class="porque"{% if not editando %} open{% endif %}>
+    <summary>
+      <span class="porque__nota porque__nota--{{ avaliacao.faixa }}">{{ avaliacao.prioridade }}</span>
+      <span class="porque__titulo">Por que {{ avaliacao.prioridade }}?</span>
+    </summary>
+    <p class="porque__sub">Sempre a mesma fórmula; a IA só sugere as respostas.</p>
+    <div class="cartao">
+      <p class="porque__linha"><span>Importância</span><span class="porque__valor">{{ avaliacao.importancia }}</span></p>
+      <dl class="porque__respostas">
+        {% for texto, valor in respostas %}<div class="fatos__linha"><dt>{{ texto }}</dt><dd>{{ valor }} de {{ nota_maxima }}</dd></div>{% endfor %}
+      </dl>
+    </div>
+    <div class="cartao">
+      <p class="porque__linha"><span>Urgência</span><span class="porque__valor">{{ avaliacao.urgencia }}</span></p>
+      <p class="porque__texto">{{ motivo_urgencia }}{% if folga_em_risco %} Abaixo de 1,2x a entrega está em risco.{% endif %}{% if tarefa.prazo %} Sobe sozinha perto do prazo.{% endif %}</p>
+    </div>
+    <p class="porque__conta">{{ conta }}</p>
+  </details>
+
+  {% if partes %}<section class="secao" aria-labelledby="titulo-partes">
+    <h2 id="titulo-partes">Partes</h2>
+    <ul class="cartao partes">
+      {% for parte in partes %}<li class="partes__item{% if parte.status == 'concluida' %} partes__item--feita{% endif %}">
+        <a href="{% url 'web:tarefa' parte.pk %}">{{ parte.titulo }}</a>
+        <span>{{ parte.blocos_estimados }} bloco{{ parte.blocos_estimados|pluralize }}</span>
+      </li>{% endfor %}
+    </ul>
+  </section>{% endif %}
+
+  {% if historico %}<section class="secao" aria-labelledby="titulo-historico">
+    <h2 id="titulo-historico">Histórico</h2>
+    <ol class="cartao historico">
+      {% for evento in historico %}<li class="fatos__linha">
+        <span>{{ evento.get_tipo_display }}</span>
+        <time datetime="{{ evento.em|date:'c' }}">{{ evento.em|date:"j b, H:i" }}</time>
+      </li>{% endfor %}
+    </ol>
+  </section>{% endif %}
+
+  <details class="editar"{% if editando %} open{% endif %}>
+    <summary class="botao">Editar tarefa</summary>
+    <form class="form-tarefa" method="post" action="{% url 'web:editar_tarefa' tarefa.pk %}" novalidate
+          hx-post="{% url 'web:editar_tarefa' tarefa.pk %}" hx-target="#detalhe-tarefa" hx-swap="outerHTML">
+      {% csrf_token %}
+      {% if form.errors %}<p class="erro" role="alert">Confira os campos marcados.</p>{% endif %}
+      {{ form.titulo.as_field_group }}
+      {{ form.proxima_acao.as_field_group }}
+      <div class="form-tarefa__par">
+        {{ form.area.as_field_group }}
+        {{ form.projeto.as_field_group }}
+      </div>
+      <div class="form-tarefa__par">
+        {{ form.prazo.as_field_group }}
+        <div class="form-tarefa__marca">{{ form.prazo_rigido }} {{ form.prazo_rigido.label_tag }}</div>
+      </div>
+      <div class="form-tarefa__par">
+        {{ form.blocos_estimados.as_field_group }}
+        {{ form.esforco.as_field_group }}
+      </div>
+      <p class="form-tarefa__grupo">Importância: de 0 (nada) a {{ nota_maxima }} (muito)</p>
+      {% for pergunta in form.perguntas %}{{ pergunta.as_field_group }}{% endfor %}
+      <button class="botao botao--primario" type="submit">Salvar e recalcular</button>
+    </form>
+  </details>
+
+  <div class="detalhe__acoes">
+    {% if tarefa.status == "aberta" %}
+    <form method="post" action="{% url 'web:concluir_tarefa' tarefa.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ aqui }}">
+      <button class="botao botao--primario" type="submit">Concluir tarefa</button>
+    </form>
+    {% elif tarefa.status == "concluida" %}
+    <form method="post" action="{% url 'web:reabrir_tarefa' tarefa.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ aqui }}">
+      <button class="botao" type="submit">Reabrir tarefa</button>
+    </form>
+    {% endif %}
+  </div>
+</div>

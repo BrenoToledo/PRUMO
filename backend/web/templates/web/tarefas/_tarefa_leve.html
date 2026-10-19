@@ -4,6 +4,6 @@
     {% csrf_token %}
     <button class="leve__circulo" type="submit" aria-label="Concluir: {{ tarefa.titulo }}" title="Concluir"></button>
   </form>
-  <span class="leve__titulo">{{ tarefa.titulo }}</span>
+  <a class="leve__titulo" href="{% url 'web:tarefa' tarefa.pk %}">{{ tarefa.titulo }}</a>
   {% if tarefa.minutos_estimados %}<span class="leve__tempo">{{ tarefa.minutos_estimados }} min</span>{% endif %}
 </div>
