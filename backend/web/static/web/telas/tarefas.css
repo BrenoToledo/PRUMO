@@ -1,0 +1,30 @@
+/* Tarefas: tarefas leves na tela Hoje (M01), detalhe (M04) e "por que esta prioridade" (M05). */
+
+/* Tarefas leves */
+.leves { margin: var(--e6) 0 var(--e4); }
+.leves__topo { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e3); margin-bottom: var(--e3); }
+.leves__topo h2 { font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); margin: 0; }
+.leves__dica { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.leves__lista { display: flex; flex-direction: column; gap: var(--e3); }
+.leve {
+  display: flex; align-items: center; gap: var(--e3);
+  min-height: 52px; padding: var(--e2) var(--e4);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+}
+.leve form { display: flex; }
+.leve__circulo {
+  flex: none; width: 24px; height: 24px; padding: 0; display: grid; place-items: center;
+  border: 2px solid var(--texto-secundario); border-radius: var(--raio-chip);
+  background: none; color: var(--texto-na-primaria); cursor: pointer;
+}
+.leve__circulo:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
+.leve__circulo--feito { border-color: var(--primaria); background: var(--primaria); cursor: default; }
+.leve__circulo svg { width: 14px; height: 14px; }
+.leve__titulo { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--texto); text-decoration: none; }
+.leve__tempo { flex: none; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.leve--feita { background: var(--primaria-suave); border-color: transparent; }
+.leve--feita .leve__titulo { color: var(--texto-secundario); text-decoration: line-through; }
+
+@media (hover: hover) {
+  .leve__circulo:hover { border-color: var(--primaria); }
+}
