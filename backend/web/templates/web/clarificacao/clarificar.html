@@ -1,0 +1,14 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Clarificar item{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/clarificacao.css' %}">{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Clarificar item</h1>
+    <p class="cabecalho__sub">Transforme a ideia numa tarefa com a próxima ação clara.</p>
+  </div>
+  {% include "web/_botao_sair.html" %}
+</header>
+{% include "web/clarificacao/_form.html" %}
+{% endblock %}
