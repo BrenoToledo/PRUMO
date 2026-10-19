@@ -54,8 +54,8 @@ class ResumoRevisaoDiaria(TypedDict):
 class PropostaReplanejamento(TypedDict):
     """`services.meu_dia_quebrou`: o que fica hoje, o que muda de dia e quem é afetado (M13, M14)."""
 
-    fica_hoje: list[dict]  # {tarefa, blocos}
-    movidos: list[dict]  # {tarefa, titulo, blocos, para, em_risco}
+    fica_hoje: list[dict]  # {tarefa, titulo, blocos}
+    movidos: list[dict]  # {tarefa, titulo, blocos, de, para, em_risco}; `de` é o início do 1º bloco que sai de hoje
     expectativas_em_risco: list[dict]  # {tarefa, titulo, nova_data, prazo, pessoas}
 
 
@@ -95,6 +95,10 @@ SERVICOS: dict[str, str] = {
     # Replanejamento e revisão (R2)
     "meu_dia_quebrou": "(usuario, *, blocos_uteis: 'int', motivo: 'str' = '', dia: 'date | None' = None) "
     "-> 'PropostaReplanejamento'",
+    # Imprevistos (P6): simular não grava nada; `meu_dia_quebrou` aplica a mesma proposta
+    "simular_meu_dia_quebrou": "(usuario, *, blocos_uteis: 'int', dia: 'date | None' = None) "
+    "-> 'PropostaReplanejamento'",
+    "distracoes_do_bloco": "(bloco: 'Bloco') -> 'list[ItemCaptura]'",
     "resumo_revisao_diaria": "(usuario, dia: 'date | None' = None) -> 'ResumoRevisaoDiaria'",
     "salvar_revisao_diaria": "(usuario, *, dia: 'date | None' = None, atencao: 'str' = '', "
     "intencao_amanha: 'str' = '', notas: 'str' = '') -> 'Revisao'",
@@ -171,4 +175,4 @@ CAMPOS_HOJE = ("dia", "capacidade", "planejados", "ocupacao", "folga_diaria", "b
 # módulo, os próprios templates (`web/templates/web/<modulo>/`), o próprio CSS (`web/static/web/telas/<modulo>.css`)
 # e os próprios testes (`web/tests/test_<modulo>.py`).
 
-TELAS_WEB = ("clarificacao", "plano", "foco", "tarefas", "perfil", "pwa")
+TELAS_WEB = ("clarificacao", "plano", "foco", "tarefas", "perfil", "pwa", "imprevistos")

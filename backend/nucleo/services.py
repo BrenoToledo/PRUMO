@@ -416,6 +416,16 @@ def meu_dia_quebrou(usuario, *, blocos_uteis: int, motivo: str = "", dia: date |
     }
 
 
+def simular_meu_dia_quebrou(usuario, *, blocos_uteis: int, dia: date | None = None) -> PropostaReplanejamento:
+    """A proposta de `meu_dia_quebrou` sem gravar nada (M14)."""
+    raise NotImplementedError  # a implementar (P6, #13)
+
+
+def distracoes_do_bloco(bloco: Bloco) -> list[ItemCaptura]:
+    """O que foi anotado no foco (origem `foco`) enquanto o bloco esteve em foco, mais antigos primeiro (M09)."""
+    raise NotImplementedError  # a implementar (P6, #15)
+
+
 # --------------------------------------------------------------------------- revisão diária
 def resumo_revisao_diaria(usuario, dia: date | None = None) -> ResumoRevisaoDiaria:
     dia = dia or hoje()

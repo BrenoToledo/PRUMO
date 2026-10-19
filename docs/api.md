@@ -29,6 +29,7 @@ Base: `/api/`. Autenticação por sessão ou token (`POST /api/token/` com `user
 | `GET /hoje/?dia=AAAA-MM-DD` | Capacidade, ocupação, blocos e tarefas leves | M01, D01 |
 | `POST /hoje/gerar/?dia=` | Refaz os blocos ainda não iniciados a partir das prioridades | M01 |
 | `POST /hoje/meu-dia-quebrou/?dia=` `{blocos_uteis, motivo?}` | Mantém hoje o que cabe, move o resto e devolve as expectativas em risco | M13, M14 |
+| `POST /hoje/meu-dia-quebrou/simular/?dia=` `{blocos_uteis}` | A mesma proposta, sem gravar nada | M14 |
 | `GET /blocos/em-foco/` | O bloco em foco agora (campos do bloco) ou `204` sem corpo | M07, M08 |
 | `POST /blocos/{id}/iniciar/` | Começa o foco | M07, M08 |
 | `POST /blocos/{id}/concluir/` `{resultado: concluiu\|avancou\|nao_avancou, blocos_restantes?, nova_proxima_acao?}` | Fecha o bloco e atualiza a tarefa | M11 |
