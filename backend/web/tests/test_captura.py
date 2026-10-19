@@ -1,6 +1,7 @@
 """Captura rápida por texto (#2)."""
 
 import json
+import re
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -34,8 +35,7 @@ def test_captura_via_htmx_salva_na_entrada(logado, usuario):
     gatilho = json.loads(resp.headers["HX-Trigger"])
     assert gatilho["capturado"]["mensagem"] == "Salvo na entrada"
     html = resp.content.decode()
-    assert 'name="texto"' in html  # formulário limpo para a próxima captura
-    assert "Ligar para o seguro" not in html
+    assert re.search(r'name="texto"[^>]*></textarea>', html)  # formulário limpo para a próxima captura
 
 
 @pytest.mark.parametrize("texto", ["", "   ", "\n"])
@@ -82,3 +82,12 @@ def test_botao_de_captura_em_todas_as_telas(logado, nome):
     assert 'id="folha-captura"' in html
     assert 'hx-post="' + reverse("web:capturar") + '"' in html
     assert "web/app.js" in html
+
+
+def test_captura_atualiza_lista_e_contadores_na_tela(logado):
+    resp = logado.post(reverse("web:capturar"), {"texto": "Pagar boleto"}, **HTMX)
+
+    html = resp.content.decode()
+    assert 'hx-swap-oob="afterbegin:#lista-entrada"' in html
+    assert 'id="nav-contador" hx-swap-oob="true"' in html
+    assert ">1<" in html

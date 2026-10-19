@@ -46,6 +46,16 @@
     if (inicial && inicial.textContent.trim()) aviso(inicial.textContent.trim());
   });
 
+  // Avisos temporários na lista (ex.: "Item descartado · Desfazer") somem sozinhos.
+  document.addEventListener("htmx:load", function (e) {
+    const el = e.detail.elt;
+    if (el && el.dataset && el.dataset.someEm) {
+      setTimeout(function () {
+        if (el.isConnected) el.remove();
+      }, Number(el.dataset.someEm));
+    }
+  });
+
   // Erro de validação (422) também troca o formulário, para mostrar a mensagem.
   document.addEventListener("htmx:beforeSwap", function (e) {
     if (e.detail.xhr.status === 422) {
