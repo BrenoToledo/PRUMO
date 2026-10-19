@@ -15,7 +15,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | Branch | Issues | Lado | Depende de | Arquivos que só ela edita |
 | --- | --- | --- | --- | --- |
 | `contratos-api` | — | contrato | P1 (já no main) | `nucleo/contratos.py`, `nucleo/tests/test_contratos.py`, `docs/contratos.md` |
-| `backend-r1` | apoio a #6, #7, #8, #11 | backend | contratos | corpo dos esboços em `services.py`, `api/`, `docs/api.md`, `nucleo/tests/test_*` novos |
+| `backend-r1` | apoio a #6, #7, #8, #11 | backend | contratos | corpo dos esboços em `services.py`, REST em `nucleo/views.py`, `nucleo/serializers.py` e `nucleo/urls.py`, `docs/api.md`, `nucleo/tests/test_*` novos |
 | `pacote-2-do-item-ao-plano` | #4, #5 | interface | contratos | `web/telas/clarificacao.py`, `web/telas/plano.py`, `web/templates/web/clarificacao/`, `web/templates/web/plano/` (e `hoje.html`), `web/tests/test_clarificacao.py`, `web/tests/test_plano.py` |
 | `pacote-3-execucao` | #6, #7 | interface | contratos (+ `bloco_em_foco` do backend-r1) | `web/telas/foco.py`, `web/templates/web/foco/`, `web/tests/test_foco.py` |
 | `pacote-4-no-ar` | #9, #10 | infra | nada | `deploy/`, `web/templates/web/_pwa_head.html`, manifesto e service worker em `web/static/web/pwa/` |
