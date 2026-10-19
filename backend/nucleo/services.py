@@ -188,6 +188,19 @@ def descartar(item: ItemCaptura) -> None:
     item.save(update_fields=["status"])
 
 
+def restaurar_item(item: ItemCaptura) -> None:
+    """Desfaz um descarte: o item volta para a caixa de entrada."""
+    if item.status != ItemCaptura.Status.DESCARTADO:
+        raise ValueError("só um item descartado pode ser restaurado")
+    item.status = ItemCaptura.Status.PENDENTE
+    item.save(update_fields=["status"])
+
+
+def caixa_de_entrada(usuario):
+    """Itens capturados e ainda não decididos, mais novos primeiro."""
+    return ItemCaptura.objects.filter(usuario=usuario, status=ItemCaptura.Status.PENDENTE).order_by("-criado_em", "-pk")
+
+
 # --------------------------------------------------------------------------- plano do dia
 def tarefas_leves(usuario):
     return Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA, esforco=Esforco.BAIXO)

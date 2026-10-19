@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "django_filters",
     "nucleo",
+    "web",
 ]
 
 MIDDLEWARE = [
@@ -53,6 +54,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "web.context_processors.captura",
             ],
         },
     },
@@ -73,6 +75,10 @@ LANGUAGE_CODE = "pt-br"
 TIME_ZONE = os.environ.get("DJANGO_TIME_ZONE", "America/Sao_Paulo")
 USE_I18N = True
 USE_TZ = True
+
+LOGIN_URL = "web:login"
+LOGIN_REDIRECT_URL = "web:hoje"
+LOGOUT_REDIRECT_URL = "web:login"
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"

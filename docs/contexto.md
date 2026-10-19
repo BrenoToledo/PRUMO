@@ -65,6 +65,7 @@ Prumo é um gerenciador de tarefas e de atenção com IA. Nasceu de uma leitura 
 | `backend/nucleo/models.py` | Modelo de dados |
 | `backend/nucleo/views.py`, `urls.py` | API REST (`docs/api.md`) |
 | `backend/nucleo/tests/` | Testes |
+| `backend/web/` | Interface web (templates + HTMX): login, layout, telas; tokens em `static/web/tokens.css` |
 | `design/` | Protótipo FigCraft, imagens das telas (M01–M35, D01–D04) e o gerador |
 | `docs/especificacao.md` | Especificação completa (conceitos, requisitos RF/RNF, telas, interações) |
 | `docs/plano.md` | Releases, ordem das issues, Definição de Pronto |

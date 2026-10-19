@@ -1,0 +1,4 @@
+<form class="sair-celular" method="post" action="{% url 'web:sair' %}">
+  {% csrf_token %}
+  <button class="botao botao--texto" type="submit">Sair</button>
+</form>

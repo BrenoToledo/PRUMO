@@ -1,0 +1,3 @@
+{% load web_extras %}<span id="contador-entrada" hx-swap-oob="true">{{ pendentes_entrada|itens }}</span>
+<span id="nav-contador" hx-swap-oob="true">{% include "web/_badge_entrada.html" %}</span>
+<div id="vazio-entrada" class="vazio" hx-swap-oob="true"{% if pendentes_entrada %} hidden{% endif %}>{% include "web/_vazio_entrada.html" %}</div>

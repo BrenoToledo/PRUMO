@@ -1,0 +1,86 @@
+/* Tokens do design system do Prumo (especificação, seção 7.1). */
+
+/* Inter servida localmente (sem CDN externo: privacidade e uso instalado no celular). Licença: vendor/inter-LICENSE.txt */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("vendor/inter-latin-wght-normal.woff2") format("woff2");
+}
+:root {
+  color-scheme: light dark;
+
+  --primaria: #0F766E;
+  --primaria-suave: #CCFBF1;
+  --fundo: #FAFAF7;
+  --superficie: #FFFFFF;
+  --borda: #E5E4DF;
+  --texto: #1C1C1A;
+  --texto-secundario: #6B6A65;
+  --texto-na-primaria: #FFFFFF;
+
+  --prioridade-critica: #DC2626;
+  --prioridade-alta: #EA580C;
+  --prioridade-media: #CA8A04;
+  --prioridade-baixa: #64748B;
+  --sucesso: #16A34A;
+  --aviso: #D97706;
+  --info: #2563EB;
+
+  --area-trabalho: #3B82F6;
+  --area-educacao: #EC4899;
+  --area-saude: #10B981;
+  --area-familia: #F59E0B;
+  --area-religiao: #8B5CF6;
+  --area-financas: #84CC16;
+  --area-casa: #F97316;
+  --area-pessoal: #06B6D4;
+
+  /* Escala tipográfica: tamanho / altura de linha / peso */
+  --display-tam: 28px; --display-alt: 34px; --display-peso: 600;
+  --titulo-tam: 20px; --titulo-alt: 28px; --titulo-peso: 600;
+  --subtitulo-tam: 16px; --subtitulo-alt: 24px; --subtitulo-peso: 600;
+  --corpo-tam: 16px; --corpo-alt: 24px; --corpo-peso: 400;
+  --legenda-tam: 13px; --legenda-alt: 18px; --legenda-peso: 400;
+  --micro-tam: 11px; --micro-alt: 16px; --micro-peso: 500;
+
+  --e1: 4px;
+  --e2: 8px;
+  --e3: 12px;
+  --e4: 16px;
+  --e6: 24px;
+  --e8: 32px;
+  --e12: 48px;
+
+  --raio-campo: 8px;
+  --raio-card: 12px;
+  --raio-chip: 999px;
+  --transicao: 150ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primaria: #2DD4BF;
+    --primaria-suave: #134E4A;
+    --fundo: #121413;
+    --superficie: #1B1E1D;
+    --borda: #2A2E2C;
+    --texto: #ECECE8;
+    --texto-secundario: #9A9C98;
+    --texto-na-primaria: #121413;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --corpo-tam: 15px;
+    --corpo-alt: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transicao: 0ms;
+  }
+}

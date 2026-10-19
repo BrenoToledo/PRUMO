@@ -1,0 +1,14 @@
+{% extends "web/base.html" %}
+{% block titulo %}Hoje{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <p class="data">{% now "l, j \d\e F" %}</p>
+    <h1>Hoje</h1>
+  </div>
+  {% include "web/_botao_sair.html" %}
+</header>
+<div class="vazio">
+  <p>Nada planejado para hoje ainda.</p>
+</div>
+{% endblock %}

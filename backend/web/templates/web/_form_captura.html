@@ -1,0 +1,13 @@
+<form id="form-captura" class="captura__form" method="post" action="{% url 'web:capturar' %}"
+      hx-post="{% url 'web:capturar' %}" hx-swap="outerHTML">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <label class="visualmente-oculto" for="id_texto">Texto da captura</label>
+  <textarea id="id_texto" name="texto" rows="3" maxlength="2000" placeholder="O que está na sua cabeça?"
+            {% if form_captura.errors %}aria-invalid="true" aria-describedby="erro-captura"{% endif %}>{{ form_captura.texto.value|default:'' }}</textarea>
+  {% if form_captura.errors %}
+    <p id="erro-captura" class="erro" role="alert">{{ form_captura.errors.texto.0 }}</p>
+  {% endif %}
+  <p class="captura__dica">Sem classificar agora. Você decide na revisão da caixa de entrada.</p>
+  <button class="botao botao--primario" type="submit">Salvar na entrada</button>
+</form>
