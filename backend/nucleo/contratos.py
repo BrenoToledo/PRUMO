@@ -171,4 +171,4 @@ CAMPOS_HOJE = ("dia", "capacidade", "planejados", "ocupacao", "folga_diaria", "b
 # módulo, os próprios templates (`web/templates/web/<modulo>/`), o próprio CSS (`web/static/web/telas/<modulo>.css`)
 # e os próprios testes (`web/tests/test_<modulo>.py`).
 
-TELAS_WEB = ("clarificacao", "plano", "foco", "tarefas", "perfil")
+TELAS_WEB = ("clarificacao", "plano", "foco", "tarefas", "perfil", "pwa")
