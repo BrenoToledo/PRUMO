@@ -80,6 +80,7 @@ SERVICOS: dict[str, str] = {
     # Plano do dia (P2 usa)
     "hoje": "() -> 'date'",
     "tarefas_leves": "(usuario) -> 'QuerySet[Tarefa]'",
+    "tem_tarefas_para_planejar": "(usuario) -> 'bool'",
     "plano_do_dia": "(usuario, dia: 'date | None' = None) -> 'PlanoDoDia'",
     "gerar_plano_do_dia": "(usuario, dia: 'date | None' = None) -> 'plan.Plano'",
     # Execução dos blocos (P3 usa)

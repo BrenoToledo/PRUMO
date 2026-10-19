@@ -3,7 +3,7 @@
     <span class="card-bloco__horario">{{ bloco.inicio_planejado|time:"H:i" }} – {{ bloco.fim_planejado|time:"H:i" }}</span>
     <span class="card-bloco__status">{% if bloco.pk == proximo_id %}Agora{% else %}{{ bloco.get_status_display }}{% endif %}</span>
   </div>
-  <h3 class="card-bloco__titulo">{{ tarefa.titulo }}</h3>
+  <h3 class="card-bloco__titulo"><a href="{% url 'web:tarefa' tarefa.pk %}">{{ tarefa.titulo }}</a></h3>
   <p class="card-bloco__acao">Próxima ação: {{ tarefa.proxima_acao }}</p>
   <div class="card-bloco__chips">
     <span class="chip-area">{{ tarefa.area.nome }}</span>

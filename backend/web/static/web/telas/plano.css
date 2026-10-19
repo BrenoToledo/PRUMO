@@ -1,4 +1,4 @@
-/* Tela Hoje: capacidade do dia, cards de bloco e tarefas leves (M01, D01). */
+/* Tela Hoje: capacidade do dia, cards de bloco (M01, D01). */
 .plano { display: flex; flex-direction: column; gap: var(--e4); margin-bottom: var(--e12); }
 .plano__resultado {
   margin: 0; padding: var(--e2) var(--e3); border-radius: var(--raio-campo);
@@ -32,8 +32,7 @@
 .capacidade__preenchido { display: block; height: 100%; border-radius: var(--raio-chip); background: var(--primaria); }
 .capacidade__folga { margin: 0; color: var(--texto-secundario); font-size: var(--micro-tam); line-height: var(--micro-alt); }
 
-.plano__blocos,
-.plano__leves { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e3); }
+.plano__blocos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e3); }
 
 .card-bloco {
   background: var(--superficie); border: 1px solid var(--borda); border-left: 4px solid var(--cor-area);
@@ -50,6 +49,8 @@
 .card-bloco--agora .card-bloco__status { color: var(--primaria); }
 .card-bloco__iniciar { margin-top: var(--e2); }
 .card-bloco__iniciar .botao { width: 100%; }
+.card-bloco__titulo a { color: inherit; text-decoration: none; }
+.card-bloco__titulo a:hover { text-decoration: underline; }
 .card-bloco__titulo { margin: 0; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); overflow-wrap: anywhere; }
 .card-bloco__acao { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); overflow-wrap: anywhere; }
 .card-bloco__chips { display: flex; align-items: center; flex-wrap: wrap; gap: var(--e2); margin-top: var(--e1); }
@@ -67,10 +68,10 @@
 .chip-prioridade--alta { --cor-faixa: var(--prioridade-alta); }
 .chip-prioridade--media { --cor-faixa: var(--prioridade-media); }
 
-.leve {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--e3);
-  min-height: 48px; padding: var(--e2) var(--e4);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+.cabecalho__acoes { display: flex; align-items: center; gap: var(--e2); }
+.botao-icone {
+  display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px;
+  border-radius: var(--raio-chip); color: var(--texto-secundario);
 }
-.leve__titulo { overflow-wrap: anywhere; }
-.leve__tempo { flex: none; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.botao-icone:hover { color: var(--texto); background: var(--superficie); }
+.botao-icone:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }

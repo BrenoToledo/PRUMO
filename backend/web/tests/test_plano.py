@@ -252,3 +252,22 @@ def test_botao_comecar_foco_so_com_a_rota_de_foco(logado, usuario):
         assert "Começar foco" not in html
     else:
         assert f'action="{url_iniciar}"' in html and "Começar foco" in html
+
+
+# ---------------------------------------------------------------- junção com foco, tarefas e perfil
+def test_hoje_liga_detalhe_da_tarefa_perfil_e_concluir_leve(logado, usuario):
+    leve = tarefa(usuario, titulo="Pagar boleto da luz", area="Pessoal", esforco=Esforco.BAIXO, minutos_estimados=5)
+
+    html = hoje_html(logado)
+
+    assert reverse("web:perfil") in html
+    assert reverse("web:concluir_tarefa", args=[leve.pk]) in html
+    assert reverse("web:tarefa", args=[leve.pk]) in html
+
+
+@freeze_time(SEGUNDA)
+def test_card_do_bloco_abre_o_detalhe_da_tarefa(logado, usuario):
+    t = tarefa(usuario, titulo="Escrever capítulo 3")
+    services.gerar_plano_do_dia(usuario)
+
+    assert reverse("web:tarefa", args=[t.pk]) in hoje_html(logado)
