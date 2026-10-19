@@ -34,7 +34,7 @@ services:
   backup:
     image: postgres:16
     restart: unless-stopped
-    entrypoint: ["sh", "/backup.sh"]
+    entrypoint: ["bash", "/backup.sh"]
     environment:
       PGHOST: db
       PGUSER: ${POSTGRES_USER:-prumo}
