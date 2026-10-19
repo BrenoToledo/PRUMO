@@ -308,25 +308,45 @@ def sair_do_bloco(bloco: Bloco, motivo: str) -> Bloco:
 
 
 def bloco_em_foco(usuario) -> Bloco | None:
-    """O bloco que está em foco agora, se houver (M07, M08). A implementar na branch backend-r1."""
-    raise NotImplementedError
+    """O bloco que está em foco agora, se houver (M07, M08)."""
+    return (
+        Bloco.objects.filter(usuario=usuario, status=Bloco.Status.EM_FOCO)
+        .select_related("tarefa", "tarefa__area")
+        .order_by("-inicio_real", "-pk")
+        .first()
+    )
 
 
 # --------------------------------------------------------------------------- tarefas
-# Esboços do contrato: a branch backend-r1 escreve o corpo sem mudar a assinatura (ver docs/contratos.md).
+@transaction.atomic
 def concluir_tarefa(tarefa: Tarefa) -> Tarefa:
-    """Marca a tarefa como concluída, grava `concluida_em` e o evento CONCLUIDA."""
-    raise NotImplementedError
+    """Marca a tarefa como concluída, grava `concluida_em` e o evento CONCLUIDA; tira os blocos planejados."""
+    if tarefa.status != Tarefa.Status.ABERTA:
+        raise ValueError("só uma tarefa aberta pode ser concluída")
+    tarefa.status, tarefa.concluida_em = Tarefa.Status.CONCLUIDA, timezone.now()
+    tarefa.save(update_fields=["status", "concluida_em"])
+    planejados = tarefa.blocos.filter(status=Bloco.Status.PLANEJADO)
+    removidos = planejados.count()
+    planejados.delete()
+    evento(tarefa, EventoTarefa.Tipo.CONCLUIDA, blocos_removidos=removidos)
+    return tarefa
 
 
+@transaction.atomic
 def reabrir_tarefa(tarefa: Tarefa) -> Tarefa:
-    """Desfaz a conclusão: a tarefa volta a aberta e o evento REABERTA é gravado."""
-    raise NotImplementedError
+    """Desfaz a conclusão: a tarefa volta a aberta, o evento REABERTA é gravado e a prioridade é recalculada."""
+    if tarefa.status != Tarefa.Status.CONCLUIDA:
+        raise ValueError("só uma tarefa concluída pode ser reaberta")
+    tarefa.status, tarefa.concluida_em = Tarefa.Status.ABERTA, None
+    tarefa.save(update_fields=["status", "concluida_em"])
+    evento(tarefa, EventoTarefa.Tipo.REABERTA)
+    recalcular_prioridade(tarefa)
+    return tarefa
 
 
 def historico_da_tarefa(tarefa: Tarefa) -> list[EventoTarefa]:
     """Eventos da tarefa, mais antigos primeiro (M18)."""
-    raise NotImplementedError
+    return list(tarefa.eventos.order_by("em", "pk"))
 
 
 # --------------------------------------------------------------------------- meu dia quebrou

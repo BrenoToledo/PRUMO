@@ -1,5 +1,6 @@
 from datetime import date
 
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action, api_view
@@ -14,6 +15,7 @@ from .serializers import (
     BlocoSerializer,
     ClarificarSerializer,
     ConcluirBlocoSerializer,
+    EventoTarefaSerializer,
     ItemCapturaSerializer,
     ListaRapidaSerializer,
     MeuDiaQuebrouSerializer,
@@ -127,8 +129,42 @@ class TarefaViewSet(DoUsuarioViewSet):
         services.recalcular_prioridade(tarefa)
         services.evento(tarefa, "criada", origem="api")
 
+    @transaction.atomic
     def perform_update(self, serializer):
-        services.recalcular_prioridade(serializer.save())
+        """Mudar o status pelo PATCH passa pelos serviços, que gravam `concluida_em` e o evento da tarefa."""
+        anterior = serializer.instance.status
+        novo = serializer.validated_data.pop("status", anterior)
+        tarefa = serializer.save()
+        if anterior == Tarefa.Status.ABERTA and novo == Tarefa.Status.CONCLUIDA:
+            services.recalcular_prioridade(tarefa)
+            services.concluir_tarefa(tarefa)
+        elif anterior == Tarefa.Status.CONCLUIDA and novo == Tarefa.Status.ABERTA:
+            services.reabrir_tarefa(tarefa)
+        else:
+            if novo != anterior:
+                tarefa.status = novo
+                tarefa.save(update_fields=["status"])
+            services.recalcular_prioridade(tarefa)
+
+    def _executa(self, fn):
+        try:
+            tarefa = fn(self.get_object())
+        except ValueError as exc:
+            return _erro(exc)
+        return Response(TarefaSerializer(tarefa, context={"request": self.request}).data)
+
+    @action(detail=True, methods=["post"])
+    def concluir(self, request, pk=None):
+        return self._executa(services.concluir_tarefa)
+
+    @action(detail=True, methods=["post"])
+    def reabrir(self, request, pk=None):
+        return self._executa(services.reabrir_tarefa)
+
+    @action(detail=True, methods=["get"])
+    def historico(self, request, pk=None):
+        """Eventos da tarefa, mais antigos primeiro (M18)."""
+        return Response(EventoTarefaSerializer(services.historico_da_tarefa(self.get_object()), many=True).data)
 
     @action(detail=True, methods=["get"])
     def prioridade(self, request, pk=None):
@@ -200,6 +236,14 @@ class BlocoViewSet(viewsets.ReadOnlyModelViewSet):
         except ValueError as exc:
             return _erro(exc)
         return Response(BlocoSerializer(bloco, context={"request": self.request}).data)
+
+    @action(detail=False, methods=["get"], url_path="em-foco")
+    def em_foco(self, request):
+        """O bloco em foco agora (M07, M08), ou 204 sem corpo."""
+        bloco = services.bloco_em_foco(request.user)
+        if bloco is None:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(BlocoSerializer(bloco, context={"request": request}).data)
 
     @action(detail=True, methods=["post"])
     def iniciar(self, request, pk=None):
