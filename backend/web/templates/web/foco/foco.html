@@ -1,0 +1,46 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}{{ timer.restante }} · Foco{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/foco.css' %}">{% endblock %}
+{% block corpo %}
+<main class="foco">
+  <header class="foco__topo">
+    <p class="foco__rotulo">Bloco {{ numero }} de {{ total }} · {{ bloco.inicio_planejado|date:"H:i" }}–{{ bloco.fim_planejado|date:"H:i" }}</p>
+    <a class="botao botao--texto" href="{% url 'web:foco' %}?sair=1" data-abrir-sair aria-haspopup="dialog" aria-controls="dialogo-sair">Sair</a>
+  </header>
+
+  <div class="foco__timer{% if timer.esgotado %} foco__timer--fim{% endif %}" data-timer
+       data-termino="{{ timer.termino }}" data-duracao="{{ timer.duracao }}" data-agora="{{ timer.agora }}">
+    <svg class="foco__anel" viewBox="0 0 220 220" aria-hidden="true">
+      <circle class="foco__trilho" cx="110" cy="110" r="104"/>
+      <circle class="foco__progresso" cx="110" cy="110" r="104" pathLength="100"
+              stroke-dasharray="100" stroke-dashoffset="{{ timer.offset }}" data-arco/>
+    </svg>
+    <p class="foco__tempo" role="timer"><span class="foco__numeros" data-tempo>{{ timer.restante }}</span><span class="foco__legenda" data-legenda>{% if timer.esgotado %}tempo do bloco esgotado{% else %}restantes{% endif %}</span></p>
+  </div>
+
+  <section class="foco__intencao" aria-labelledby="intencao">
+    <p class="foco__rotulo" id="intencao">Intenção</p>
+    <h1>{{ tarefa.titulo }}</h1>
+  </section>
+
+  <section class="foco__caixa" aria-labelledby="primeiro-passo">
+    <p class="foco__rotulo" id="primeiro-passo">Primeiro passo</p>
+    <p>{{ tarefa.proxima_acao }}</p>
+  </section>
+
+  <div class="foco__acoes">
+    <a class="botao botao--primario" href="{% url 'web:foco' %}?fim=1">Concluir bloco</a>
+  </div>
+
+  <dialog id="dialogo-sair" class="foco__dialogo" aria-labelledby="titulo-sair"{% if sair_aberto %} open{% endif %}>
+    <h2 id="titulo-sair">Sair do bloco?</h2>
+    <p class="foco__dica">O tempo focado até agora fica registrado no planejado vs. real.</p>
+    {% include "web/foco/_form_sair.html" %}
+    <form method="dialog">
+      <button class="botao botao--primario foco__largo" type="submit" autofocus>Continuar focado</button>
+    </form>
+  </dialog>
+</main>
+{% endblock %}
+{% block scripts %}<script src="{% static 'web/telas/foco.js' %}" defer></script>{% endblock %}
