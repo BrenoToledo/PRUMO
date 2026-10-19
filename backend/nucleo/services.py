@@ -351,9 +351,8 @@ def historico_da_tarefa(tarefa: Tarefa) -> list[EventoTarefa]:
 
 # --------------------------------------------------------------------------- meu dia quebrou
 @transaction.atomic
-def meu_dia_quebrou(usuario, *, blocos_uteis: int, motivo: str = "", dia: date | None = None) -> PropostaReplanejamento:
-    """Mantém hoje o que cabe e move o resto para os próximos dias livres, sem culpa."""
-    dia = dia or hoje()
+def _proposta_de_replanejamento(usuario, blocos_uteis: int, dia: date) -> dict:
+    """Calcula o que fica hoje e o que muda de dia, sem gravar. Base de simular e aplicar."""
     pendentes_qs = _blocos_do_dia(usuario, dia).filter(status=Bloco.Status.PLANEJADO).select_related("tarefa")
     por_tarefa: dict[int, list[Bloco]] = defaultdict(list)
     for b in pendentes_qs:
@@ -370,21 +369,64 @@ def meu_dia_quebrou(usuario, *, blocos_uteis: int, motivo: str = "", dia: date |
             0, capacidade_do_dia(usuario, d) - _blocos_do_dia(usuario, d).filter(status__in=STATUS_ABERTOS).count()
         )
     fica, movidos = plan.replanejar(dia, pendentes, blocos_uteis, livres)
-
     manter = defaultdict(int)
     for m in fica:
         manter[m.tarefa_id] += m.blocos
-    for tid, bs in por_tarefa.items():
-        for b in bs[manter[tid] :]:
+    saem = {tid: bs[manter[tid] :] for tid, bs in por_tarefa.items()}
+    return {"tarefas": tarefas, "fica": fica, "movidos": movidos, "saem": saem}
+
+
+def _expectativa_em_risco(tarefa: Tarefa, para: date) -> dict:
+    pessoas = [
+        v.pessoa.nome
+        for v in tarefa.vinculos.filter(relacao=TarefaPessoa.Relacao.DEPENDE_DE_MIM).select_related("pessoa")
+    ]
+    return {"tarefa": tarefa.id, "titulo": tarefa.titulo, "nova_data": para, "prazo": tarefa.prazo, "pessoas": pessoas}
+
+
+def _formatar_proposta(calculo: dict) -> PropostaReplanejamento:
+    tarefas, saem = calculo["tarefas"], calculo["saem"]
+    return {
+        "fica_hoje": [
+            {"tarefa": m.tarefa_id, "titulo": tarefas[m.tarefa_id].titulo, "blocos": m.blocos} for m in calculo["fica"]
+        ],
+        "movidos": [
+            {
+                "tarefa": m.tarefa_id,
+                "titulo": tarefas[m.tarefa_id].titulo,
+                "blocos": m.blocos,
+                "de": saem[m.tarefa_id][0].inicio_planejado,
+                "para": m.para,
+                "em_risco": m.em_risco,
+            }
+            for m in calculo["movidos"]
+        ],
+        "expectativas_em_risco": [
+            _expectativa_em_risco(tarefas[m.tarefa_id], m.para) for m in calculo["movidos"] if m.em_risco
+        ],
+    }
+
+
+def simular_meu_dia_quebrou(usuario, *, blocos_uteis: int, dia: date | None = None) -> PropostaReplanejamento:
+    """A proposta de `meu_dia_quebrou` sem gravar nada (M14)."""
+    return _formatar_proposta(_proposta_de_replanejamento(usuario, blocos_uteis, dia or hoje()))
+
+
+@transaction.atomic
+def meu_dia_quebrou(usuario, *, blocos_uteis: int, motivo: str = "", dia: date | None = None) -> PropostaReplanejamento:
+    """Mantém hoje o que cabe e move o resto para os próximos dias livres, sem culpa."""
+    calculo = _proposta_de_replanejamento(usuario, blocos_uteis, dia or hoje())
+    proposta = _formatar_proposta(calculo)  # antes de apagar: `de` vem dos blocos que saem de hoje
+    for bs in calculo["saem"].values():
+        for b in bs:
             b.delete()
 
     jornada = jornada_de(perfil_de(usuario))
     passo = timedelta(minutes=jornada.duracao_bloco_min + plan.INTERVALO_ENTRE_BLOCOS_MIN)
     duracao = timedelta(minutes=jornada.duracao_bloco_min)
     tz = timezone.get_current_timezone()
-    em_risco = []
-    for m in movidos:
-        t = tarefas[m.tarefa_id]
+    for m in calculo["movidos"]:
+        t = calculo["tarefas"][m.tarefa_id]
         for _ in range(m.blocos):
             n = _blocos_do_dia(usuario, m.para).count()
             ini = datetime.combine(m.para, jornada.inicio, tzinfo=tz) + passo * n
@@ -392,33 +434,7 @@ def meu_dia_quebrou(usuario, *, blocos_uteis: int, motivo: str = "", dia: date |
         t.adiamentos += 1
         t.save(update_fields=["adiamentos"])
         evento(t, EventoTarefa.Tipo.REPLANEJADA, para=m.para.isoformat(), blocos=m.blocos, motivo=motivo)
-        if m.em_risco:
-            pessoas = [
-                v.pessoa.nome
-                for v in t.vinculos.filter(relacao=TarefaPessoa.Relacao.DEPENDE_DE_MIM).select_related("pessoa")
-            ]
-            em_risco.append(
-                {"tarefa": t.id, "titulo": t.titulo, "nova_data": m.para, "prazo": t.prazo, "pessoas": pessoas}
-            )
-    return {
-        "fica_hoje": [{"tarefa": m.tarefa_id, "blocos": m.blocos} for m in fica],
-        "movidos": [
-            {
-                "tarefa": m.tarefa_id,
-                "titulo": tarefas[m.tarefa_id].titulo,
-                "blocos": m.blocos,
-                "para": m.para,
-                "em_risco": m.em_risco,
-            }
-            for m in movidos
-        ],
-        "expectativas_em_risco": em_risco,
-    }
-
-
-def simular_meu_dia_quebrou(usuario, *, blocos_uteis: int, dia: date | None = None) -> PropostaReplanejamento:
-    """A proposta de `meu_dia_quebrou` sem gravar nada (M14)."""
-    raise NotImplementedError  # a implementar (P6, #13)
+    return proposta
 
 
 def distracoes_do_bloco(bloco: Bloco) -> list[ItemCaptura]:
