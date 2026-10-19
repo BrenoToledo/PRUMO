@@ -6,10 +6,12 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 
 from django.db import transaction
+from django.db.models import QuerySet
 from django.utils import timezone
 
 from . import planejamento as plan
 from . import prioridade as motor
+from .contratos import PlanoDoDia, PropostaReplanejamento, ResumoRevisaoDiaria
 from .models import (
     Area,
     Bloco,
@@ -196,13 +198,13 @@ def restaurar_item(item: ItemCaptura) -> None:
     item.save(update_fields=["status"])
 
 
-def caixa_de_entrada(usuario):
+def caixa_de_entrada(usuario) -> QuerySet[ItemCaptura]:
     """Itens capturados e ainda não decididos, mais novos primeiro."""
     return ItemCaptura.objects.filter(usuario=usuario, status=ItemCaptura.Status.PENDENTE).order_by("-criado_em", "-pk")
 
 
 # --------------------------------------------------------------------------- plano do dia
-def tarefas_leves(usuario):
+def tarefas_leves(usuario) -> QuerySet[Tarefa]:
     return Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA, esforco=Esforco.BAIXO)
 
 
@@ -237,7 +239,7 @@ def gerar_plano_do_dia(usuario, dia: date | None = None) -> plan.Plano:
     return resultado
 
 
-def plano_do_dia(usuario, dia: date | None = None) -> dict:
+def plano_do_dia(usuario, dia: date | None = None) -> PlanoDoDia:
     dia = dia or hoje()
     blocos = list(_blocos_do_dia(usuario, dia).select_related("tarefa", "tarefa__area"))
     cap = capacidade_do_dia(usuario, dia)
@@ -305,9 +307,31 @@ def sair_do_bloco(bloco: Bloco, motivo: str) -> Bloco:
     return bloco
 
 
+def bloco_em_foco(usuario) -> Bloco | None:
+    """O bloco que está em foco agora, se houver (M07, M08). A implementar na branch backend-r1."""
+    raise NotImplementedError
+
+
+# --------------------------------------------------------------------------- tarefas
+# Esboços do contrato: a branch backend-r1 escreve o corpo sem mudar a assinatura (ver docs/contratos.md).
+def concluir_tarefa(tarefa: Tarefa) -> Tarefa:
+    """Marca a tarefa como concluída, grava `concluida_em` e o evento CONCLUIDA."""
+    raise NotImplementedError
+
+
+def reabrir_tarefa(tarefa: Tarefa) -> Tarefa:
+    """Desfaz a conclusão: a tarefa volta a aberta e o evento REABERTA é gravado."""
+    raise NotImplementedError
+
+
+def historico_da_tarefa(tarefa: Tarefa) -> list[EventoTarefa]:
+    """Eventos da tarefa, mais antigos primeiro (M18)."""
+    raise NotImplementedError
+
+
 # --------------------------------------------------------------------------- meu dia quebrou
 @transaction.atomic
-def meu_dia_quebrou(usuario, *, blocos_uteis: int, motivo: str = "", dia: date | None = None) -> dict:
+def meu_dia_quebrou(usuario, *, blocos_uteis: int, motivo: str = "", dia: date | None = None) -> PropostaReplanejamento:
     """Mantém hoje o que cabe e move o resto para os próximos dias livres, sem culpa."""
     dia = dia or hoje()
     pendentes_qs = _blocos_do_dia(usuario, dia).filter(status=Bloco.Status.PLANEJADO).select_related("tarefa")
@@ -373,7 +397,7 @@ def meu_dia_quebrou(usuario, *, blocos_uteis: int, motivo: str = "", dia: date |
 
 
 # --------------------------------------------------------------------------- revisão diária
-def resumo_revisao_diaria(usuario, dia: date | None = None) -> dict:
+def resumo_revisao_diaria(usuario, dia: date | None = None) -> ResumoRevisaoDiaria:
     dia = dia or hoje()
     blocos = list(_blocos_do_dia(usuario, dia).select_related("tarefa"))
     ini, fim = _limites_do_dia(dia)
