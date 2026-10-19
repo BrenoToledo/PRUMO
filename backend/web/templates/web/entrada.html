@@ -9,8 +9,8 @@
   </div>
   {% include "web/_botao_sair.html" %}
 </header>
-<ul id="lista-entrada" class="lista">
+<div id="lista-entrada" class="lista">
   {% for item, form in itens %}{% include "web/_item_entrada.html" %}{% endfor %}
-</ul>
+</div>
 <div id="vazio-entrada" class="vazio"{% if pendentes_entrada %} hidden{% endif %}>{% include "web/_vazio_entrada.html" %}</div>
 {% endblock %}
