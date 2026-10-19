@@ -129,6 +129,7 @@ class TarefaSerializer(DoUsuarioMixin, serializers.ModelSerializer):
             "explicacao_prioridade",
             "status",
             "adiamentos",
+            "adiada_ate",
             "vinculos",
             "criada_em",
             "concluida_em",
@@ -140,6 +141,7 @@ class TarefaSerializer(DoUsuarioMixin, serializers.ModelSerializer):
             "prioridade",
             "explicacao_prioridade",
             "adiamentos",
+            "adiada_ate",
             "criada_em",
             "concluida_em",
         ]

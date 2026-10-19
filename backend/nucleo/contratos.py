@@ -99,6 +99,10 @@ SERVICOS: dict[str, str] = {
     "resumo_revisao_diaria": "(usuario, dia: 'date | None' = None) -> 'ResumoRevisaoDiaria'",
     "salvar_revisao_diaria": "(usuario, *, dia: 'date | None' = None, atencao: 'str' = '', "
     "intencao_amanha: 'str' = '', notas: 'str' = '') -> 'Revisao'",
+    # Fechar o dia (P7): intenção de amanhã no topo de Hoje, adiar e cancelar tarefa
+    "intencao_do_dia": "(usuario, dia: 'date | None' = None) -> 'str'",
+    "adiar_tarefa": "(tarefa: 'Tarefa', *, para: 'date | None' = None, motivo: 'str' = '') -> 'Tarefa'",
+    "cancelar_tarefa": "(tarefa: 'Tarefa', *, motivo: 'str' = '') -> 'Tarefa'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -131,6 +135,7 @@ CAMPOS_TAREFA = (
     "explicacao_prioridade",
     "status",
     "adiamentos",
+    "adiada_ate",
     "vinculos",
     "criada_em",
     "concluida_em",
@@ -172,4 +177,4 @@ CAMPOS_HOJE = ("dia", "capacidade", "planejados", "ocupacao", "folga_diaria", "b
 # módulo, os próprios templates (`web/templates/web/<modulo>/`), o próprio CSS (`web/static/web/telas/<modulo>.css`)
 # e os próprios testes (`web/tests/test_<modulo>.py`).
 
-TELAS_WEB = ("clarificacao", "plano", "foco", "tarefas", "perfil", "pwa")
+TELAS_WEB = ("clarificacao", "plano", "foco", "tarefas", "perfil", "pwa", "revisao", "pausa")

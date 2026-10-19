@@ -467,3 +467,17 @@ def salvar_revisao_diaria(
         defaults={"atencao": atencao, "intencao_amanha": intencao_amanha, "notas": notas, "metricas": metricas},
     )
     return revisao
+
+
+def intencao_do_dia(usuario, dia: date | None = None) -> str:
+    """A intenção escrita na última revisão diária antes de `dia` (topo de Hoje)."""
+    raise NotImplementedError
+
+
+# --------------------------------------------------------------------------- adiar e cancelar
+def adiar_tarefa(tarefa: Tarefa, *, para: date | None = None, motivo: str = "") -> Tarefa:
+    raise NotImplementedError
+
+
+def cancelar_tarefa(tarefa: Tarefa, *, motivo: str = "") -> Tarefa:
+    raise NotImplementedError

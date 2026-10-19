@@ -20,6 +20,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `pacote-3-execucao` | #6, #7 | interface | contratos (+ `bloco_em_foco` do backend-r1) | `web/telas/foco.py`, `web/templates/web/foco/`, `web/tests/test_foco.py` |
 | `pacote-4-no-ar` | #9, #10 | infra | nada | `deploy/`, `web/telas/pwa.py`, `web/templates/web/_pwa_head.html`, manifesto e service worker em `web/static/web/pwa/` |
 | `pacote-5-acabamento` | #8, #11, #12 | interface | contratos (+ tarefas do backend-r1) | `web/telas/tarefas.py`, `web/telas/perfil.py`, `web/templates/web/tarefas/`, `web/templates/web/perfil/`, `web/tests/test_tarefas.py`, `web/tests/test_perfil.py` |
+| `pacote-7-fechar-o-dia` | #17, #19, #16 | backend + interface | main (P1–P5) | `web/telas/revisao.py`, `web/telas/pausa.py`, `web/templates/web/revisao/`, `web/templates/web/pausa/`, `web/static/web/telas/revisao.css`, `pausa.css`, `pausa.js`, `web/tests/test_revisao.py`, `web/tests/test_pausa.py`, `nucleo/tests/test_fechar_o_dia.py`; em `tarefas` só adiar e cancelar, em `plano` só a intenção no topo de Hoje, em `foco` só o botão Pausar |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -42,6 +43,10 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:tarefa` | `/tarefas/<pk>/` | GET | tarefas | `avaliar_tarefa`, `historico_da_tarefa` |
 | `web:concluir_tarefa` | `/tarefas/<pk>/concluir/` | POST | tarefas | `concluir_tarefa` |
 | `web:reabrir_tarefa` | `/tarefas/<pk>/reabrir/` | POST | tarefas | `reabrir_tarefa` |
+| `web:adiar_tarefa` | `/tarefas/<pk>/adiar/` (`para=AAAA-MM-DD`, padrão amanhã) | POST | tarefas | `adiar_tarefa` |
+| `web:cancelar_tarefa` | `/tarefas/<pk>/cancelar/` | POST | tarefas | `cancelar_tarefa` |
+| `web:revisao` | `/revisao/` | GET, POST | revisao | `resumo_revisao_diaria`, `salvar_revisao_diaria` |
+| `web:pausa` | `/foco/pausa/` (`?min=5\|10\|15`, padrão 10) | GET | pausa | `bloco_em_foco` |
 | `web:perfil` | `/perfil/` | GET, POST | perfil | `perfil_de` |
 | `web:service_worker` | `/sw.js` | GET (público) | pwa | — |
 
@@ -67,6 +72,18 @@ Na API, `PATCH /tarefas/{id}/` com `status=concluida` passa a chamar `concluir_t
 4. `pacote-4-no-ar` a qualquer momento.
 
 Como cada etapa só toca os próprios arquivos, os conflitos esperados são nenhum ou uma linha em `base.html` (o link de navegação).
+
+## Fechar o dia (P7, R2)
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `intencao_do_dia(usuario, dia=None)` | `str` | A `intencao_amanha` da revisão diária mais recente dos 7 dias antes de `dia`; `""` se não houver (topo de Hoje) |
+| `adiar_tarefa(tarefa, *, para=None, motivo="")` | `Tarefa` | Só tarefa aberta (`ValueError`). `para` padrão é amanhã e precisa ser depois de hoje. Grava `adiada_ate = para`, soma 1 em `adiamentos`, apaga os blocos planejados antes de `para` e grava o evento `adiada` `{para, blocos_removidos, motivo}` |
+| `cancelar_tarefa(tarefa, *, motivo="")` | `Tarefa` | Só tarefa aberta (`ValueError`). Status `cancelada`, apaga todos os blocos planejados e grava o evento `cancelada` `{blocos_removidos, motivo}` |
+
+`Tarefa` ganha `adiada_ate` (data, opcional), que entra em `CAMPOS_TAREFA` só para leitura. O plano do dia, as tarefas leves e `tem_tarefas_para_planejar` ignoram tarefas com `adiada_ate` depois do dia. `EventoTarefa.Tipo` ganha `cancelada`. Na API, `POST /tarefas/{id}/adiar/` e `POST /tarefas/{id}/cancelar/`; `PATCH` com `status=cancelada` numa tarefa aberta passa pelo cancelamento.
+
+A pausa (M10) é só interface: o timer roda no navegador e não grava nada.
 
 ## Mudar um contrato
 
