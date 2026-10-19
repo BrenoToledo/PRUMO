@@ -96,6 +96,24 @@ Para acessar por um nome da rede local (ex.: `prumo.casa.lan`, configurado no ro
 
 Se o domínio for público (DNS apontando para um IP acessível pela internet), troque `PRUMO_TLS` por um e-mail e o Caddy usa Let's Encrypt, sem instalar nada no celular.
 
+## Instalar no celular (PWA)
+
+Issue [#10](https://github.com/BrenoToledo/PRUMO/issues/10). Com o HTTPS funcionando:
+
+1. Abra o endereço HTTPS do Prumo no **Chrome do Android** e entre.
+2. Menu ⋮ → **Adicionar à tela inicial** (ou **Instalar app**) → **Instalar**.
+3. O ícone "P" aparece na tela inicial e abre o Prumo em tela cheia, sem a barra do navegador.
+
+No iPhone (Safari): botão Compartilhar → **Adicionar à Tela de Início**.
+
+Como funciona:
+
+- `web/static/web/pwa/manifest.json`: nome, cores (`#FAFAF7` de fundo, P em `#0F766E`), `display: standalone` e ícones de 192 e 512 px (mais um *maskable* para o recorte redondo do Android). Ligado no `<head>` por `web/templates/web/_pwa_head.html`.
+- `/sw.js` (rota `web:service_worker`, em `web/telas/pwa.py`): service worker mínimo. Precisa ser servido na raiz para controlar todas as páginas. Ele guarda **só os arquivos estáticos** (`/static/…`): responde do cache e atualiza em segundo plano. Páginas e API sempre vão à rede, então nenhum dado seu fica guardado no aparelho, e sem conexão o app mostra o erro normal do navegador.
+- Mudou o `sw.js`? Troque o nome do cache (`prumo-estaticos-v1` → `v2`) para o navegador descartar o antigo.
+
+Se a opção de instalar não aparecer: confira se a página abriu em HTTPS sem aviso de certificado, e no Chrome do computador abra DevTools → *Application* → *Manifest* para ver o motivo.
+
 ## Atualizar
 
 ```bash

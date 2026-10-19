@@ -1,1 +1,9 @@
 {# Manifesto e service worker do PWA (P4, issue #10). Dona: branch pacote-4-no-ar. #}
+{% load static %}
+  <link rel="manifest" href="{% static 'web/pwa/manifest.json' %}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'web/pwa/icone-192.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'web/pwa/icone-180.png' %}">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Prumo">
+  {% url 'web:service_worker' as url_service_worker %}{% if url_service_worker %}<script src="{% static 'web/pwa/registrar.js' %}" data-service-worker="{{ url_service_worker }}" defer></script>{% endif %}
