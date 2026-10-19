@@ -1,0 +1,67 @@
+/* Modo foco (M08), sair do bloco (M12) e fim do bloco (M11). Tela sem navegação: só intenção, passo e tempo. */
+.foco {
+  width: 100%; max-width: 480px; min-height: 100dvh; margin: 0 auto;
+  padding: var(--e6) var(--e6) calc(var(--e6) + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: var(--e4);
+}
+.foco p { margin: 0; }
+.foco h1 { margin: 0; font-size: var(--titulo-tam); line-height: var(--titulo-alt); font-weight: var(--titulo-peso); overflow-wrap: anywhere; }
+
+.foco__topo { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); }
+.foco__rotulo {
+  font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso);
+  letter-spacing: .04em; text-transform: uppercase; color: var(--texto-secundario);
+}
+.foco__topo .botao--texto { text-decoration: none; }
+
+/* Timer */
+.foco__timer { position: relative; width: 220px; height: 220px; margin: var(--e2) auto; }
+.foco__anel { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+.foco__trilho, .foco__progresso { fill: none; stroke-width: 8; }
+.foco__trilho { stroke: var(--borda); }
+.foco__progresso { stroke: var(--primaria); stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+.foco__tempo {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.foco__numeros {
+  font-size: 44px; line-height: 52px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.foco__legenda { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.foco__timer--fim .foco__numeros { color: var(--primaria); }
+
+.foco__intencao { display: flex; flex-direction: column; gap: 2px; }
+.foco__caixa {
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  padding: var(--e3) var(--e4); display: flex; flex-direction: column; gap: var(--e1);
+}
+.foco__acoes { margin-top: auto; display: flex; gap: var(--e3); }
+.foco__acoes .botao { flex: 1; text-decoration: none; }
+.foco__largo { width: 100%; }
+
+/* Sair do bloco */
+.foco__dialogo {
+  width: calc(100% - 2 * var(--e6)); max-width: 400px;
+  border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background: var(--superficie); color: var(--texto); padding: var(--e6);
+}
+.foco__dialogo::backdrop { background: rgb(0 0 0 / .4); }
+.foco__dialogo h2 { margin: 0 0 var(--e1); font-size: var(--titulo-tam); line-height: var(--titulo-alt); font-weight: var(--titulo-peso); }
+.foco__dica { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); margin-bottom: var(--e4); }
+.foco__form-sair { margin: var(--e4) 0 var(--e3); display: flex; flex-direction: column; gap: var(--e3); }
+.foco__form-sair .erro { margin: 0; }
+.foco__motivos { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--e2); }
+.foco__motivos legend { padding: 0; margin-bottom: var(--e2); }
+.foco__pilula {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--e3);
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); cursor: pointer;
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.foco__pilula input { position: absolute; opacity: 0; pointer-events: none; }
+.foco__pilula:has(input:checked) { background: var(--primaria); border-color: var(--primaria); color: var(--texto-na-primaria); }
+.foco__pilula:has(input:focus-visible) { outline: 2px solid var(--primaria); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .foco__progresso { transition: none; }
+}
