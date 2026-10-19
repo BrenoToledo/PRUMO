@@ -205,13 +205,18 @@ def caixa_de_entrada(usuario) -> QuerySet[ItemCaptura]:
 
 
 # --------------------------------------------------------------------------- plano do dia
+def _abertas_no_dia(usuario, dia: date) -> QuerySet[Tarefa]:
+    """Tarefas abertas que podem entrar no plano de `dia` (as adiadas só voltam na data escolhida)."""
+    return Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA).exclude(adiada_ate__gt=dia)
+
+
 def tarefas_leves(usuario) -> QuerySet[Tarefa]:
-    return Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA, esforco=Esforco.BAIXO)
+    return _abertas_no_dia(usuario, hoje()).filter(esforco=Esforco.BAIXO)
 
 
 def tem_tarefas_para_planejar(usuario) -> bool:
     """Há tarefas abertas que o plano em blocos usa (as leves ficam para o fim do dia)?"""
-    return Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA).exclude(esforco=Esforco.BAIXO).exists()
+    return _abertas_no_dia(usuario, hoje()).exclude(esforco=Esforco.BAIXO).exists()
 
 
 @transaction.atomic
@@ -220,7 +225,7 @@ def gerar_plano_do_dia(usuario, dia: date | None = None) -> plan.Plano:
     dia = dia or hoje()
     _blocos_do_dia(usuario, dia).filter(status=Bloco.Status.PLANEJADO).delete()
     ja_feitos = _blocos_do_dia(usuario, dia).exclude(status=Bloco.Status.PLANEJADO).count()
-    abertas = list(Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA).exclude(esforco=Esforco.BAIXO))
+    abertas = list(_abertas_no_dia(usuario, dia).exclude(esforco=Esforco.BAIXO))
     for t in abertas:
         recalcular_prioridade(t)
     candidatas = [
@@ -488,9 +493,39 @@ def intencao_do_dia(usuario, dia: date | None = None) -> str:
 
 
 # --------------------------------------------------------------------------- adiar e cancelar
+def _blocos_planejados_desde_hoje(tarefa: Tarefa):
+    """Blocos ainda não iniciados de hoje em diante; os de dias passados ficam como registro (planejado vs. real)."""
+    ini, _ = _limites_do_dia(hoje())
+    return tarefa.blocos.filter(status=Bloco.Status.PLANEJADO, inicio_planejado__gte=ini)
+
+
+@transaction.atomic
 def adiar_tarefa(tarefa: Tarefa, *, para: date | None = None, motivo: str = "") -> Tarefa:
-    raise NotImplementedError
+    """Tira a tarefa dos planos até `para` (padrão: amanhã), soma um adiamento e grava o evento ADIADA."""
+    if tarefa.status != Tarefa.Status.ABERTA:
+        raise ValueError("só uma tarefa aberta pode ser adiada")
+    para = para or hoje() + timedelta(days=1)
+    if para <= hoje():
+        raise ValueError("adie para uma data depois de hoje")
+    inicio_de_para, _ = _limites_do_dia(para)
+    saem = _blocos_planejados_desde_hoje(tarefa).filter(inicio_planejado__lt=inicio_de_para)
+    removidos = saem.count()
+    saem.delete()
+    tarefa.adiada_ate, tarefa.adiamentos = para, tarefa.adiamentos + 1
+    tarefa.save(update_fields=["adiada_ate", "adiamentos"])
+    evento(tarefa, EventoTarefa.Tipo.ADIADA, para=para.isoformat(), blocos_removidos=removidos, motivo=motivo[:200])
+    return tarefa
 
 
+@transaction.atomic
 def cancelar_tarefa(tarefa: Tarefa, *, motivo: str = "") -> Tarefa:
-    raise NotImplementedError
+    """A tarefa deixa de existir para o plano: status CANCELADA, sem blocos futuros, com o evento CANCELADA."""
+    if tarefa.status != Tarefa.Status.ABERTA:
+        raise ValueError("só uma tarefa aberta pode ser cancelada")
+    tarefa.status = Tarefa.Status.CANCELADA
+    tarefa.save(update_fields=["status"])
+    saem = _blocos_planejados_desde_hoje(tarefa)
+    removidos = saem.count()
+    saem.delete()
+    evento(tarefa, EventoTarefa.Tipo.CANCELADA, blocos_removidos=removidos, motivo=motivo[:200])
+    return tarefa

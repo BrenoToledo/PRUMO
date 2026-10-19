@@ -219,6 +219,15 @@ class SairBlocoSerializer(serializers.Serializer):
     motivo = serializers.CharField(max_length=120)
 
 
+class AdiarTarefaSerializer(serializers.Serializer):
+    para = serializers.DateField(required=False)
+    motivo = serializers.CharField(required=False, allow_blank=True, max_length=200)
+
+
+class CancelarTarefaSerializer(serializers.Serializer):
+    motivo = serializers.CharField(required=False, allow_blank=True, max_length=200)
+
+
 class MeuDiaQuebrouSerializer(serializers.Serializer):
     blocos_uteis = serializers.IntegerField(min_value=0, max_value=20)
     motivo = serializers.CharField(required=False, allow_blank=True, max_length=120)

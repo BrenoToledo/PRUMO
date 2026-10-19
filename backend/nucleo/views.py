@@ -11,8 +11,10 @@ from . import prioridade as motor
 from . import services
 from .models import Area, Bloco, ItemCaptura, Pessoa, Projeto, Rotina, Tarefa
 from .serializers import (
+    AdiarTarefaSerializer,
     AreaSerializer,
     BlocoSerializer,
+    CancelarTarefaSerializer,
     ClarificarSerializer,
     ConcluirBlocoSerializer,
     EventoTarefaSerializer,
@@ -140,15 +142,17 @@ class TarefaViewSet(DoUsuarioViewSet):
             services.concluir_tarefa(tarefa)
         elif anterior == Tarefa.Status.CONCLUIDA and novo == Tarefa.Status.ABERTA:
             services.reabrir_tarefa(tarefa)
+        elif anterior == Tarefa.Status.ABERTA and novo == Tarefa.Status.CANCELADA:
+            services.cancelar_tarefa(tarefa)
         else:
             if novo != anterior:
                 tarefa.status = novo
                 tarefa.save(update_fields=["status"])
             services.recalcular_prioridade(tarefa)
 
-    def _executa(self, fn):
+    def _executa(self, fn, **kw):
         try:
-            tarefa = fn(self.get_object())
+            tarefa = fn(self.get_object(), **kw)
         except ValueError as exc:
             return _erro(exc)
         return Response(TarefaSerializer(tarefa, context={"request": self.request}).data)
@@ -160,6 +164,18 @@ class TarefaViewSet(DoUsuarioViewSet):
     @action(detail=True, methods=["post"])
     def reabrir(self, request, pk=None):
         return self._executa(services.reabrir_tarefa)
+
+    @action(detail=True, methods=["post"])
+    def adiar(self, request, pk=None):
+        ser = AdiarTarefaSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        return self._executa(services.adiar_tarefa, **ser.validated_data)
+
+    @action(detail=True, methods=["post"])
+    def cancelar(self, request, pk=None):
+        ser = CancelarTarefaSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        return self._executa(services.cancelar_tarefa, **ser.validated_data)
 
     @action(detail=True, methods=["get"])
     def historico(self, request, pk=None):

@@ -147,6 +147,26 @@
 .detalhe__acoes { display: flex; justify-content: flex-end; margin-top: var(--e3); }
 .detalhe__acoes .botao { min-width: 160px; }
 
+/* Adiar e cancelar (#19): cada ação abre o próprio formulário curto. */
+.detalhe__acoes { flex-wrap: wrap; gap: var(--e3); margin-bottom: var(--e12); }
+.acao-extra summary { list-style: none; }
+.acao-extra summary::-webkit-details-marker { display: none; }
+.acao-extra[open] { flex-basis: 100%; order: 1; }
+.acao-extra .botao { min-width: 0; }
+.detalhe__concluir { order: -1; flex-basis: 100%; display: flex; justify-content: flex-end; }
+.acao-extra__form {
+  display: flex; flex-direction: column; gap: var(--e2); margin-top: var(--e3); padding: var(--e4);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+}
+.acao-extra__form label { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.acao-extra__form input {
+  width: 100%; padding: var(--e3); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+  background: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px; line-height: 24px;
+}
+.acao-extra__form .erro { margin: 0; }
+.acao-extra__dica { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.acao-extra__form .botao { align-self: flex-end; }
+
 @media (hover: hover) {
   .leve__circulo:hover { border-color: var(--primaria); }
   .notas label:hover { border-color: var(--primaria); }
