@@ -1,17 +1,70 @@
 """Instalar no celular: manifesto, ícones e service worker mínimo (#10)."""
 
 import json
+import struct
+import zlib
 
 import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles import finders
 from django.templatetags.static import static
 from django.urls import include, path, reverse
-from PIL import Image
 
 from config import urls as config_urls
 from web import urls as web_urls
 from web.telas import pwa
+
+ASSINATURA_PNG = b"\x89PNG\r\n\x1a\n"
+
+
+def _blocos_png(caminho):
+    with open(caminho, "rb") as arquivo:
+        dados = arquivo.read()
+    assert dados[:8] == ASSINATURA_PNG, "não é PNG"
+    pos = 8
+    while pos < len(dados):
+        (tamanho,) = struct.unpack(">I", dados[pos : pos + 4])
+        yield dados[pos + 4 : pos + 8], dados[pos + 8 : pos + 8 + tamanho]
+        pos += 12 + tamanho
+
+
+def _tamanho_png(caminho):
+    tipo, dados = next(_blocos_png(caminho))
+    assert tipo == b"IHDR"
+    return struct.unpack(">II", dados[:8])
+
+
+def _cores_png(caminho):
+    """Cores RGB de um PNG de 8 bits (RGB ou RGBA, sem entrelaçamento), só com a biblioteca padrão."""
+    blocos = list(_blocos_png(caminho))
+    largura, altura, profundidade, tipo_cor, _, _, entrelacado = struct.unpack(">IIBBBBB", blocos[0][1])
+    assert profundidade == 8 and tipo_cor in (2, 6) and not entrelacado
+    canais = 3 if tipo_cor == 2 else 4
+    bruto = zlib.decompress(b"".join(d for t, d in blocos if t == b"IDAT"))
+    passo = largura * canais
+    anterior, cores, pos = bytearray(passo), set(), 0
+    for _ in range(altura):
+        filtro, linha = bruto[pos], bytearray(bruto[pos + 1 : pos + 1 + passo])
+        pos += 1 + passo
+        for i in range(passo):
+            a = linha[i - canais] if i >= canais else 0
+            b = anterior[i]
+            c = anterior[i - canais] if i >= canais else 0
+            if filtro == 1:
+                linha[i] = (linha[i] + a) & 0xFF
+            elif filtro == 2:
+                linha[i] = (linha[i] + b) & 0xFF
+            elif filtro == 3:
+                linha[i] = (linha[i] + (a + b) // 2) & 0xFF
+            elif filtro == 4:
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                preditor = a if pa <= pb and pa <= pc else (b if pb <= pc else c)
+                linha[i] = (linha[i] + preditor) & 0xFF
+        cores.update(tuple(linha[i : i + 3]) for i in range(0, passo, canais))
+        anterior = linha
+    return cores
+
 
 # As rotas do PWA ficam em web/telas/pwa.py; enquanto web/urls.py não as inclui, os testes usam este urlconf.
 _rotas_web = web_urls.urlpatterns + [r for r in pwa.urlpatterns if r not in web_urls.urlpatterns]
@@ -59,14 +112,11 @@ def test_manifesto_tem_icones_de_192_e_512_e_maskable():
         caminho = finders.find("web/pwa/" + icone["src"])
         assert caminho, icone["src"]
         largura, altura = (int(n) for n in icone["sizes"].split("x"))
-        with Image.open(caminho) as imagem:
-            assert imagem.size == (largura, altura)
-            assert imagem.format == "PNG"
+        assert _tamanho_png(caminho) == (largura, altura)
 
 
 def test_icone_tem_a_cor_primaria():
-    with Image.open(finders.find("web/pwa/icone-512.png")) as imagem:
-        cores = {cor for _, cor in imagem.convert("RGB").getcolors(maxcolors=512 * 512)}
+    cores = _cores_png(finders.find("web/pwa/icone-512.png"))
     assert (0x0F, 0x76, 0x6E) in cores
     assert (0xFA, 0xFA, 0xF7) in cores
 
