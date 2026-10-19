@@ -124,7 +124,7 @@ def pg_dump_falso(tmp_path):
     return bin_dir
 
 
-@pytest.mark.skipif(shutil.which("sh") is None, reason="precisa de sh")
+@pytest.mark.skipif(shutil.which("bash") is None, reason="precisa de bash")
 def test_backup_grava_dump_e_guarda_so_7_dias(tmp_path, pg_dump_falso):
     destino = tmp_path / "backups"
     destino.mkdir()
@@ -143,7 +143,7 @@ def test_backup_grava_dump_e_guarda_so_7_dias(tmp_path, pg_dump_falso):
         "BACKUP_RETENCAO_DIAS": "7",
         "PGDATABASE": "prumo",
     }
-    subprocess.run(["sh", str(DEPLOY / "backup.sh"), "agora"], env=env, check=True, timeout=30)
+    subprocess.run(["bash", str(DEPLOY / "backup.sh"), "agora"], env=env, check=True, timeout=30)
 
     novos = [p for p in destino.glob("prumo-*.dump") if p not in (antigo, recente)]
     assert len(novos) == 1

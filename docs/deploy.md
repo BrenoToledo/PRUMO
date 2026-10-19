@@ -129,7 +129,7 @@ Os dados não são afetados: ficam no volume `prumo_pgdata`. Faça um backup man
 Backup manual, a qualquer hora:
 
 ```bash
-docker compose exec backup sh /backup.sh agora
+docker compose exec backup bash /backup.sh agora
 ls -lh backups/
 ```
 
