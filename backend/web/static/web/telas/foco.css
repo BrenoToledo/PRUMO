@@ -51,6 +51,7 @@
 .foco__dica { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); margin-bottom: var(--e4); }
 .foco__form-sair { margin: var(--e4) 0 var(--e3); display: flex; flex-direction: column; gap: var(--e3); }
 .foco__form-sair .erro { margin: 0; }
+.foco__replanejar { color: var(--primaria); }
 .foco__motivos { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--e2); }
 .foco__motivos legend { padding: 0; margin-bottom: var(--e2); }
 .foco__pilula {

@@ -245,6 +245,63 @@ def test_sair_de_bloco_de_outra_pessoa_da_404(logado, outra):
     assert logado.post(reverse("web:sair_do_bloco", args=[alheio.pk]), {"motivo": "Cansaço"}).status_code == 404
 
 
+# ---------------------------------------------------------------- sair e replanejar (#14)
+def test_dialogo_de_saida_oferece_os_tres_caminhos(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    html = logado.get(reverse("web:foco") + "?sair=1").content.decode()
+
+    for motivo in ("Interrupção urgente", "Cansaço", "Terminei antes", "Outro"):
+        assert motivo in html
+    assert "Continuar focado" in html
+    assert "Sair e registrar" in html
+    assert 'name="depois" value="replanejar"' in html
+    assert "Sair e replanejar o dia" in html
+
+
+def test_sair_e_replanejar_registra_e_abre_meu_dia_quebrou(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    with freeze_time("2026-10-19 11:30:00"):
+        resposta = logado.post(
+            reverse("web:sair_do_bloco", args=[bloco.pk]), {"motivo": "Interrupção urgente", "depois": "replanejar"}
+        )
+
+    assert resposta.status_code == 302
+    assert resposta["Location"] == reverse("web:meu_dia_quebrou")
+    bloco.refresh_from_db()
+    assert bloco.status == Bloco.Status.INTERROMPIDO
+    assert bloco.motivo == "Interrupção urgente"
+
+
+def test_sair_e_replanejar_por_htmx(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    resposta = logado.post(
+        reverse("web:sair_do_bloco", args=[bloco.pk]), {"motivo": "Cansaço", "depois": "replanejar"}, **HTMX
+    )
+
+    assert resposta["HX-Redirect"] == reverse("web:meu_dia_quebrou")
+
+
+def test_sair_e_replanejar_sem_motivo_nao_sai(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    resposta = logado.post(reverse("web:sair_do_bloco", args=[bloco.pk]), {"depois": "replanejar"}, **HTMX)
+
+    assert resposta.status_code == 422
+    bloco.refresh_from_db()
+    assert bloco.status == Bloco.Status.EM_FOCO
+
+
+def test_depois_desconhecido_volta_para_hoje(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    resposta = logado.post(reverse("web:sair_do_bloco", args=[bloco.pk]), {"motivo": "Outro", "depois": "x"})
+
+    assert resposta["Location"] == reverse("web:hoje")
+
+
 # ---------------------------------------------------------------- fim do bloco (#7)
 def concluir(cliente, bloco, dados, **extra):
     return cliente.post(reverse("web:concluir_bloco", args=[bloco.pk]), dados, **extra)

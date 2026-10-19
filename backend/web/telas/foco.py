@@ -4,7 +4,8 @@ Rotas reservadas pelo contrato:
 - GET `foco/` → `web:foco`, usa `services.bloco_em_foco`.
 - POST `blocos/<pk>/iniciar/` → `web:iniciar_bloco`, chama `services.iniciar_bloco`.
 - POST `blocos/<pk>/concluir/` → `web:concluir_bloco`, chama `services.concluir_bloco`.
-- POST `blocos/<pk>/sair/` → `web:sair_do_bloco`, chama `services.sair_do_bloco`.
+- POST `blocos/<pk>/sair/` → `web:sair_do_bloco`, chama `services.sair_do_bloco`; com `depois=replanejar` segue
+  para `web:meu_dia_quebrou` (P6, #14).
 
 O timer roda no navegador (`static/web/telas/foco.js`): a página entrega o término calculado a partir do início
 real e a duração do bloco, então recarregar não zera o tempo.
@@ -174,7 +175,9 @@ def sair_do_bloco(request, pk):
         return render(request, "web/foco/_form_sair.html", {"bloco": bloco, "form_sair": form}, status=422)
     services.sair_do_bloco(bloco, form.cleaned_data["motivo"])
     aviso = f"Bloco encerrado · {bloco.minutos_focados} min registrados"
-    return _ir_para(request, reverse("web:hoje"), aviso)
+    # "Sair e replanejar o dia" (M12 → M13, #14): registra a saída e abre o "meu dia quebrou".
+    destino = "web:meu_dia_quebrou" if request.POST.get("depois") == "replanejar" else "web:hoje"
+    return _ir_para(request, reverse(destino), aviso)
 
 
 @require_POST
