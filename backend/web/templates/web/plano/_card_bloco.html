@@ -1,0 +1,18 @@
+{% with tarefa=bloco.tarefa %}<article id="bloco-{{ bloco.pk }}" class="card-bloco card-bloco--{{ bloco.status }}{% if bloco.pk == proximo_id %} card-bloco--agora{% endif %}" style="--cor-area: {{ tarefa.area.cor }}">
+  <div class="card-bloco__topo">
+    <span class="card-bloco__horario">{{ bloco.inicio_planejado|time:"H:i" }} – {{ bloco.fim_planejado|time:"H:i" }}</span>
+    <span class="card-bloco__status">{% if bloco.pk == proximo_id %}Agora{% else %}{{ bloco.get_status_display }}{% endif %}</span>
+  </div>
+  <h3 class="card-bloco__titulo">{{ tarefa.titulo }}</h3>
+  <p class="card-bloco__acao">Próxima ação: {{ tarefa.proxima_acao }}</p>
+  <div class="card-bloco__chips">
+    <span class="chip-area">{{ tarefa.area.nome }}</span>
+    {% include "web/plano/_chip_prioridade.html" %}
+    <span class="card-bloco__blocos">{{ tarefa.blocos_restantes }} bloco{{ tarefa.blocos_restantes|pluralize }}</span>
+  </div>
+  {% if bloco.pk == proximo_id %}{% url 'web:iniciar_bloco' bloco.pk as url_iniciar %}{% if url_iniciar %}
+  <form class="card-bloco__iniciar" method="post" action="{{ url_iniciar }}">
+    {% csrf_token %}
+    <button class="botao botao--primario" type="submit">Começar foco</button>
+  </form>{% endif %}{% endif %}
+</article>{% endwith %}

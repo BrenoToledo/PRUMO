@@ -11,6 +11,9 @@
     </div>
   </div>
   <div class="item__acoes">
+    <form method="get" action="{% url 'web:clarificar' item.pk %}">
+      <button class="botao botao--primario botao--pequeno" type="submit">Clarificar</button>
+    </form>
     <details class="item__rapida"{% if aberto %} open{% endif %}>
       <summary class="botao botao--pequeno">Lista rápida</summary>
       <form class="item__form" method="post" action="{% url 'web:lista_rapida' item.pk %}"
