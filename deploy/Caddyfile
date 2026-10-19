@@ -1,0 +1,7 @@
+# Proxy HTTPS na frente do backend (perfil "https" do docker-compose).
+# PRUMO_TLS=internal usa a CA própria do Caddy; um e-mail usa Let's Encrypt (só para domínio público).
+{$PRUMO_DOMINIO} {
+	tls {$PRUMO_TLS}
+	encode zstd gzip
+	reverse_proxy backend:8000
+}
