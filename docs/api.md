@@ -16,11 +16,11 @@ Base: `/api/`. Autenticação por sessão ou token (`POST /api/token/` com `user
 
 | Método e rota | O que faz | Tela |
 | --- | --- | --- |
-| `GET/POST /tarefas/`, `GET/PATCH/DELETE /tarefas/{id}/` | CRUD; prioridade recalculada a cada gravação. Filtros: `status`, `area`, `projeto`, `esforco` | M04 |
+| `GET/POST /tarefas/`, `GET/PATCH/DELETE /tarefas/{id}/` | CRUD; prioridade recalculada a cada gravação. `PATCH` com `status=concluida` numa tarefa aberta passa pela conclusão abaixo, e com `status=aberta` numa concluída, pela reabertura. Filtros: `status`, `area`, `projeto`, `esforco` | M04 |
 | `GET /tarefas/{id}/prioridade/` | Nota, faixa, folga, destino, explicação e as 4 perguntas | M05 |
-| `POST /tarefas/{id}/concluir/` | Conclui, grava `concluida_em` e o evento `concluida`. *Contrato; implementado na branch backend-r1* | M17, M18 |
-| `POST /tarefas/{id}/reabrir/` | Volta a aberta e grava o evento `reaberta`. *Contrato; backend-r1* | M18 |
-| `GET /tarefas/{id}/historico/` | Eventos da tarefa `[{tipo, em, dados}]`, mais antigos primeiro. *Contrato; backend-r1* | M18 |
+| `POST /tarefas/{id}/concluir/` | Conclui, grava `concluida_em` e o evento `concluida` e remove os blocos ainda planejados. Devolve a tarefa; `400` se ela não estiver aberta | M17, M18 |
+| `POST /tarefas/{id}/reabrir/` | Volta a aberta, limpa `concluida_em`, grava o evento `reaberta` e recalcula a prioridade. Devolve a tarefa; `400` se ela não estiver concluída | M18 |
+| `GET /tarefas/{id}/historico/` | Eventos da tarefa `[{tipo, em, dados}]`, mais antigos primeiro | M18 |
 
 ## Dia e foco
 
@@ -29,7 +29,7 @@ Base: `/api/`. Autenticação por sessão ou token (`POST /api/token/` com `user
 | `GET /hoje/?dia=AAAA-MM-DD` | Capacidade, ocupação, blocos e tarefas leves | M01, D01 |
 | `POST /hoje/gerar/?dia=` | Refaz os blocos ainda não iniciados a partir das prioridades | M01 |
 | `POST /hoje/meu-dia-quebrou/?dia=` `{blocos_uteis, motivo?}` | Mantém hoje o que cabe, move o resto e devolve as expectativas em risco | M13, M14 |
-| `GET /blocos/em-foco/` | O bloco em foco agora (campos do bloco) ou `204` sem corpo. *Contrato; backend-r1* | M07, M08 |
+| `GET /blocos/em-foco/` | O bloco em foco agora (campos do bloco) ou `204` sem corpo | M07, M08 |
 | `POST /blocos/{id}/iniciar/` | Começa o foco | M07, M08 |
 | `POST /blocos/{id}/concluir/` `{resultado: concluiu\|avancou\|nao_avancou, blocos_restantes?, nova_proxima_acao?}` | Fecha o bloco e atualiza a tarefa | M11 |
 | `POST /blocos/{id}/sair/` `{motivo}` | Interrompe e registra | M12 |
