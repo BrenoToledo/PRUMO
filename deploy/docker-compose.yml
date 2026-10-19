@@ -1,0 +1,75 @@
+# Produção no homelab (#9). Rode de dentro de deploy/:  docker compose up -d
+# Passo a passo, HTTPS e restauração do backup: docs/deploy.md
+name: prumo
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-prumo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no deploy/.env}
+      POSTGRES_DB: ${POSTGRES_DB:-prumo}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ../backend
+    image: prumo-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DJANGO_DEBUG: "false"
+      DATABASE_URL: postgres://${POSTGRES_USER:-prumo}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-prumo}
+    ports:
+      - "${PRUMO_PORTA:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backup:
+    image: postgres:16
+    restart: unless-stopped
+    entrypoint: ["sh", "/backup.sh"]
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-prumo}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-prumo}
+      BACKUP_DIR: /backups
+      BACKUP_HORA: ${BACKUP_HORA:-03:00}
+      BACKUP_RETENCAO_DIAS: ${BACKUP_RETENCAO_DIAS:-7}
+      TZ: ${DJANGO_TIME_ZONE:-America/Sao_Paulo}
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - ${PRUMO_BACKUP_DIR:-./backups}:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # HTTPS opcional (necessário para instalar o PWA fora do localhost): docker compose --profile https up -d
+  caddy:
+    image: caddy:2
+    profiles: ["https"]
+    restart: unless-stopped
+    environment:
+      PRUMO_DOMINIO: ${PRUMO_DOMINIO:-prumo.casa.lan}
+      PRUMO_TLS: ${PRUMO_TLS:-internal}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

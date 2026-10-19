@@ -8,6 +8,8 @@ requires-python = ">=3.12"
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]
 addopts = "-q"
+# WhiteNoise avisa quando STATIC_ROOT não existe (normal antes do collectstatic, como nos testes).
+filterwarnings = ["ignore:No directory at:UserWarning"]
 
 [tool.ruff]
 line-length = 120
