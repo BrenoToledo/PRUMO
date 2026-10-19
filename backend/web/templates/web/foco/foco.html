@@ -6,7 +6,7 @@
 <main class="foco">
   <header class="foco__topo">
     <p class="foco__rotulo">Bloco {{ numero }} de {{ total }} · {{ bloco.inicio_planejado|date:"H:i" }}–{{ bloco.fim_planejado|date:"H:i" }}</p>
-    <a class="botao botao--texto" href="{% url 'web:foco' %}?sair=1" data-abrir-sair aria-haspopup="dialog" aria-controls="dialogo-sair">Sair</a>
+    <a class="botao botao--texto" href="{% url 'web:foco' %}?sair=1" data-abrir="dialogo-sair" aria-haspopup="dialog" aria-controls="dialogo-sair">Sair</a>
   </header>
 
   <div class="foco__timer{% if timer.esgotado %} foco__timer--fim{% endif %}" data-timer
@@ -29,9 +29,20 @@
     <p>{{ tarefa.proxima_acao }}</p>
   </section>
 
+  <a class="botao foco__largo foco__anotar" href="{% url 'web:foco' %}?anotar=1" data-abrir="dialogo-distracao"
+     aria-haspopup="dialog" aria-controls="dialogo-distracao">Anotar distração</a>
+
   <div class="foco__acoes">
     <a class="botao botao--primario" href="{% url 'web:foco' %}?fim=1">Concluir bloco</a>
   </div>
+
+  <dialog id="dialogo-distracao" class="foco__dialogo foco__folha" aria-labelledby="titulo-distracao"{% if distracao_aberta %} open{% endif %}>
+    <h2 id="titulo-distracao">Anotar e voltar</h2>
+    {% include "web/foco/_form_distracao.html" %}
+    <form method="dialog">
+      <button class="botao botao--texto foco__largo" type="submit">Voltar ao foco sem anotar</button>
+    </form>
+  </dialog>
 
   <dialog id="dialogo-sair" class="foco__dialogo" aria-labelledby="titulo-sair"{% if sair_aberto %} open{% endif %}>
     <h2 id="titulo-sair">Sair do bloco?</h2>

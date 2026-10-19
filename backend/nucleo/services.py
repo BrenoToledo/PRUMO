@@ -439,7 +439,14 @@ def meu_dia_quebrou(usuario, *, blocos_uteis: int, motivo: str = "", dia: date |
 
 def distracoes_do_bloco(bloco: Bloco) -> list[ItemCaptura]:
     """O que foi anotado no foco (origem `foco`) enquanto o bloco esteve em foco, mais antigos primeiro (M09)."""
-    raise NotImplementedError  # a implementar (P6, #15)
+    if bloco.inicio_real is None:
+        return []
+    itens = ItemCaptura.objects.filter(
+        usuario=bloco.usuario, origem=ItemCaptura.Origem.FOCO, criado_em__gte=bloco.inicio_real
+    )
+    if bloco.fim_real is not None:
+        itens = itens.filter(criado_em__lte=bloco.fim_real)
+    return list(itens.order_by("criado_em", "pk"))
 
 
 # --------------------------------------------------------------------------- revisão diária

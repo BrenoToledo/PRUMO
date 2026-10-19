@@ -52,6 +52,20 @@
 .foco__form-sair { margin: var(--e4) 0 var(--e3); display: flex; flex-direction: column; gap: var(--e3); }
 .foco__form-sair .erro { margin: 0; }
 .foco__replanejar { color: var(--primaria); }
+
+/* Anotar distração (M09): folha que sobe de baixo; o timer segue rodando por trás. */
+.foco__anotar { text-decoration: none; }
+.foco__folha { margin-bottom: 0; border-radius: var(--raio-card) var(--raio-card) 0 0; }
+.foco__form-distracao { margin: var(--e3) 0 var(--e2); display: flex; flex-direction: column; gap: var(--e3); }
+.foco__form-distracao .erro, .foco__form-distracao .foco__dica { margin: 0; }
+.foco__campo {
+  width: 100%; padding: var(--e3); resize: vertical;
+  border: 1px solid var(--primaria); border-radius: var(--raio-campo);
+  background: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px; line-height: var(--corpo-alt);
+}
+.foco__campo:focus-visible { outline: 2px solid var(--primaria); outline-offset: -1px; }
+.foco__anotadas { padding: var(--e3) var(--e4); border-radius: var(--raio-campo); background: var(--primaria-suave); }
+.foco__anotadas ul { margin: var(--e1) 0 0; padding-left: var(--e4); }
 .foco__motivos { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--e2); }
 .foco__motivos legend { padding: 0; margin-bottom: var(--e2); }
 .foco__pilula {

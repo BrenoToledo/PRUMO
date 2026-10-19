@@ -1,6 +1,6 @@
 """Meu dia quebrou: simular sem gravar e aplicar a mesma proposta (#13); distrações do bloco (#15)."""
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -8,7 +8,7 @@ from freezegun import freeze_time
 from rest_framework.test import APIClient
 
 from nucleo import contratos, services
-from nucleo.models import Area, Bloco, EventoTarefa, Tarefa
+from nucleo.models import Area, Bloco, EventoTarefa, ItemCaptura, Tarefa
 
 SEG = "2026-10-19"
 
@@ -106,3 +106,42 @@ def test_api_simular_nao_grava(api, usuario, plano):
 def test_api_simular_valida_blocos_uteis(api):
     r = api.post("/api/hoje/meu-dia-quebrou/simular/", {"blocos_uteis": -1}, format="json")
     assert r.status_code == 400
+
+
+# ---------------------------------------------------------------- distrações do bloco
+def test_distracoes_do_bloco_so_as_do_foco_e_do_periodo(usuario, plano):
+    bloco = plano.first()
+    with freeze_time(f"{SEG} 07:50:00-03:00"):
+        services.capturar(usuario, "antes do bloco", origem=ItemCaptura.Origem.FOCO)
+    with freeze_time(f"{SEG} 08:00:00-03:00"):
+        services.iniciar_bloco(bloco)
+    with freeze_time(f"{SEG} 08:10:00-03:00"):
+        services.capturar(usuario, "Pagar a DARF", origem=ItemCaptura.Origem.FOCO)
+        services.capturar(usuario, "captura comum", origem=ItemCaptura.Origem.TEXTO)
+    with freeze_time(f"{SEG} 08:20:00-03:00"):
+        services.capturar(usuario, "Pedir acesso ao servidor", origem=ItemCaptura.Origem.FOCO)
+    outra = get_user_model().objects.create_user("outra", password="senha-forte-123")
+    with freeze_time(f"{SEG} 08:15:00-03:00"):
+        services.capturar(outra, "de outra pessoa", origem=ItemCaptura.Origem.FOCO)
+    with freeze_time(f"{SEG} 08:30:00-03:00"):
+        services.sair_do_bloco(bloco, "Cansaço")
+    with freeze_time(f"{SEG} 08:40:00-03:00"):
+        services.capturar(usuario, "depois do bloco", origem=ItemCaptura.Origem.FOCO)
+
+    textos = [i.texto for i in services.distracoes_do_bloco(bloco)]
+    assert textos == ["Pagar a DARF", "Pedir acesso ao servidor"]
+
+
+def test_bloco_nao_iniciado_nao_tem_distracoes(usuario, plano):
+    services.capturar(usuario, "solta", origem=ItemCaptura.Origem.FOCO)
+    assert services.distracoes_do_bloco(plano.first()) == []
+
+
+def test_janela_do_bloco_usa_inicio_real(usuario, plano):
+    bloco = plano.first()
+    with freeze_time(f"{SEG} 09:00:00-03:00"):
+        services.iniciar_bloco(bloco)
+    with freeze_time(f"{SEG} 09:00:00-03:00") as relogio:
+        relogio.tick(timedelta(minutes=5))
+        services.capturar(usuario, "no meio", origem=ItemCaptura.Origem.FOCO)
+    assert [i.texto for i in services.distracoes_do_bloco(bloco)] == ["no meio"]
