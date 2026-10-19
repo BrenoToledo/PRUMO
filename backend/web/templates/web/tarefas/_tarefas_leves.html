@@ -1,0 +1,9 @@
+{% if tarefas_leves %}<section class="leves" aria-labelledby="titulo-leves">
+  <div class="leves__topo">
+    <h2 id="titulo-leves">Tarefas leves</h2>
+    <span class="leves__dica">esforço baixo · fim do dia</span>
+  </div>
+  <div class="leves__lista">
+    {% for tarefa in tarefas_leves %}{% include "web/tarefas/_tarefa_leve.html" %}{% endfor %}
+  </div>
+</section>{% endif %}
