@@ -1,0 +1,23 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Fim do bloco{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/foco.css' %}">{% endblock %}
+{% block corpo %}
+<main class="foco">
+  <header class="foco__topo foco__topo--fim">
+    <a class="foco__fechar" href="{% url 'web:foco' %}" aria-label="Voltar ao foco" title="Voltar ao foco">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </a>
+    <h1>Bloco concluído</h1>
+  </header>
+
+  <div class="fim__numeros">
+    <p class="fim__numero"><strong>{{ minutos }} min</strong> <span>focados</span></p>
+  </div>
+
+  <p class="fim__tarefa">{{ tarefa.titulo }}</p>
+
+  {% include "web/foco/_form_fim.html" %}
+</main>
+{% endblock %}
+{% block scripts %}<script src="{% static 'web/telas/foco.js' %}" defer></script>{% endblock %}

@@ -59,6 +59,18 @@
     });
   }
 
+  // Fim do bloco (M11): botões − e + dos blocos restantes. Delegado no documento porque o formulário
+  // pode ser trocado pelo HTMX (erro de validação).
+  document.addEventListener("click", function (e) {
+    const botao = e.target.closest("[data-passo]");
+    if (!botao) return;
+    const campo = botao.closest("[data-contador]").querySelector("input");
+    const minimo = Number(campo.min || 0);
+    const maximo = Number(campo.max || 20);
+    const valor = Number(campo.value || 0) + Number(botao.dataset.passo);
+    campo.value = String(Math.min(maximo, Math.max(minimo, valor)));
+  });
+
   document.addEventListener("DOMContentLoaded", function () {
     const timer = document.querySelector("[data-timer]");
     if (timer) iniciarTimer(timer);

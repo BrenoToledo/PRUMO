@@ -243,3 +243,148 @@ def test_sair_de_bloco_de_outra_pessoa_da_404(logado, outra):
     alheio = iniciado(criar_bloco(outra))
 
     assert logado.post(reverse("web:sair_do_bloco", args=[alheio.pk]), {"motivo": "Cansaço"}).status_code == 404
+
+
+# ---------------------------------------------------------------- fim do bloco (#7)
+def concluir(cliente, bloco, dados, **extra):
+    return cliente.post(reverse("web:concluir_bloco", args=[bloco.pk]), dados, **extra)
+
+
+def test_fim_do_bloco_mostra_as_tres_opcoes(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    with freeze_time("2026-10-19 12:30:00"):
+        html = logado.get(reverse("web:foco") + "?fim=1").content.decode()
+
+    assert "Bloco concluído" in html
+    assert "90 min" in html  # focados até agora
+    for valor, rotulo in Bloco.Resultado.choices:
+        assert f'value="{valor}"' in html
+        assert rotulo in html
+    assert 'name="blocos_restantes"' in html and 'value="1"' in html  # 2 estimados, este conta como feito
+    assert 'name="nova_proxima_acao"' in html
+    assert reverse("web:concluir_bloco", args=[bloco.pk]) in html
+
+
+def test_fim_sem_bloco_em_foco_volta_para_hoje(logado, sem_foco):
+    resposta = logado.get(reverse("web:foco") + "?fim=1")
+
+    assert resposta["Location"] == reverse("web:hoje")
+
+
+def test_concluiu_a_tarefa(logado, usuario, bloco, em_foco):
+    iniciado(bloco)
+    tarefa = bloco.tarefa
+    sobra = Bloco.objects.create(
+        usuario=usuario, tarefa=tarefa, inicio_planejado=timezone.now(), fim_planejado=timezone.now()
+    )
+
+    resposta = concluir(logado, bloco, {"resultado": "concluiu"}, follow=True)
+
+    assert resposta.redirect_chain[-1][0] == reverse("web:hoje")
+    assert "Bloco registrado" in resposta.content.decode()
+    bloco.refresh_from_db()
+    tarefa.refresh_from_db()
+    assert bloco.status == Bloco.Status.CONCLUIDO
+    assert bloco.resultado == Bloco.Resultado.CONCLUIU
+    assert tarefa.status == tarefa.Status.CONCLUIDA
+    assert tarefa.concluida_em is not None
+    assert tarefa.blocos_feitos == 1
+    assert not Bloco.objects.filter(pk=sobra.pk).exists()
+    assert EventoTarefa.objects.filter(tarefa=tarefa, tipo=EventoTarefa.Tipo.CONCLUIDA).exists()
+
+
+def test_avancou_com_blocos_restantes_e_nova_proxima_acao(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    concluir(
+        logado,
+        bloco,
+        {"resultado": "avancou", "blocos_restantes": "3", "nova_proxima_acao": "  Escrever a seção 3.2  "},
+    )
+
+    bloco.refresh_from_db()
+    tarefa = bloco.tarefa
+    tarefa.refresh_from_db()
+    assert bloco.status == Bloco.Status.CONCLUIDO
+    assert bloco.resultado == Bloco.Resultado.AVANCOU
+    assert tarefa.status == tarefa.Status.ABERTA
+    assert tarefa.blocos_feitos == 1
+    assert tarefa.blocos_estimados == 4
+    assert tarefa.proxima_acao == "Escrever a seção 3.2"
+    assert EventoTarefa.objects.filter(tarefa=tarefa, tipo=EventoTarefa.Tipo.BLOCO).exists()
+
+
+def test_avancou_sem_mexer_nos_blocos_mantem_a_estimativa(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    concluir(logado, bloco, {"resultado": "avancou", "blocos_restantes": "", "nova_proxima_acao": ""})
+
+    tarefa = bloco.tarefa
+    tarefa.refresh_from_db()
+    assert tarefa.blocos_feitos == 1
+    assert tarefa.blocos_estimados == 2
+    assert tarefa.proxima_acao == "Abrir a tabela de artigos e revisar o artigo 1"
+
+
+def test_nao_avancou(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    concluir(logado, bloco, {"resultado": "nao_avancou", "blocos_restantes": "5"})
+
+    bloco.refresh_from_db()
+    tarefa = bloco.tarefa
+    tarefa.refresh_from_db()
+    assert bloco.status == Bloco.Status.CONCLUIDO
+    assert bloco.resultado == Bloco.Resultado.NAO_AVANCOU
+    assert tarefa.status == tarefa.Status.ABERTA
+    assert tarefa.blocos_feitos == 0
+    assert tarefa.blocos_estimados == 2  # blocos restantes só valem para "avancei"
+
+
+def test_concluir_por_htmx_volta_para_hoje(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    resposta = concluir(logado, bloco, {"resultado": "avancou"}, **HTMX)
+
+    assert resposta.status_code == 200
+    assert resposta["HX-Redirect"] == reverse("web:hoje")
+
+
+@pytest.mark.parametrize(
+    "dados",
+    [{}, {"resultado": "talvez"}, {"resultado": "avancou", "blocos_restantes": "-1"}],
+)
+def test_concluir_invalido_da_422(logado, bloco, em_foco, dados):
+    iniciado(bloco)
+
+    resposta = concluir(logado, bloco, dados, **HTMX)
+
+    assert resposta.status_code == 422
+    assert 'class="erro"' in resposta.content.decode()
+    bloco.refresh_from_db()
+    assert bloco.status == Bloco.Status.EM_FOCO
+
+
+def test_concluir_invalido_sem_htmx_volta_ao_fim_do_bloco(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    resposta = concluir(logado, bloco, {})
+
+    assert resposta["Location"] == reverse("web:foco") + "?fim=1"
+
+
+def test_concluir_bloco_que_nao_esta_em_foco_da_404(logado, bloco):
+    assert concluir(logado, bloco, {"resultado": "concluiu"}).status_code == 404
+
+
+def test_concluir_bloco_de_outra_pessoa_da_404(logado, outra):
+    alheio = iniciado(criar_bloco(outra))
+
+    assert concluir(logado, alheio, {"resultado": "concluiu"}).status_code == 404
+    alheio.refresh_from_db()
+    assert alheio.status == Bloco.Status.EM_FOCO
+
+
+def test_concluir_so_aceita_post(logado, bloco):
+    assert logado.get(reverse("web:concluir_bloco", args=[bloco.pk])).status_code == 405
