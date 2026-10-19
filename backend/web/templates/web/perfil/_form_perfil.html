@@ -1,0 +1,56 @@
+<form id="form-perfil" class="perfil" method="post" action="{% url 'web:perfil' %}" novalidate
+      hx-post="{% url 'web:perfil' %}" hx-target="this" hx-swap="outerHTML">
+  {% csrf_token %}
+  {% if form.errors %}<p class="erro" role="alert">{% for erro in form.non_field_errors %}{{ erro }} {% empty %}Confira os campos marcados.{% endfor %}</p>{% endif %}
+  {% if salvo %}<p class="perfil__salvo" role="status">Perfil salvo · {{ capacidade }} blocos por dia útil.</p>{% endif %}
+
+  <fieldset class="perfil__grupo">
+    <legend>Jornada</legend>
+    <div class="perfil__par">
+      <div class="perfil__campo">
+        <label for="{{ form.inicio_trabalho.id_for_label }}">{{ form.inicio_trabalho.label }}</label>
+        {{ form.inicio_trabalho }}
+        {% for erro in form.inicio_trabalho.errors %}<p class="perfil__erro">{{ erro }}</p>{% endfor %}
+      </div>
+      <div class="perfil__campo">
+        <label for="{{ form.fim_trabalho.id_for_label }}">{{ form.fim_trabalho.label }}</label>
+        {{ form.fim_trabalho }}
+        {% for erro in form.fim_trabalho.errors %}<p class="perfil__erro">{{ erro }}</p>{% endfor %}
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset class="perfil__grupo">
+    <legend>{{ form.pico_energia.label }}</legend>
+    <div class="perfil__opcoes">
+      {% for pico in picos %}<label class="opcao">
+        <input type="radio" name="pico_energia" value="{{ pico.valor }}"{% if pico.marcado %} checked{% endif %}>
+        <span class="opcao__texto">{{ pico.rotulo }}<span class="opcao__dica">{{ pico.dica }}</span></span>
+      </label>{% endfor %}
+    </div>
+    {% for erro in form.pico_energia.errors %}<p class="perfil__erro">{{ erro }}</p>{% endfor %}
+  </fieldset>
+
+  <fieldset class="perfil__grupo">
+    <legend>{{ form.folga_diaria.label }}</legend>
+    <div class="perfil__chips">
+      {% for folga in folgas %}<label class="chip-opcao">
+        <input type="radio" name="folga_diaria" value="{{ folga.valor }}"{% if folga.marcada %} checked{% endif %}>
+        <span>{{ folga.rotulo }}</span>
+      </label>{% endfor %}
+    </div>
+    {% for erro in form.folga_diaria.errors %}<p class="perfil__erro">{{ erro }}</p>{% endfor %}
+  </fieldset>
+
+  <fieldset class="perfil__grupo">
+    <legend>Bloco de foco</legend>
+    <div class="perfil__campo">
+      <label for="{{ form.duracao_bloco_min.id_for_label }}">{{ form.duracao_bloco_min.label }}</label>
+      {{ form.duracao_bloco_min }}
+      {% for erro in form.duracao_bloco_min.errors %}<p class="perfil__erro">{{ erro }}</p>{% endfor %}
+    </div>
+  </fieldset>
+
+  <p class="perfil__capacidade">Com este horário cabem <strong>{{ capacidade }} blocos</strong> por dia útil, já descontada a folga.</p>
+  <button class="botao botao--primario perfil__salvar" type="submit">Salvar</button>
+</form>

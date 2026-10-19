@@ -1,0 +1,153 @@
+/* Tarefas: tarefas leves na tela Hoje (M01), detalhe (M04) e "por que esta prioridade" (M05). */
+
+/* Tarefas leves */
+.leves { margin: var(--e6) 0 var(--e4); }
+.leves__topo { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e3); margin-bottom: var(--e3); }
+.leves__topo h2 { font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); margin: 0; }
+.leves__dica { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.leves__lista { display: flex; flex-direction: column; gap: var(--e3); }
+.leve {
+  display: flex; align-items: center; gap: var(--e3);
+  min-height: 52px; padding: var(--e2) var(--e4);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+}
+.leve form { display: flex; }
+.leve__circulo {
+  flex: none; width: 24px; height: 24px; padding: 0; display: grid; place-items: center;
+  border: 2px solid var(--texto-secundario); border-radius: var(--raio-chip);
+  background: none; color: var(--texto-na-primaria); cursor: pointer;
+}
+.leve__circulo:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
+.leve__circulo--feito { border-color: var(--primaria); background: var(--primaria); cursor: default; }
+.leve__circulo svg { width: 14px; height: 14px; }
+.leve__titulo { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--texto); text-decoration: none; }
+.leve__tempo { flex: none; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.leve--feita { background: var(--primaria-suave); border-color: transparent; }
+.leve--feita .leve__titulo { color: var(--texto-secundario); text-decoration: line-through; }
+
+/* Detalhe da tarefa (M04) */
+.detalhe { display: flex; flex-direction: column; gap: var(--e3); }
+.voltar {
+  display: inline-flex; align-items: center; gap: var(--e2); align-self: flex-start; min-height: 44px;
+  color: var(--texto); text-decoration: none;
+  font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso);
+}
+.voltar svg { width: 20px; height: 20px; }
+.detalhe__titulo { font-size: var(--titulo-tam); line-height: var(--titulo-alt); font-weight: var(--titulo-peso); margin: 0; overflow-wrap: anywhere; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--e2); margin: 0; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px var(--e2); border-radius: var(--raio-chip);
+  background: var(--borda); color: var(--texto);
+  font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso);
+}
+.chip--area { background: color-mix(in srgb, var(--cor-area) 15%, transparent); }
+.chip--area::before { content: ""; width: 6px; height: 6px; border-radius: var(--raio-chip); background: var(--cor-area); }
+.chip--critica { background: color-mix(in srgb, var(--prioridade-critica) 15%, transparent); color: var(--prioridade-critica); }
+.chip--alta { background: color-mix(in srgb, var(--prioridade-alta) 15%, transparent); color: var(--prioridade-alta); }
+.chip--media { background: color-mix(in srgb, var(--prioridade-media) 15%, transparent); color: var(--prioridade-media); }
+.chip--baixa { background: color-mix(in srgb, var(--prioridade-baixa) 15%, transparent); color: var(--prioridade-baixa); }
+
+.cartao {
+  margin: 0; padding: var(--e3) var(--e4);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+}
+.rotulo {
+  margin: 0 0 var(--e1); color: var(--texto-secundario); text-transform: uppercase; letter-spacing: .04em;
+  font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso);
+}
+.detalhe__acao { margin: 0; overflow-wrap: anywhere; }
+
+.fatos { display: flex; flex-direction: column; gap: var(--e2); }
+.fatos__linha {
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--e3);
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.fatos__linha dt, .fatos__linha > span:first-child { color: var(--texto-secundario); }
+.fatos__linha dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.porque__respostas dd { white-space: nowrap; }
+
+.blocos__linha {
+  display: flex; justify-content: space-between; margin: 0 0 var(--e2);
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt); color: var(--texto-secundario);
+}
+.barra {
+  display: block; width: 100%; height: 8px; border: 0; border-radius: var(--raio-chip);
+  background: var(--borda); overflow: hidden; appearance: none;
+}
+.barra::-webkit-progress-bar { background: var(--borda); border-radius: var(--raio-chip); }
+.barra::-webkit-progress-value { background: var(--primaria); border-radius: var(--raio-chip); }
+.barra::-moz-progress-bar { background: var(--primaria); border-radius: var(--raio-chip); }
+
+/* Por que esta prioridade (M05) */
+.porque { display: flex; flex-direction: column; gap: var(--e3); }
+.porque summary {
+  display: flex; align-items: center; gap: var(--e3); min-height: 44px; cursor: pointer; list-style: none;
+}
+.porque summary::-webkit-details-marker { display: none; }
+.porque__nota { font-size: var(--display-tam); line-height: var(--display-alt); font-weight: var(--display-peso); }
+.porque__nota--critica { color: var(--prioridade-critica); }
+.porque__nota--alta { color: var(--prioridade-alta); }
+.porque__nota--media { color: var(--prioridade-media); }
+.porque__nota--baixa { color: var(--prioridade-baixa); }
+.porque__titulo { font-size: var(--titulo-tam); line-height: var(--titulo-alt); font-weight: var(--titulo-peso); }
+.porque__sub { margin: 0 0 var(--e3); color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.porque .cartao { margin-bottom: var(--e3); }
+.porque__linha {
+  display: flex; justify-content: space-between; margin: 0 0 var(--e2);
+  font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso);
+}
+.porque__valor { color: var(--primaria); }
+.porque__respostas { display: flex; flex-direction: column; gap: var(--e2); margin: 0; }
+.porque__texto { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.porque__conta {
+  margin: 0; padding: var(--e3) var(--e4); border-radius: var(--raio-card); background: var(--primaria-suave);
+  font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Partes e histórico */
+.secao h2 { margin: var(--e3) 0 var(--e2); font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+.partes, .historico { list-style: none; display: flex; flex-direction: column; gap: var(--e2); }
+.partes__item { display: flex; justify-content: space-between; gap: var(--e3); }
+.partes__item a { color: var(--texto); }
+.partes__item span { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.partes__item--feita a { color: var(--texto-secundario); text-decoration: line-through; }
+
+/* Edição */
+.editar summary { list-style: none; align-self: flex-start; }
+.editar summary::-webkit-details-marker { display: none; }
+.form-tarefa { display: flex; flex-direction: column; gap: var(--e3); margin-top: var(--e3); }
+.form-tarefa > div, .form-tarefa__par > div { display: flex; flex-direction: column; gap: var(--e1); }
+.form-tarefa label, .form-tarefa legend {
+  color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.form-tarefa input:not([type="checkbox"], [type="radio"]), .form-tarefa select {
+  width: 100%; min-height: 44px; padding: 0 var(--e3);
+  border: 1px solid var(--borda); border-radius: var(--raio-campo);
+  background: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px;
+}
+.form-tarefa input:focus-visible, .form-tarefa select:focus-visible { outline: 2px solid var(--primaria); outline-offset: -1px; }
+.form-tarefa__par { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); }
+.form-tarefa .form-tarefa__marca { flex-direction: row; align-items: center; align-self: end; min-height: 44px; }
+.form-tarefa__grupo { margin: var(--e2) 0 0; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+.form-tarefa fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.form-tarefa legend { padding: 0; margin-bottom: var(--e1); }
+.form-tarefa .errorlist { margin: 0; padding: 0; list-style: none; color: var(--prioridade-critica); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.notas { display: flex; gap: var(--e2); }
+.notas label {
+  display: grid; place-items: center; min-width: 44px; min-height: 36px; padding: 0 var(--e3);
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); background: var(--superficie);
+  color: var(--texto); cursor: pointer;
+}
+.notas input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.notas label:has(input:checked) { background: var(--primaria); border-color: var(--primaria); color: var(--texto-na-primaria); }
+.notas label:has(input:focus-visible) { outline: 2px solid var(--primaria); outline-offset: 2px; }
+.form-tarefa .botao--primario { align-self: flex-end; }
+
+.detalhe__acoes { display: flex; justify-content: flex-end; margin-top: var(--e3); }
+.detalhe__acoes .botao { min-width: 160px; }
+
+@media (hover: hover) {
+  .leve__circulo:hover { border-color: var(--primaria); }
+  .notas label:hover { border-color: var(--primaria); }
+}

@@ -1,0 +1,56 @@
+/* Perfil e horário (M31, M33): jornada, pico de energia, folga e duração do bloco. */
+.perfil__voltar {
+  display: inline-flex; align-items: center; gap: var(--e1); min-height: 32px;
+  color: var(--texto-secundario); text-decoration: none;
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.perfil__voltar svg { width: 16px; height: 16px; }
+
+.perfil { display: flex; flex-direction: column; gap: var(--e6); }
+.perfil__grupo { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.perfil__grupo legend {
+  padding: 0; margin-bottom: var(--e2); color: var(--texto-secundario); text-transform: uppercase; letter-spacing: .04em;
+  font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso);
+}
+.perfil__par { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); }
+.perfil__campo { display: flex; flex-direction: column; gap: var(--e1); }
+.perfil__campo label { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.perfil__campo input {
+  width: 100%; min-height: 48px; padding: 0 var(--e3);
+  border: 1px solid var(--borda); border-radius: var(--raio-campo);
+  background: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px;
+}
+.perfil__campo input:focus-visible { outline: 2px solid var(--primaria); outline-offset: -1px; }
+.perfil__erro { margin: 0; color: var(--prioridade-critica); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+
+.perfil__opcoes { display: flex; flex-direction: column; gap: var(--e3); }
+.opcao {
+  display: flex; align-items: center; gap: var(--e3); min-height: 52px; padding: var(--e3) var(--e4);
+  border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--superficie); cursor: pointer;
+}
+.opcao input { accent-color: var(--primaria); width: 20px; height: 20px; margin: 0; flex: none; }
+.opcao:has(input:checked) { border-color: var(--primaria); background: var(--primaria-suave); }
+.opcao__texto { display: flex; flex-direction: column; }
+.opcao__dica { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+
+.perfil__chips { display: flex; flex-wrap: wrap; gap: var(--e2); }
+.chip-opcao { position: relative; cursor: pointer; }
+.chip-opcao input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.chip-opcao span {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--e3);
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); background: var(--superficie);
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: var(--micro-peso);
+}
+.chip-opcao input:checked + span { background: var(--primaria); border-color: var(--primaria); color: var(--texto-na-primaria); }
+.chip-opcao input:focus-visible + span { outline: 2px solid var(--primaria); outline-offset: 2px; }
+
+.perfil__capacidade { margin: 0; color: var(--texto-secundario); }
+.perfil__capacidade strong { color: var(--texto); }
+.perfil__salvo {
+  margin: 0; padding: var(--e3) var(--e4); border-radius: var(--raio-campo); background: var(--primaria-suave);
+}
+.perfil__salvar { width: 100%; }
+
+@media (min-width: 1024px) {
+  .perfil__salvar { width: auto; align-self: flex-end; min-width: 160px; }
+}

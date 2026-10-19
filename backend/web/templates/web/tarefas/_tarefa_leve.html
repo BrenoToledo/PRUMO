@@ -1,0 +1,9 @@
+<div id="tarefa-leve-{{ tarefa.pk }}" class="leve">
+  <form method="post" action="{% url 'web:concluir_tarefa' tarefa.pk %}"
+        hx-post="{% url 'web:concluir_tarefa' tarefa.pk %}" hx-target="#tarefa-leve-{{ tarefa.pk }}" hx-swap="outerHTML">
+    {% csrf_token %}
+    <button class="leve__circulo" type="submit" aria-label="Concluir: {{ tarefa.titulo }}" title="Concluir"></button>
+  </form>
+  <a class="leve__titulo" href="{% url 'web:tarefa' tarefa.pk %}">{{ tarefa.titulo }}</a>
+  {% if tarefa.minutos_estimados %}<span class="leve__tempo">{{ tarefa.minutos_estimados }} min</span>{% endif %}
+</div>

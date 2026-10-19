@@ -1,0 +1,18 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Perfil e horário{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/perfil.css' %}">{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <a class="perfil__voltar" href="{% url 'web:hoje' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      Hoje
+    </a>
+    <h1>Perfil e horário</h1>
+    <p class="cabecalho__sub">Quando você trabalha e quando rende mais. O plano do dia usa isto.</p>
+  </div>
+  {% include "web/_botao_sair.html" %}
+</header>
+{% include "web/perfil/_form_perfil.html" %}
+{% endblock %}
