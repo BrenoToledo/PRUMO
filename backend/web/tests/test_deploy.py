@@ -115,11 +115,12 @@ def pg_dump_falso(tmp_path):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     falso = bin_dir / "pg_dump"
-    falso.write_text(
-        '#!/bin/sh\nfor a in "$@"; do case "$a" in --file=*) arq="${a#--file=}";; esac; done\n'
-        'echo "dump de $PGDATABASE" > "$arq"\n',
-        encoding="utf-8",
+    script = (
+        "#!/bin/sh\n"
+        + 'for a in "$@"; do case "$a" in --file=*) arq="${a#--file=}";; esac; done\n'
+        + 'echo "dump de $PGDATABASE" > "$arq"\n'
     )
+    falso.write_text(script, encoding="utf-8")
     falso.chmod(0o755)
     return bin_dir
 
