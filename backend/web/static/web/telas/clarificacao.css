@@ -55,3 +55,17 @@
   .clarificacao { padding: var(--e6); }
   .clarificacao__acoes { display: flex; justify-content: flex-end; }
 }
+
+/* IA (P10, #25): pedir, revisar e responder à sugestão; as 4 perguntas de importância. */
+.sugestao-ia { padding: var(--e3); border-radius: var(--raio-card); background: var(--primaria-suave); }
+.sugestao-ia__rotulo { display: flex; align-items: center; gap: var(--e1); margin: 0; color: var(--primaria); font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: 600; }
+.sugestao-ia__rotulo svg { width: 16px; height: 16px; }
+.sugestao-ia__texto { margin: var(--e1) 0 0; font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.sugestao-ia__acoes { display: flex; gap: var(--e2); margin: var(--e1) 0 0; }
+.sugestao-ia__pedir { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); margin: 0; }
+.clarificacao__importancia summary { cursor: pointer; }
+.clarificacao__pergunta { margin: var(--e2) 0 0; padding: 0; border: 0; }
+.clarificacao__pergunta legend { padding: 0; font-size: var(--legenda-tam); line-height: var(--legenda-alt); color: var(--texto-secundario); }
+.clarificacao__notas { display: flex; gap: var(--e3); margin-top: var(--e1); }
+.clarificacao__notas label { display: flex; align-items: center; gap: 4px; min-height: 32px; }
+.clarificacao__notas input { accent-color: var(--primaria); }
