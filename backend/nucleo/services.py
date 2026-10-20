@@ -271,7 +271,7 @@ def plano_do_dia(usuario, dia: date | None = None) -> PlanoDoDia:
 
 
 # --------------------------------------------------------------------------- execução dos blocos
-def iniciar_bloco(bloco: Bloco) -> Bloco:
+def iniciar_bloco(bloco: Bloco, *, minutos: int | None = None, checklist: list[str] | None = None) -> Bloco:
     if bloco.status != Bloco.Status.PLANEJADO:
         raise ValueError("só um bloco planejado pode ser iniciado")
     bloco.status, bloco.inicio_real = Bloco.Status.EM_FOCO, timezone.now()
@@ -685,3 +685,8 @@ def excluir_area(area: Area) -> None:
     if partes:
         raise ValueError(f"{area.nome} tem {' e '.join(partes)}. Mude para outra área antes de excluir.")
     area.delete()
+
+
+# --------------------------------------------------------------------------- desktop
+def prioridades_da_semana(usuario, limite: int = 4) -> list[Tarefa]:
+    raise NotImplementedError
