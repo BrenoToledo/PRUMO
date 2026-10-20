@@ -1,6 +1,6 @@
 # API REST
 
-Base: `/api/`. Autenticação por sessão ou token (`POST /api/token/` com `username` e `password`, depois `Authorization: Token <token>`). Cada usuário só vê os próprios dados.
+Base: `/api/`. Autenticação por sessão ou token. Para ferramentas (MCP, scripts), gere um token com nome em Perfil → Tokens da API (`/perfil/tokens/`) e mande `Authorization: Bearer prumo_…`; a chave só aparece ao criar e pode ser revogada a qualquer momento (revogada ou inválida dá `401`). Também vale o token único do DRF: `POST /api/token/` com `username` e `password`, depois `Authorization: Token <token>`. Cada usuário só vê os próprios dados.
 
 ## Caixa de entrada e clarificação
 

@@ -171,6 +171,11 @@ SERVICOS: dict[str, str] = {
     "registrar_resposta": "(sugestao: 'SugestaoIA', final: 'dict', *, tarefa: 'Tarefa | None' = None) -> 'SugestaoIA'",
     "aplicar_quebra": "(sugestao: 'SugestaoIA', partes: 'list[dict]') -> 'list[Tarefa]'",
     "motivo_para_quebrar": "(tarefa: 'Tarefa') -> 'str'",
+    # Tokens da API (P12, #30): para o MCP e outras ferramentas. A chave só aparece ao criar; o banco guarda o hash
+    "criar_token_api": "(usuario, nome: 'str') -> 'tuple[TokenAPI, str]'",
+    "tokens_api_de": "(usuario) -> 'list[TokenAPI]'",
+    "revogar_token_api": "(token: 'TokenAPI') -> 'TokenAPI'",
+    "autenticar_token_api": "(chave: 'str') -> 'TokenAPI | None'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -260,4 +265,5 @@ TELAS_WEB = (
     "imprevistos",
     "preparar",
     "ia",
+    "tokens",
 )
