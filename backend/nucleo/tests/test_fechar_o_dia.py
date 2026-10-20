@@ -2,47 +2,14 @@
 
 from datetime import date, timedelta
 
-import pytest
-from django.contrib.auth import get_user_model
 from freezegun import freeze_time
-from rest_framework.test import APIClient
 
 from nucleo import services
-from nucleo.models import Area, Esforco, Revisao, Tarefa
+from nucleo.models import Revisao
 
 SEG = "2026-10-19"  # segunda-feira
 SEGUNDA = date(2026, 10, 19)
 TERCA = date(2026, 10, 20)
-
-
-@pytest.fixture
-def usuario(db):
-    return get_user_model().objects.create_user("breno", password="senha-forte-123")
-
-
-@pytest.fixture
-def outra(db):
-    return get_user_model().objects.create_user("outra", password="senha-forte-123")
-
-
-@pytest.fixture
-def api(usuario):
-    c = APIClient()
-    c.force_authenticate(usuario)
-    return c
-
-
-def nova_tarefa(usuario, titulo="Escrever capítulo 3", **extra):
-    dados = {
-        "titulo": titulo,
-        "proxima_acao": "Revisar os 5 artigos",
-        "area": Area.objects.get(usuario=usuario, nome="Educação"),
-        "respostas_importancia": {"impacto": 4, "dependentes": 3, "meta": 4, "irreversivel": 3},
-        "esforco": Esforco.ALTO,
-        "blocos_estimados": 2,
-    }
-    with freeze_time("2026-10-12 07:00"):
-        return Tarefa.objects.create(usuario=usuario, **(dados | extra))
 
 
 def _tipos(tarefa) -> list[str]:

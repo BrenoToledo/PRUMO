@@ -3,53 +3,25 @@
 from datetime import date, timedelta
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
 from django.urls import reverse
 from freezegun import freeze_time
 
 from nucleo import services
-from nucleo.models import Area, Bloco, Esforco, ItemCaptura, Revisao, Tarefa
+from nucleo.models import Bloco, ItemCaptura, Revisao
+from nucleo.tests.apoio import nova_tarefa
 
 SEGUNDA = "2026-10-19 21:00"  # 18:00 em São Paulo
 DIA = date(2026, 10, 19)
 
 
 @pytest.fixture
-def usuario(db):
-    return get_user_model().objects.create_user("breno", password="senha-forte-123")
-
-
-@pytest.fixture
-def outra(db):
-    return get_user_model().objects.create_user("outra", password="senha-forte-123")
-
-
-@pytest.fixture
-def logado(client, usuario):
-    client.force_login(usuario)
-    return client
-
-
-def tarefa(usuario, titulo, **extra):
-    dados = {
-        "titulo": titulo,
-        "proxima_acao": "Começar pelo primeiro passo",
-        "area": Area.objects.get(usuario=usuario, nome="Educação"),
-        "respostas_importancia": {"impacto": 4, "dependentes": 3, "meta": 4, "irreversivel": 3},
-        "esforco": Esforco.ALTO,
-        "blocos_estimados": 1,
-    }
-    return Tarefa.objects.create(usuario=usuario, **(dados | extra))
-
-
-@pytest.fixture
 def dia_com_blocos(usuario):
     """Um dia com um bloco feito, um interrompido, um não feito e uma distração anotada no foco."""
     with freeze_time("2026-10-19 10:00"):
-        tarefa(usuario, "Capítulo 3 do TCC", blocos_estimados=1)
-        tarefa(usuario, "Mapear tags OPC UA", blocos_estimados=1)
-        tarefa(usuario, "Responder fornecedor", blocos_estimados=1)
+        nova_tarefa(usuario, "Capítulo 3 do TCC", blocos_estimados=1)
+        nova_tarefa(usuario, "Mapear tags OPC UA", blocos_estimados=1)
+        nova_tarefa(usuario, "Responder fornecedor", blocos_estimados=1)
         services.gerar_plano_do_dia(usuario)
     blocos = list(Bloco.objects.filter(usuario=usuario).order_by("inicio_planejado"))
     with freeze_time("2026-10-19 11:00"):
@@ -103,9 +75,12 @@ def test_resumo_do_dia(logado, dia_com_blocos):
 @freeze_time(SEGUNDA)
 def test_planejado_vs_real(logado, dia_com_blocos):
     html = pagina(logado)
-    assert "Capítulo 3 do TCC" in html and "feito" in html
-    assert "Mapear tags OPC UA" in html and "interrompido" in html
-    assert "Responder fornecedor" in html and "não feito" in html
+    assert "Capítulo 3 do TCC" in html
+    assert "feito" in html
+    assert "Mapear tags OPC UA" in html
+    assert "interrompido" in html
+    assert "Responder fornecedor" in html
+    assert "não feito" in html
 
 
 @freeze_time(SEGUNDA)
@@ -119,11 +94,12 @@ def test_distracoes_com_atalho_para_a_entrada(logado, dia_com_blocos):
 @freeze_time(SEGUNDA)
 def test_imprevistos_do_meu_dia_quebrou(logado, usuario):
     with freeze_time("2026-10-19 10:00"):
-        tarefa(usuario, "Capítulo 3 do TCC", blocos_estimados=3)
+        nova_tarefa(usuario, "Capítulo 3 do TCC", blocos_estimados=3)
         services.gerar_plano_do_dia(usuario)
         services.meu_dia_quebrou(usuario, blocos_uteis=1, motivo="Reunião surpresa")
     html = pagina(logado)
-    assert "1</strong>" in html and "imprevisto" in html
+    assert "1</strong>" in html
+    assert "imprevisto" in html
 
 
 @freeze_time(SEGUNDA)
@@ -135,7 +111,7 @@ def test_dia_vazio(logado):
 @freeze_time(SEGUNDA)
 def test_nao_mostra_dados_de_outro_usuario(logado, outra):
     with freeze_time("2026-10-19 10:00"):
-        tarefa(outra, "Segredo da outra")
+        nova_tarefa(outra, "Segredo da outra")
         services.gerar_plano_do_dia(outra)
     services.capturar(outra, "Distração da outra", origem=ItemCaptura.Origem.FOCO)
     html = pagina(logado)

@@ -144,11 +144,10 @@
 .notas label:has(input:focus-visible) { outline: 2px solid var(--primaria); outline-offset: 2px; }
 .form-tarefa .botao--primario { align-self: flex-end; }
 
-.detalhe__acoes { display: flex; justify-content: flex-end; margin-top: var(--e3); }
+.detalhe__acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--e3); margin-top: var(--e3); margin-bottom: var(--e12); }
 .detalhe__acoes .botao { min-width: 160px; }
 
 /* Adiar e cancelar (#19): cada ação abre o próprio formulário curto. */
-.detalhe__acoes { flex-wrap: wrap; gap: var(--e3); margin-bottom: var(--e12); }
 .acao-extra summary { list-style: none; }
 .acao-extra summary::-webkit-details-marker { display: none; }
 .acao-extra[open] { flex-basis: 100%; order: 1; }

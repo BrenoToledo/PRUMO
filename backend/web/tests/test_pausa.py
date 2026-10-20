@@ -3,41 +3,19 @@
 import re
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
 from django.urls import reverse
 from freezegun import freeze_time
 
 from nucleo import services
-from nucleo.models import Area, Bloco, Esforco, EventoTarefa, Tarefa
+from nucleo.models import Bloco, EventoTarefa
+from nucleo.tests.apoio import nova_tarefa
 
 SEGUNDA = "2026-10-19 11:10"  # 08:10 em São Paulo, dentro do primeiro bloco
 
 
-@pytest.fixture
-def usuario(db):
-    return get_user_model().objects.create_user("breno", password="senha-forte-123")
-
-
-@pytest.fixture
-def outra(db):
-    return get_user_model().objects.create_user("outra", password="senha-forte-123")
-
-
-@pytest.fixture
-def logado(client, usuario):
-    client.force_login(usuario)
-    return client
-
-
 def bloco_em_foco(usuario):
-    Tarefa.objects.create(
-        usuario=usuario,
-        titulo="Escrever capítulo 3 do TCC",
-        proxima_acao="Revisar os 5 artigos",
-        area=Area.objects.get(usuario=usuario, nome="Educação"),
-        esforco=Esforco.ALTO,
-    )
+    nova_tarefa(usuario, "Escrever capítulo 3 do TCC", blocos_estimados=1)
     with freeze_time("2026-10-19 10:00"):
         services.gerar_plano_do_dia(usuario)
     bloco = Bloco.objects.filter(usuario=usuario).first()
@@ -55,7 +33,8 @@ def test_rota_reservada():
 
 def test_exige_login(client):
     r = client.get(reverse("web:pausa"))
-    assert r.status_code == 302 and reverse("web:login") in r["Location"]
+    assert r.status_code == 302
+    assert reverse("web:login") in r["Location"]
 
 
 @freeze_time(SEGUNDA)
@@ -67,7 +46,8 @@ def test_so_aceita_get(logado, usuario):
 @freeze_time(SEGUNDA)
 def test_sem_bloco_em_foco_volta_para_hoje(logado):
     r = pagina(logado)
-    assert r.status_code == 302 and r["Location"] == reverse("web:hoje")
+    assert r.status_code == 302
+    assert r["Location"] == reverse("web:hoje")
     assert [str(m) for m in get_messages(r.wsgi_request)] == ["Nenhum bloco em foco agora."]
 
 
@@ -120,8 +100,10 @@ def test_sugestoes_sem_tela_e_aviso_sobre_redes(logado, usuario):
 def test_ao_terminar_oferece_voltar_ao_foco_ou_encerrar_o_bloco(logado, usuario):
     bloco_em_foco(usuario)
     html = pagina(logado).content.decode()
-    assert f'href="{reverse("web:foco")}"' in html and "Voltar ao foco" in html
-    assert f'href="{reverse("web:foco")}?fim=1"' in html and "Encerrar bloco" in html
+    assert f'href="{reverse("web:foco")}"' in html
+    assert "Voltar ao foco" in html
+    assert f'href="{reverse("web:foco")}?fim=1"' in html
+    assert "Encerrar bloco" in html
     assert 'src="/static/web/telas/pausa.js"' in html
 
 
@@ -139,4 +121,5 @@ def test_pausa_nao_muda_o_bloco_nem_grava_evento(logado, usuario):
 def test_modo_foco_tem_o_botao_pausar(logado, usuario):
     bloco_em_foco(usuario)
     html = logado.get(reverse("web:foco")).content.decode()
-    assert f'href="{reverse("web:pausa")}"' in html and "Pausar" in html
+    assert f'href="{reverse("web:pausa")}"' in html
+    assert "Pausar" in html

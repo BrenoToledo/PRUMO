@@ -3,44 +3,17 @@
 from datetime import date
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
 from django.urls import reverse
 from freezegun import freeze_time
 
 from nucleo import services
-from nucleo.models import Area, Bloco, Esforco, EventoTarefa, Tarefa
+from nucleo.models import Bloco, EventoTarefa, Tarefa
+from nucleo.tests.apoio import nova_tarefa
 
 HTMX = {"HTTP_HX_REQUEST": "true"}
 SEGUNDA = "2026-10-19 10:00"  # 07:00 em São Paulo
 TERCA = date(2026, 10, 20)
-
-
-@pytest.fixture
-def usuario(db):
-    return get_user_model().objects.create_user("breno", password="senha-forte-123")
-
-
-@pytest.fixture
-def outra(db):
-    return get_user_model().objects.create_user("outra", password="senha-forte-123")
-
-
-@pytest.fixture
-def logado(client, usuario):
-    client.force_login(usuario)
-    return client
-
-
-def nova_tarefa(usuario, titulo="Escrever capítulo 3", **extra):
-    dados = {
-        "titulo": titulo,
-        "proxima_acao": "Revisar os 5 artigos",
-        "area": Area.objects.get(usuario=usuario, nome="Educação"),
-        "esforco": Esforco.ALTO,
-        "blocos_estimados": 2,
-    }
-    return Tarefa.objects.create(usuario=usuario, **(dados | extra))
 
 
 def avisos(resposta) -> list[str]:
@@ -87,7 +60,8 @@ def test_adiar_sem_htmx_volta_ao_detalhe_com_aviso(logado, usuario):
 
     r = logado.post(reverse("web:adiar_tarefa", args=[tarefa.pk]), {"para": "2026-10-20", "next": aqui})
 
-    assert r.status_code == 302 and r["Location"] == aqui
+    assert r.status_code == 302
+    assert r["Location"] == aqui
     assert avisos(r) == ["Tarefa adiada para 20/10"]
     tarefa.refresh_from_db()
     assert (tarefa.adiamentos, tarefa.adiada_ate) == (1, TERCA)
@@ -109,7 +83,8 @@ def test_adiar_via_htmx_devolve_o_detalhe(logado, usuario):
     r = logado.post(reverse("web:adiar_tarefa", args=[tarefa.pk]), {"para": "2026-10-21"}, **HTMX)
     assert r.status_code == 200
     html = r.content.decode()
-    assert 'id="detalhe-tarefa"' in html and "<html" not in html
+    assert 'id="detalhe-tarefa"' in html
+    assert "<html" not in html
     assert "fora do plano até 21 out" in html
 
 
@@ -135,7 +110,8 @@ def test_cancelar_tira_dos_planos(logado, usuario):
 
     r = logado.post(reverse("web:cancelar_tarefa", args=[tarefa.pk]), {"motivo": "Não faz mais sentido"})
 
-    assert r.status_code == 302 and r["Location"] == reverse("web:hoje")
+    assert r.status_code == 302
+    assert r["Location"] == reverse("web:hoje")
     assert avisos(r) == ["Tarefa cancelada"]
     tarefa.refresh_from_db()
     assert tarefa.status == Tarefa.Status.CANCELADA
@@ -165,7 +141,8 @@ def test_tarefa_de_outro_usuario_e_404(logado, outra):
     assert logado.post(reverse("web:adiar_tarefa", args=[alheia.pk])).status_code == 404
     assert logado.post(reverse("web:cancelar_tarefa", args=[alheia.pk])).status_code == 404
     alheia.refresh_from_db()
-    assert alheia.status == Tarefa.Status.ABERTA and alheia.adiamentos == 0
+    assert alheia.status == Tarefa.Status.ABERTA
+    assert alheia.adiamentos == 0
 
 
 @pytest.mark.parametrize("rota", ["web:adiar_tarefa", "web:cancelar_tarefa"])
@@ -174,4 +151,5 @@ def test_exige_login_e_post(client, logado, usuario, rota):
     assert logado.get(reverse(rota, args=[tarefa.pk])).status_code == 405
     logado.logout()
     r = client.post(reverse(rota, args=[tarefa.pk]))
-    assert r.status_code == 302 and reverse("web:login") in r["Location"]
+    assert r.status_code == 302
+    assert reverse("web:login") in r["Location"]

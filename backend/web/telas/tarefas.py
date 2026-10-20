@@ -32,6 +32,8 @@ from nucleo import services
 from nucleo.models import Tarefa
 
 ERRO_DATA_ADIAR = "Escolha uma data depois de hoje."
+ROTA_TAREFA = "web:tarefa"
+PARCIAL_DETALHE = "web/tarefas/_detalhe.html"
 RESPOSTAS_IMPORTANCIA = [(n, str(n)) for n in range(motor.NOTA_MAXIMA_RESPOSTA + 1)]
 LIMIAR_FOLGA_EM_RISCO = 1.2  # abaixo disso a entrega está em risco (docs/contexto.md)
 
@@ -132,7 +134,7 @@ def _contexto(request, tarefa, form=None, editando=False):
         "historico": services.historico_da_tarefa(tarefa),
         "form": form or TarefaForm(request.user, instance=tarefa),
         "editando": editando,
-        "aqui": reverse("web:tarefa", args=[tarefa.pk]),
+        "aqui": reverse(ROTA_TAREFA, args=[tarefa.pk]),
         "hoje": services.hoje(),
         "amanha": services.hoje() + timedelta(days=1),
     }
@@ -153,14 +155,14 @@ def editar_tarefa(request, pk):
     if not form.is_valid():
         tarefa.refresh_from_db()  # o ModelForm já escreveu os valores inválidos na instância
         contexto = _contexto(request, tarefa, form=form, editando=True)
-        modelo = "web/tarefas/_detalhe.html" if htmx else "web/tarefas/detalhe.html"
+        modelo = PARCIAL_DETALHE if htmx else "web/tarefas/detalhe.html"
         return render(request, modelo, contexto, status=422)
     tarefa = form.save()
     av = services.recalcular_prioridade(tarefa)
     if not htmx:
         messages.success(request, f"Tarefa salva · prioridade {av.rotulo}")
-        return redirect("web:tarefa", pk=tarefa.pk)
-    return render(request, "web/tarefas/_detalhe.html", _contexto(request, tarefa))
+        return redirect(ROTA_TAREFA, pk=tarefa.pk)
+    return render(request, PARCIAL_DETALHE, _contexto(request, tarefa))
 
 
 def _voltar(request, aviso):
@@ -202,12 +204,12 @@ def adiar_tarefa(request, pk):
     except ValueError:
         if not request.headers.get("HX-Request"):
             messages.error(request, ERRO_DATA_ADIAR)
-            return redirect("web:tarefa", pk=tarefa.pk)
+            return redirect(ROTA_TAREFA, pk=tarefa.pk)
         contexto = _contexto(request, tarefa) | {"erro_adiar": ERRO_DATA_ADIAR}
-        return render(request, "web/tarefas/_detalhe.html", contexto, status=422)
+        return render(request, PARCIAL_DETALHE, contexto, status=422)
     if not request.headers.get("HX-Request"):
         return _voltar(request, f"Tarefa adiada para {tarefa.adiada_ate:%d/%m}")
-    return render(request, "web/tarefas/_detalhe.html", _contexto(request, tarefa))
+    return render(request, PARCIAL_DETALHE, _contexto(request, tarefa))
 
 
 @require_POST
@@ -220,7 +222,7 @@ def cancelar_tarefa(request, pk):
     if not request.headers.get("HX-Request"):
         messages.success(request, "Tarefa cancelada")
         return redirect("web:hoje")
-    return render(request, "web/tarefas/_detalhe.html", _contexto(request, tarefa))
+    return render(request, PARCIAL_DETALHE, _contexto(request, tarefa))
 
 
 urlpatterns = [
