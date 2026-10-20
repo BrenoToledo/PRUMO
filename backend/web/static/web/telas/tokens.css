@@ -1,0 +1,17 @@
+/* Tokens da API (M33, integrações): gerar, ver uma vez e revogar. */
+.tokens__dica { margin: var(--e2) 0 var(--e4); color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.tokens__novo { display: flex; flex-direction: column; gap: var(--e2); margin-bottom: var(--e4); border-color: var(--primaria); background: var(--primaria-suave); }
+.tokens__novo h2 { margin: 0; }
+.tokens__alerta { margin: 0; color: var(--aviso); font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: 600; }
+.tokens__chave {
+  width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 var(--e3);
+  border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--superficie); color: var(--texto);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: var(--legenda-tam);
+}
+.tokens__uso { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.tokens__uso code, .tokens__sub code { overflow-wrap: anywhere; }
+.tokens__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.tokens__item { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); }
+.tokens__nome { display: block; font-weight: 600; font-size: inherit; }
+.tokens__sub { display: block; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.tokens__form { margin-bottom: var(--e6); }

@@ -97,6 +97,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "nucleo.autenticacao.TokenAPIAutenticacao",  # primeiro: sem credencial, a API responde 401 com Bearer
         "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.TokenAuthentication",
     ],

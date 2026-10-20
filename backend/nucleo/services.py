@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
+import secrets
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -39,6 +41,7 @@ from .models import (
     SugestaoIA,
     Tarefa,
     TarefaPessoa,
+    TokenAPI,
 )
 
 AREAS_PADRAO = [
@@ -948,3 +951,51 @@ def motivo_para_quebrar(tarefa: Tarefa) -> str:
     if tarefa.status != Tarefa.Status.ABERTA or tarefa.partes.filter(status=Tarefa.Status.ABERTA).exists():
         return ""
     return plan.motivo_para_quebrar(tarefa.adiamentos, tarefa.blocos_restantes)
+
+
+# --------------------------------------------------------------------------- tokens da API (P12)
+PREFIXO_TOKEN = "prumo_"
+NOME_TOKEN_MAX = 60
+
+
+def _hash_da_chave(chave: str) -> str:
+    return hashlib.sha256(chave.encode()).hexdigest()
+
+
+def criar_token_api(usuario, nome: str) -> tuple[TokenAPI, str]:
+    nome = (nome or "").strip()
+    if not nome:
+        raise ValueError("Dê um nome ao token, por exemplo a ferramenta que vai usá-lo.")
+    if len(nome) > NOME_TOKEN_MAX:
+        raise ValueError(f"O nome pode ter até {NOME_TOKEN_MAX} caracteres.")
+    chave = PREFIXO_TOKEN + secrets.token_urlsafe(32)
+    token = TokenAPI.objects.create(
+        usuario=usuario, nome=nome, prefixo=chave[: len(PREFIXO_TOKEN) + 4], hash=_hash_da_chave(chave)
+    )
+    return token, chave
+
+
+def tokens_api_de(usuario) -> list[TokenAPI]:
+    return list(TokenAPI.objects.filter(usuario=usuario, revogado_em__isnull=True))
+
+
+def revogar_token_api(token: TokenAPI) -> TokenAPI:
+    if token.revogado_em:
+        raise ValueError("Este token já foi revogado.")
+    token.revogado_em = timezone.now()
+    token.save(update_fields=["revogado_em"])
+    return token
+
+
+def autenticar_token_api(chave: str) -> TokenAPI | None:
+    if not chave or not chave.startswith(PREFIXO_TOKEN):
+        return None
+    token = (
+        TokenAPI.objects.select_related("usuario")
+        .filter(hash=_hash_da_chave(chave), revogado_em__isnull=True, usuario__is_active=True)
+        .first()
+    )
+    if token:
+        token.ultimo_uso_em = timezone.now()
+        token.save(update_fields=["ultimo_uso_em"])
+    return token
