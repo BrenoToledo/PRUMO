@@ -9,9 +9,15 @@ Rota própria do módulo:
 - POST `tarefas/<pk>/editar/` → `web:editar_tarefa`: salva os campos básicos e as 4 respostas de importância e
   chama `services.recalcular_prioridade` (o mesmo que o `PATCH /api/tarefas/{id}/` faz).
 
+Rotas do P7 (issue #19, branch pacote-7-fechar-o-dia):
+- POST `tarefas/<pk>/adiar/` → `web:adiar_tarefa` (`para=AAAA-MM-DD`, padrão amanhã), chama `services.adiar_tarefa`.
+- POST `tarefas/<pk>/cancelar/` → `web:cancelar_tarefa` (`motivo` opcional), chama `services.cancelar_tarefa`.
+
 As tarefas leves (#8) aparecem na tela Hoje pelo parcial `web/tarefas/_tarefas_leves.html`, que recebe
 `tarefas_leves` do `PlanoDoDia`. Concluir e reabrir respondem ao HTMX com um item desse parcial.
 """
+
+from datetime import timedelta
 
 from django import forms
 from django.contrib import messages
@@ -25,6 +31,9 @@ from nucleo import prioridade as motor
 from nucleo import services
 from nucleo.models import Tarefa
 
+ERRO_DATA_ADIAR = "Escolha uma data depois de hoje."
+ROTA_TAREFA = "web:tarefa"
+PARCIAL_DETALHE = "web/tarefas/_detalhe.html"
 RESPOSTAS_IMPORTANCIA = [(n, str(n)) for n in range(motor.NOTA_MAXIMA_RESPOSTA + 1)]
 LIMIAR_FOLGA_EM_RISCO = 1.2  # abaixo disso a entrega está em risco (docs/contexto.md)
 
@@ -74,6 +83,15 @@ class TarefaForm(forms.ModelForm):
         return tarefa
 
 
+class AdiarForm(forms.Form):
+    para = forms.DateField(required=False, error_messages={"invalid": ERRO_DATA_ADIAR})
+    motivo = forms.CharField(required=False, max_length=200, strip=True)
+
+
+class CancelarForm(forms.Form):
+    motivo = forms.CharField(required=False, max_length=200, strip=True)
+
+
 def _tarefa_do_usuario(request, pk, status=None):
     filtros = {"pk": pk, "usuario": request.user}
     if status:
@@ -116,7 +134,9 @@ def _contexto(request, tarefa, form=None, editando=False):
         "historico": services.historico_da_tarefa(tarefa),
         "form": form or TarefaForm(request.user, instance=tarefa),
         "editando": editando,
-        "aqui": reverse("web:tarefa", args=[tarefa.pk]),
+        "aqui": reverse(ROTA_TAREFA, args=[tarefa.pk]),
+        "hoje": services.hoje(),
+        "amanha": services.hoje() + timedelta(days=1),
     }
 
 
@@ -135,14 +155,14 @@ def editar_tarefa(request, pk):
     if not form.is_valid():
         tarefa.refresh_from_db()  # o ModelForm já escreveu os valores inválidos na instância
         contexto = _contexto(request, tarefa, form=form, editando=True)
-        modelo = "web/tarefas/_detalhe.html" if htmx else "web/tarefas/detalhe.html"
+        modelo = PARCIAL_DETALHE if htmx else "web/tarefas/detalhe.html"
         return render(request, modelo, contexto, status=422)
     tarefa = form.save()
     av = services.recalcular_prioridade(tarefa)
     if not htmx:
         messages.success(request, f"Tarefa salva · prioridade {av.rotulo}")
-        return redirect("web:tarefa", pk=tarefa.pk)
-    return render(request, "web/tarefas/_detalhe.html", _contexto(request, tarefa))
+        return redirect(ROTA_TAREFA, pk=tarefa.pk)
+    return render(request, PARCIAL_DETALHE, _contexto(request, tarefa))
 
 
 def _voltar(request, aviso):
@@ -172,9 +192,44 @@ def reabrir_tarefa(request, pk):
     return render(request, "web/tarefas/_tarefa_leve.html", {"tarefa": tarefa})
 
 
+@require_POST
+@login_required
+def adiar_tarefa(request, pk):
+    tarefa = _tarefa_do_usuario(request, pk, Tarefa.Status.ABERTA)
+    form = AdiarForm(request.POST)
+    try:
+        if not form.is_valid():
+            raise ValueError(ERRO_DATA_ADIAR)
+        services.adiar_tarefa(tarefa, para=form.cleaned_data["para"], motivo=form.cleaned_data["motivo"])
+    except ValueError:
+        if not request.headers.get("HX-Request"):
+            messages.error(request, ERRO_DATA_ADIAR)
+            return redirect(ROTA_TAREFA, pk=tarefa.pk)
+        contexto = _contexto(request, tarefa) | {"erro_adiar": ERRO_DATA_ADIAR}
+        return render(request, PARCIAL_DETALHE, contexto, status=422)
+    if not request.headers.get("HX-Request"):
+        return _voltar(request, f"Tarefa adiada para {tarefa.adiada_ate:%d/%m}")
+    return render(request, PARCIAL_DETALHE, _contexto(request, tarefa))
+
+
+@require_POST
+@login_required
+def cancelar_tarefa(request, pk):
+    tarefa = _tarefa_do_usuario(request, pk, Tarefa.Status.ABERTA)
+    form = CancelarForm(request.POST)
+    motivo = form.cleaned_data["motivo"] if form.is_valid() else ""
+    services.cancelar_tarefa(tarefa, motivo=motivo)
+    if not request.headers.get("HX-Request"):
+        messages.success(request, "Tarefa cancelada")
+        return redirect("web:hoje")
+    return render(request, PARCIAL_DETALHE, _contexto(request, tarefa))
+
+
 urlpatterns = [
     path("tarefas/<int:pk>/", tarefa, name="tarefa"),
     path("tarefas/<int:pk>/editar/", editar_tarefa, name="editar_tarefa"),
     path("tarefas/<int:pk>/concluir/", concluir_tarefa, name="concluir_tarefa"),
     path("tarefas/<int:pk>/reabrir/", reabrir_tarefa, name="reabrir_tarefa"),
+    path("tarefas/<int:pk>/adiar/", adiar_tarefa, name="adiar_tarefa"),
+    path("tarefas/<int:pk>/cancelar/", cancelar_tarefa, name="cancelar_tarefa"),
 ]

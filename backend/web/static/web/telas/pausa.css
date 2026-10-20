@@ -1,0 +1,27 @@
+/* Pausa (M10): timer curto, sugestões sem tela e aviso sobre redes sociais. Usa a base de foco.css. */
+.pausa__duracoes { display: flex; justify-content: center; gap: var(--e2); }
+.pausa__duracao {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--e3);
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); color: var(--texto); text-decoration: none;
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.pausa__duracao[aria-current="true"] { background: var(--primaria); border-color: var(--primaria); color: var(--texto-na-primaria); }
+.pausa__duracao:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
+
+.pausa__timer { display: flex; flex-direction: column; align-items: center; gap: var(--e2); margin: var(--e4) 0; text-align: center; }
+.pausa__icone {
+  width: 72px; height: 72px; display: grid; place-items: center;
+  border-radius: var(--raio-chip); background: var(--primaria-suave); color: var(--primaria);
+}
+.pausa__icone svg { width: 32px; height: 32px; }
+.pausa__tempo { margin: 0; }
+.pausa__timer--fim .foco__numeros { color: var(--primaria); }
+
+.pausa__titulo { margin: 0 0 var(--e2); font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+.pausa__sugestoes ul { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e1); }
+.pausa__aviso {
+  margin: 0; padding: var(--e3) var(--e4); border-radius: var(--raio-campo);
+  background: color-mix(in srgb, var(--aviso) 14%, transparent); color: var(--texto);
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.pausa__timer--fim ~ .foco__acoes .botao--primario { outline: 2px solid var(--primaria); outline-offset: 2px; }
