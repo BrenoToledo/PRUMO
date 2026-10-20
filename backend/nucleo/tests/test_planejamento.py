@@ -47,7 +47,8 @@ def test_esforco_alto_vai_para_o_pico_de_energia():
 def test_prazo_rigido_vencendo_passa_na_frente():
     cands = [p.Candidata(1, 90, "medio", 3), p.Candidata(2, 30, "medio", 1, prazo=SEG, prazo_rigido=True)]
     plano = p.montar_plano_do_dia(SEG, J, cands)
-    assert plano.slots and 2 in [s.tarefa_id for s in plano.slots]
+    assert plano.slots
+    assert 2 in [s.tarefa_id for s in plano.slots]
 
 
 def test_horarios_com_intervalo_entre_blocos():

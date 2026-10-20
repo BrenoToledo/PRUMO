@@ -11,7 +11,7 @@
     {% endif %}
     <div class="campo">
       <label for="id_username">Usuário</label>
-      <input id="id_username" name="username" type="text" autocomplete="username" autocapitalize="none" required autofocus value="{{ form.username.value|default:'' }}">
+      <input id="id_username" name="username" type="text" autocomplete="username" autocapitalize="none" required value="{{ form.username.value|default:'' }}">
     </div>
     <div class="campo">
       <label for="id_password">Senha</label>

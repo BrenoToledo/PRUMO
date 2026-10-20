@@ -3,13 +3,13 @@
   "use strict";
 
   const script = document.currentScript;
-  const endereco = script && script.dataset.serviceWorker;
+  const endereco = script?.dataset.serviceWorker;
   if (!endereco || !("serviceWorker" in navigator)) return;
 
   window.addEventListener("load", function () {
-    navigator.serviceWorker.register(endereco, { scope: "/" }).catch(function (erro) {
+    navigator.serviceWorker.register(endereco, { scope: "/" }).catch(function (error_) {
       // Sem service worker o site funciona igual; só não fica instalável.
-      console.warn("Prumo: service worker não registrado", erro);
+      console.warn("Prumo: service worker não registrado", error_);
     });
   });
 })();

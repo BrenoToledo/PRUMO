@@ -1,13 +1,10 @@
-{% if resultado %}<p class="plano__resultado" role="status">{{ resultado }}</p>{% endif %}
+{% if resultado %}<output class="plano__resultado">{{ resultado }}</output>{% endif %}
 <section class="capacidade" aria-labelledby="titulo-capacidade">
   <div class="capacidade__linha">
     <h2 id="titulo-capacidade" class="capacidade__titulo">Capacidade do dia</h2>
     <span class="capacidade__valor">{{ plano.planejados }} de {{ plano.capacidade }} blocos · {{ ocupacao_pct }}%</span>
   </div>
-  <div class="capacidade__barra" role="progressbar" aria-labelledby="titulo-capacidade"
-       aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ barra_pct }}">
-    <span class="capacidade__preenchido" style="width: {{ barra_pct }}%"></span>
-  </div>
+  <progress class="capacidade__barra" aria-labelledby="titulo-capacidade" max="100" value="{{ barra_pct }}">{{ barra_pct }}%</progress>
   <p class="capacidade__folga">{{ folga_pct }}% do dia livre para imprevistos</p>
 </section>
 
