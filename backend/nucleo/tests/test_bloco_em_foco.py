@@ -75,7 +75,8 @@ def test_api_em_foco_devolve_os_campos_do_bloco(api, blocos):
     assert r.status_code == 200
     dados = r.json()
     assert set(dados) == set(contratos.CAMPOS_BLOCO)
-    assert dados["id"] == blocos[0].pk and dados["status"] == "em_foco"
+    assert dados["id"] == blocos[0].pk
+    assert dados["status"] == "em_foco"
 
 
 def test_api_em_foco_exige_login(db):

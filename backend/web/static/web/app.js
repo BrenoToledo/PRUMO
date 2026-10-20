@@ -19,8 +19,7 @@
     const folha = document.getElementById("folha-captura");
     function abrirCaptura() {
       if (!folha.open) folha.showModal();
-      const c = campo();
-      if (c) c.focus();
+      campo()?.focus();
     }
     if (folha) {
       document.querySelectorAll("#abrir-captura, [data-abrir-captura]").forEach(function (botao) {
@@ -52,13 +51,13 @@
     });
 
     const inicial = document.getElementById("aviso");
-    if (inicial && inicial.textContent.trim()) aviso(inicial.textContent.trim());
+    if (inicial?.textContent.trim()) aviso(inicial.textContent.trim());
   });
 
   // Avisos temporários na lista (ex.: "Item descartado · Desfazer") somem sozinhos.
   document.addEventListener("htmx:load", function (e) {
     const el = e.detail.elt;
-    if (el && el.dataset && el.dataset.someEm) {
+    if (el?.dataset?.someEm) {
       setTimeout(function () {
         if (el.isConnected) el.remove();
       }, Number(el.dataset.someEm));
@@ -75,6 +74,6 @@
   document.addEventListener("htmx:afterSwap", function () {
     const folha = document.getElementById("folha-captura");
     const c = campo();
-    if (folha && folha.open && c) c.focus();
+    if (folha?.open && c) c.focus();
   });
 })();

@@ -47,6 +47,7 @@
 .perfil__capacidade { margin: 0; color: var(--texto-secundario); }
 .perfil__capacidade strong { color: var(--texto); }
 .perfil__salvo {
+  display: block;
   margin: 0; padding: var(--e3) var(--e4); border-radius: var(--raio-campo); background: var(--primaria-suave);
 }
 .perfil__salvar { width: 100%; }

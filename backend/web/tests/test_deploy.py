@@ -41,7 +41,8 @@ def test_producao_le_tudo_do_ambiente(monkeypatch):
     assert conf["SECRET_KEY"] == "chave-de-teste-bem-comprida"
     assert conf["ALLOWED_HOSTS"] == ["prumo.casa.lan", "localhost"]
     assert conf["CSRF_TRUSTED_ORIGINS"] == ["https://prumo.casa.lan"]
-    assert conf["SESSION_COOKIE_SECURE"] and conf["CSRF_COOKIE_SECURE"]
+    assert conf["SESSION_COOKIE_SECURE"]
+    assert conf["CSRF_COOKIE_SECURE"]
     assert conf["SECURE_PROXY_SSL_HEADER"] == ("HTTP_X_FORWARDED_PROTO", "https")
 
 
@@ -84,7 +85,8 @@ def test_collectstatic_de_producao_gera_arquivos_com_hash(tmp_path):
         nome = staticfiles_storage.stored_name("web/tokens.css")
         assert nome != "web/tokens.css"
         css = (tmp_path / nome).read_text(encoding="utf-8")
-        assert "inter-latin-wght-normal." in css and ".woff2" in css
+        assert "inter-latin-wght-normal." in css
+        assert ".woff2" in css
         assert (tmp_path / (nome + ".gz")).exists()
 
 

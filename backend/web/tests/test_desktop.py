@@ -79,7 +79,8 @@ def test_css_do_desktop_tem_tres_colunas_acima_de_1024px():
     css = (ESTATICOS / "telas" / "hoje.css").read_text()
 
     desktop = css[css.index("@media (min-width: 1024px)") :]
-    assert ".painel-hoje" in desktop and "position: fixed" in desktop
+    assert ".painel-hoje" in desktop
+    assert "position: fixed" in desktop
     assert ".painel-hoje { display: none; }" in css  # no celular o painel não aparece (M01)
 
 
@@ -94,7 +95,8 @@ def test_atalho_f_ignora_campos_de_texto_e_teclas_modificadoras():
 @freeze_time(SEGUNDA)
 def test_ctrl_k_abre_a_captura_em_qualquer_tela(logado):
     js = (ESTATICOS / "app.js").read_text()
-    assert re.search(r"e\.ctrlKey \|\| e\.metaKey", js) and '"k"' in js
+    assert re.search(r"e\.ctrlKey \|\| e\.metaKey", js)
+    assert '"k"' in js
 
     html = logado.get(reverse("web:entrada")).content.decode()
     assert 'aria-keyshortcuts="Control+K Meta+K"' in html  # campo "Capturar ideia" da barra lateral (D01)

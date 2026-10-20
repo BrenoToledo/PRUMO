@@ -135,7 +135,8 @@ def test_post_concluir(api, usuario, tarefa):
     services.gerar_plano_do_dia(usuario)
     r = api.post(f"/api/tarefas/{tarefa.pk}/concluir/")
     assert r.status_code == 200, r.data
-    assert r.data["status"] == "concluida" and r.data["concluida_em"]
+    assert r.data["status"] == "concluida"
+    assert r.data["concluida_em"]
     assert not tarefa.blocos.filter(status=Bloco.Status.PLANEJADO).exists()
     assert api.post(f"/api/tarefas/{tarefa.pk}/concluir/").status_code == 400
 
@@ -145,7 +146,8 @@ def test_post_reabrir(api, tarefa):
     services.concluir_tarefa(tarefa)
     r = api.post(f"/api/tarefas/{tarefa.pk}/reabrir/")
     assert r.status_code == 200, r.data
-    assert r.data["status"] == "aberta" and r.data["concluida_em"] is None
+    assert r.data["status"] == "aberta"
+    assert r.data["concluida_em"] is None
 
 
 def test_get_historico(api, tarefa):
@@ -178,7 +180,8 @@ def test_patch_status_concluida_passa_por_concluir_tarefa(api, usuario, tarefa):
     services.gerar_plano_do_dia(usuario)
     r = api.patch(f"/api/tarefas/{tarefa.pk}/", {"status": "concluida", "contexto": "casa"}, format="json")
     assert r.status_code == 200, r.data
-    assert r.data["status"] == "concluida" and r.data["concluida_em"]
+    assert r.data["status"] == "concluida"
+    assert r.data["concluida_em"]
     assert r.data["contexto"] == "casa"
     assert _tipos(tarefa)[-1] == EventoTarefa.Tipo.CONCLUIDA
     assert not tarefa.blocos.filter(status=Bloco.Status.PLANEJADO).exists()
@@ -192,7 +195,8 @@ def test_patch_status_aberta_numa_concluida_passa_por_reabrir_tarefa(api, tarefa
     services.concluir_tarefa(tarefa)
     r = api.patch(f"/api/tarefas/{tarefa.pk}/", {"status": "aberta"}, format="json")
     assert r.status_code == 200, r.data
-    assert r.data["status"] == "aberta" and r.data["concluida_em"] is None
+    assert r.data["status"] == "aberta"
+    assert r.data["concluida_em"] is None
     assert _tipos(tarefa)[-1] == EventoTarefa.Tipo.REABERTA
 
 

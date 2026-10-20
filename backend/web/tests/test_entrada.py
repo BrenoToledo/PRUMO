@@ -60,7 +60,8 @@ def test_lista_so_pendentes_do_usuario_mais_novos_primeiro(logado, usuario, outr
     assert "Item descartado" not in html
     assert "Segredo da outra pessoa" not in html
     assert "áudio · hoje" in html
-    assert 'id="contador-entrada"' in html and "2 itens" in html
+    assert 'id="contador-entrada"' in html
+    assert "2 itens" in html
 
 
 def test_contador_na_navegacao(logado, usuario):
@@ -93,7 +94,8 @@ def test_descartar_via_htmx_oferece_desfazer_e_atualiza_contador(logado, usuario
     html = resp.content.decode()
     assert "Desfazer" in html
     assert 'hx-post="' + reverse("web:restaurar", args=[item.pk]) + '"' in html
-    assert 'hx-swap-oob="true"' in html and "1 item" in html
+    assert 'hx-swap-oob="true"' in html
+    assert "1 item" in html
 
 
 def test_desfazer_volta_o_item(logado, usuario):
@@ -121,7 +123,8 @@ def test_descartar_sem_javascript_volta_para_entrada(logado, usuario):
 
     resp = logado.post(reverse("web:descartar", args=[item.pk]))
 
-    assert resp.status_code == 302 and resp.url == reverse("web:entrada")
+    assert resp.status_code == 302
+    assert resp.url == reverse("web:entrada")
 
 
 def test_acoes_so_aceitam_post(logado, usuario):
@@ -172,4 +175,5 @@ def test_tela_tem_formulario_de_lista_rapida_com_areas(logado, usuario):
     html = logado.get(reverse("web:entrada")).content.decode()
 
     assert 'hx-post="' + reverse("web:lista_rapida", args=[item.pk]) + '"' in html
-    assert "Educação" in html and "Pessoal" in html
+    assert "Educação" in html
+    assert "Pessoal" in html

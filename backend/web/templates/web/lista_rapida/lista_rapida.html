@@ -14,10 +14,10 @@
 <div class="leves__lista">
   {% for tarefa in lista.tarefas %}{% include "web/tarefas/_tarefa_leve.html" %}{% endfor %}
 </div>
-<p class="rapida__resumo{% if not lista.cabe_hoje %} rapida__resumo--aviso{% endif %}" role="status">
+<output class="rapida__resumo{% if not lista.cabe_hoje %} rapida__resumo--aviso{% endif %}">
   Total: {{ lista.total_minutos }} min.
   {% if lista.cabe_hoje %}Cabe no fim do dia de hoje.{% else %}Não cabe no que resta da jornada ({{ lista.minutos_livres }} min livres).{% endif %}
-</p>
+</output>
 <a class="botao botao--primario rapida__encaixar" href="{% url 'web:hoje' %}#titulo-leves">Encaixar no fim do dia</a>
 {% else %}
 <div class="vazio">
