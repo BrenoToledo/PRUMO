@@ -16,3 +16,11 @@ def nova_tarefa(usuario, titulo="Escrever capítulo 3", **extra) -> Tarefa:
         "blocos_estimados": 2,
     }
     return Tarefa.objects.create(usuario=usuario, **(dados | extra))
+
+
+def na_lista_rapida(usuario, texto="Pagar boleto da luz", minutos=5, area="Pessoal") -> Tarefa:
+    """Captura `texto` e manda direto para a lista rápida, como o botão da caixa de entrada faz."""
+    from nucleo import services
+
+    item = services.capturar(usuario, texto)
+    return services.para_lista_rapida(item, Area.objects.get(usuario=usuario, nome=area), minutos)

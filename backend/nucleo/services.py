@@ -36,6 +36,7 @@ DIAS_UTEIS = {0, 1, 2, 3, 4}  # seg a sex
 JANELA_REPLANEJAMENTO_DIAS = 14
 JANELA_INTENCAO_DIAS = 7  # a intenção de sexta ainda vale na segunda (e depois de um feriado)
 STATUS_ABERTOS = (Bloco.Status.PLANEJADO, Bloco.Status.EM_FOCO)
+LISTA_RAPIDA_MAX_MIN = 10
 
 
 # --------------------------------------------------------------------------- perfil e jornada
@@ -170,7 +171,7 @@ def clarificar(item: ItemCaptura, dados: dict, pessoas: list[tuple] | None = Non
 @transaction.atomic
 def para_lista_rapida(item: ItemCaptura, area: Area, minutos: int = 5) -> Tarefa:
     """Itens de menos de 10 minutos pulam a triagem e viram tarefas leves."""
-    if minutos > 10:
+    if minutos > LISTA_RAPIDA_MAX_MIN:
         raise ValueError("a lista rápida é para itens de até 10 minutos")
     tarefa = Tarefa.objects.create(
         usuario=item.usuario,
@@ -533,8 +534,30 @@ def cancelar_tarefa(tarefa: Tarefa, *, motivo: str = "") -> Tarefa:
 
 
 # --------------------------------------------------------------------------- lista rápida
+def _minutos_livres_no_fim_do_dia(usuario) -> int:
+    """Minutos do fim do último bloco ativo de hoje (ou de agora, se for mais tarde) até o fim da jornada."""
+    perfil = perfil_de(usuario)
+    tz = timezone.get_current_timezone()
+    dia = hoje()
+    inicio = max(datetime.combine(dia, perfil.inicio_trabalho, tzinfo=tz), timezone.now())
+    ultimo = _blocos_do_dia(usuario, dia).filter(status__in=STATUS_ABERTOS).order_by("-fim_planejado").first()
+    if ultimo is not None:
+        inicio = max(inicio, ultimo.fim_planejado)
+    fim = datetime.combine(dia, perfil.fim_trabalho, tzinfo=tz)
+    return max(0, int((fim - inicio).total_seconds() // 60))
+
+
 def lista_rapida(usuario) -> ListaRapida:
-    raise NotImplementedError
+    """Coisas de até 10 minutos, para resolver de uma vez no fim do dia (M17)."""
+    tarefas = list(
+        tarefas_leves(usuario)
+        .filter(minutos_estimados__isnull=False, minutos_estimados__lte=LISTA_RAPIDA_MAX_MIN)
+        .select_related("area")
+        .order_by("criada_em", "pk")
+    )
+    total = sum(t.minutos_estimados for t in tarefas)
+    livres = _minutos_livres_no_fim_do_dia(usuario)
+    return {"tarefas": tarefas, "total_minutos": total, "minutos_livres": livres, "cabe_hoje": total <= livres}
 
 
 # --------------------------------------------------------------------------- projetos
