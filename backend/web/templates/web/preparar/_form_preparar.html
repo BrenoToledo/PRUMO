@@ -1,0 +1,29 @@
+<form id="form-preparar" class="preparar__form" method="post" action="{% url 'web:preparar_foco' bloco.pk %}"
+      hx-post="{% url 'web:preparar_foco' bloco.pk %}" hx-target="this" hx-swap="outerHTML">
+  {% csrf_token %}
+  <fieldset class="preparar__grupo">
+    <legend class="preparar__subtitulo">Antes de começar</legend>
+    {% for c in checklist %}
+    <label class="preparar__item">
+      <input type="checkbox" name="checklist" value="{{ c.item }}"{% if c.marcado %} checked{% endif %}>
+      <span class="preparar__marca" aria-hidden="true"></span>
+      <span class="preparar__texto">{{ c.item }}<span class="preparar__dica">{{ c.dica }}</span></span>
+    </label>
+    {% endfor %}
+  </fieldset>
+
+  <fieldset class="preparar__grupo">
+    <legend class="preparar__rotulo">Duração</legend>
+    <div class="preparar__duracoes">
+      {% for d in duracoes %}
+      <label class="preparar__duracao">
+        <input type="radio" name="minutos" value="{{ d.minutos }}"{% if d.escolhido %} checked{% endif %}>
+        <span>{{ d.minutos }} min{% if d.planejado %} · planejado{% endif %}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% if form.minutos.errors %}<p class="erro" role="alert">{{ form.minutos.errors.0 }}</p>{% endif %}
+  </fieldset>
+
+  <button class="botao botao--primario preparar__comecar" type="submit">Começar foco</button>
+</form>

@@ -54,8 +54,8 @@ class ResumoRevisaoDiaria(TypedDict):
 class PropostaReplanejamento(TypedDict):
     """`services.meu_dia_quebrou`: o que fica hoje, o que muda de dia e quem é afetado (M13, M14)."""
 
-    fica_hoje: list[dict]  # {tarefa, blocos}
-    movidos: list[dict]  # {tarefa, titulo, blocos, para, em_risco}
+    fica_hoje: list[dict]  # {tarefa, titulo, blocos}
+    movidos: list[dict]  # {tarefa, titulo, blocos, de, para, em_risco}; `de` é o início do 1º bloco que sai de hoje
     expectativas_em_risco: list[dict]  # {tarefa, titulo, nova_data, prazo, pessoas}
 
 
@@ -126,7 +126,8 @@ SERVICOS: dict[str, str] = {
     "plano_do_dia": "(usuario, dia: 'date | None' = None) -> 'PlanoDoDia'",
     "gerar_plano_do_dia": "(usuario, dia: 'date | None' = None) -> 'plan.Plano'",
     # Execução dos blocos (P3 usa)
-    "iniciar_bloco": "(bloco: 'Bloco') -> 'Bloco'",
+    "iniciar_bloco": "(bloco: 'Bloco', *, minutos: 'int | None' = None, checklist: 'list[str] | None' = None) "
+    "-> 'Bloco'",
     "concluir_bloco": "(bloco: 'Bloco', resultado: 'str', *, blocos_restantes: 'int | None' = None, "
     "nova_proxima_acao: 'str' = '') -> 'Bloco'",
     "sair_do_bloco": "(bloco: 'Bloco', motivo: 'str') -> 'Bloco'",
@@ -138,6 +139,10 @@ SERVICOS: dict[str, str] = {
     # Replanejamento e revisão (R2)
     "meu_dia_quebrou": "(usuario, *, blocos_uteis: 'int', motivo: 'str' = '', dia: 'date | None' = None) "
     "-> 'PropostaReplanejamento'",
+    # Imprevistos (P6): simular não grava nada; `meu_dia_quebrou` aplica a mesma proposta
+    "simular_meu_dia_quebrou": "(usuario, *, blocos_uteis: 'int', dia: 'date | None' = None) "
+    "-> 'PropostaReplanejamento'",
+    "distracoes_do_bloco": "(bloco: 'Bloco') -> 'list[ItemCaptura]'",
     "resumo_revisao_diaria": "(usuario, dia: 'date | None' = None) -> 'ResumoRevisaoDiaria'",
     "salvar_revisao_diaria": "(usuario, *, dia: 'date | None' = None, atencao: 'str' = '', "
     "intencao_amanha: 'str' = '', notas: 'str' = '') -> 'Revisao'",
@@ -155,6 +160,8 @@ SERVICOS: dict[str, str] = {
     "atualizar_area": "(area: 'Area', *, nome: 'str | None' = None, cor: 'str | None' = None) -> 'Area'",
     "mover_area": "(area: 'Area', passo: 'int') -> 'None'",
     "excluir_area": "(area: 'Area') -> 'None'",
+    # Desktop (P9): painel de prioridades de Hoje
+    "prioridades_da_semana": "(usuario, limite: 'int' = 4) -> 'list[Tarefa]'",
     # IA que ajuda (P10): harness, pré-preencher a clarificação e quebrar tarefa. A IA só sugere (SugestaoIA)
     "ia_disponivel": "(usuario) -> 'bool'",
     "uso_de_ia": "(usuario) -> 'UsoDeIA'",
@@ -250,5 +257,7 @@ TELAS_WEB = (
     "lista_rapida",
     "projetos",
     "areas",
+    "imprevistos",
+    "preparar",
     "ia",
 )

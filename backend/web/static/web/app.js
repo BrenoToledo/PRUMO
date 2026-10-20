@@ -1,4 +1,4 @@
-// Comportamentos pequenos da interface: folha de captura, Enter para salvar e aviso temporário.
+// Comportamentos pequenos da interface: folha de captura (e Ctrl+K), Enter para salvar e aviso temporário.
 (function () {
   "use strict";
 
@@ -17,15 +17,23 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     const folha = document.getElementById("folha-captura");
-    const abrir = document.getElementById("abrir-captura");
-    if (folha && abrir) {
-      abrir.addEventListener("click", function () {
-        folha.showModal();
-        const c = campo();
-        if (c) c.focus();
+    function abrirCaptura() {
+      if (!folha.open) folha.showModal();
+      campo()?.focus();
+    }
+    if (folha) {
+      document.querySelectorAll("#abrir-captura, [data-abrir-captura]").forEach(function (botao) {
+        botao.addEventListener("click", abrirCaptura);
       });
       folha.addEventListener("click", function (e) {
         if (e.target === folha) folha.close(); // toque fora da folha
+      });
+      // Ctrl+K (⌘K no Mac) abre a captura em qualquer tela (D01).
+      document.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "k") {
+          e.preventDefault();
+          abrirCaptura();
+        }
       });
     }
 

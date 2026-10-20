@@ -19,8 +19,10 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `pacote-2-do-item-ao-plano` | #4, #5 | interface | contratos | `web/telas/clarificacao.py`, `web/telas/plano.py`, `web/templates/web/clarificacao/`, `web/templates/web/plano/` (e `hoje.html`), `web/tests/test_clarificacao.py`, `web/tests/test_plano.py` |
 | `pacote-3-execucao` | #6, #7 | interface | contratos (+ `bloco_em_foco` do backend-r1) | `web/telas/foco.py`, `web/templates/web/foco/`, `web/tests/test_foco.py` |
 | `pacote-4-no-ar` | #9, #10 | infra | nada | `deploy/`, `web/telas/pwa.py`, `web/templates/web/_pwa_head.html`, manifesto e service worker em `web/static/web/pwa/` |
+| `claude/project-thread-yfqx9j` (P6 · Imprevistos) | #13, #14, #15 | backend + interface | main (P1–P5) | `web/telas/imprevistos.py`, `web/templates/web/imprevistos/`, `web/static/web/telas/imprevistos.css`, `web/tests/test_imprevistos.py`, `nucleo/tests/test_imprevistos.py`; em `foco` só o diálogo de saída e a distração (M09, M12) |
 | `pacote-5-acabamento` | #8, #11, #12 | interface | contratos (+ tarefas do backend-r1) | `web/telas/tarefas.py`, `web/telas/perfil.py`, `web/templates/web/tarefas/`, `web/templates/web/perfil/`, `web/tests/test_tarefas.py`, `web/tests/test_perfil.py` |
 | `pacote-8-organizacao` | #18, #20, #21 | backend + interface | main (P1–P5, P7) | `web/telas/lista_rapida.py`, `web/telas/projetos.py`, `web/telas/areas.py`, `web/templates/web/lista_rapida/`, `web/templates/web/projetos/`, `web/templates/web/areas/`, `web/static/web/telas/lista_rapida.css`, `projetos.css`, `areas.css`, `web/tests/test_lista_rapida.py`, `web/tests/test_projetos.py`, `web/tests/test_areas.py`, `nucleo/tests/test_organizacao.py`; em `clarificacao` só o campo projeto, na entrada só o atalho da lista rápida, no perfil só o link para as áreas |
+| `pacote-9-desktop` | #22, #23 | backend + interface | main (P1–P5, P7, P8) | `web/telas/preparar.py`, `web/templates/web/preparar/`, `web/static/web/telas/preparar.css`, `hoje.css`, `hoje.js`, `web/tests/test_preparar.py`, `web/tests/test_desktop.py`, `nucleo/tests/test_desktop.py`; em `plano` só o painel de prioridades, o botão "Iniciar foco · F" e o link do card "Agora" para M07; em `app.js` só o atalho Ctrl+K |
 | `pacote-7-fechar-o-dia` | #17, #19, #16 | backend + interface | main (P1–P5) | `web/telas/revisao.py`, `web/telas/pausa.py`, `web/templates/web/revisao/`, `web/templates/web/pausa/`, `web/static/web/telas/revisao.css`, `pausa.css`, `pausa.js`, `web/tests/test_revisao.py`, `web/tests/test_pausa.py`, `web/tests/test_adiar_cancelar.py`, `nucleo/tests/test_fechar_o_dia.py`, `nucleo/tests/test_adiar_cancelar.py`, `nucleo/tests/apoio.py` e as fixtures comuns em `backend/conftest.py`; em `tarefas` só adiar e cancelar, em `plano` só a intenção no topo de Hoje, em `foco` só o botão Pausar |
 | `claude/project-thread-2u8m3o` (P10 · IA) | #24, #25, #26 | backend + interface | main (P1–P5, P7, P8) | `backend/ia/` (com os testes em `ia/tests/`), `web/telas/ia.py`, `web/templates/web/ia/`, `web/templates/web/tarefas/quebrar.html` e `_quebra.html`, `web/static/web/telas/ia.css`, `web/tests/test_ia.py`, `web/tests/test_quebrar.py`, `web/tests/test_clarificacao_ia.py`, `nucleo/tests/test_ia.py`; em `clarificacao` só o botão da IA e as 4 respostas de importância, em `tarefas` só a rota de quebrar e o aviso de quebra, no perfil só o link para IA e privacidade |
 
@@ -59,6 +61,10 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:editar_area` | `/areas/<pk>/editar/` | POST | areas | `atualizar_area` |
 | `web:mover_area` | `/areas/<pk>/mover/` (`passo=-1\|1`) | POST | areas | `mover_area` |
 | `web:excluir_area` | `/areas/<pk>/excluir/` | POST | areas | `excluir_area` |
+| `web:anotar_distracao` | `/blocos/<pk>/distracao/` | POST | foco | `capturar` (origem `foco`), `distracoes_do_bloco` |
+| `web:meu_dia_quebrou` | `/hoje/quebrou/` (`?motivo=…&blocos_uteis=N` mostra a proposta, M14) | GET | imprevistos | `simular_meu_dia_quebrou` |
+| `web:aplicar_replanejamento` | `/hoje/quebrou/aplicar/` | POST | imprevistos | `meu_dia_quebrou` |
+| `web:preparar_foco` | `/blocos/<pk>/preparar/` | GET, POST | preparar | `iniciar_bloco` (com `minutos` e `checklist`) |
 | `web:ia` | `/ia/` | GET, POST (escolher provedor) | ia | `uso_de_ia` |
 | `web:sugerir_clarificacao` | `/entrada/<pk>/clarificar/ia/` (`novo=1` pede outra) | POST | clarificacao | `sugerir_clarificacao` |
 | `web:recusar_clarificacao` | `/entrada/<pk>/clarificar/ia/recusar/` | POST | clarificacao | `recusar_sugestao` |
@@ -81,6 +87,18 @@ Convenções das telas (as mesmas do P1): views com `require_GET`/`require_POST`
 | `tem_tarefas_para_planejar(usuario)` | `bool` | Há tarefa aberta que não é leve (estado vazio da tela Hoje). Entrou na junção |
 
 Na API, `PATCH /tarefas/{id}/` com `status=concluida` passa a chamar `concluir_tarefa` (hoje não grava evento nem `concluida_em`).
+
+## Imprevistos (P6, R2)
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `simular_meu_dia_quebrou(usuario, *, blocos_uteis, dia=None)` | `PropostaReplanejamento` | A mesma proposta que `meu_dia_quebrou` aplicaria, **sem gravar** (M14) |
+| `meu_dia_quebrou(usuario, *, blocos_uteis, motivo="", dia=None)` | `PropostaReplanejamento` | Aplica: apaga os blocos planejados que saem de hoje, cria os novos, soma `adiamentos` e grava o evento `replanejada` com o motivo |
+| `distracoes_do_bloco(bloco)` | `list[ItemCaptura]` | Itens com origem `foco` do usuário criados desde o início real do bloco (até o fim real, se houver), mais antigos primeiro |
+
+`PropostaReplanejamento` ganha campos, sem tirar nenhum: `fica_hoje[*].titulo` e `movidos[*].de` (início do primeiro bloco que sai de hoje). Na API, `POST /hoje/meu-dia-quebrou/simular/` devolve a proposta sem gravar.
+
+No foco, sair do bloco aceita `depois=replanejar` além do `motivo`: registra a saída e leva a `web:meu_dia_quebrou` (M12 → M13).
 
 ## Ordem de junção
 
@@ -118,6 +136,15 @@ A pausa (M10) é só interface: o timer roda no navegador e não grava nada.
 | `excluir_area(area)` | `None` | `ValueError` se a área tiver tarefas (de qualquer status), projetos ou rotinas |
 
 O "Encaixar no fim do dia" da lista rápida não grava nada: as tarefas da lista já são tarefas leves e aparecem no fim de Hoje; o botão leva para lá. Na API, `DELETE /areas/{id}/` passa por `excluir_area` (`409` se a área estiver em uso) e `POST /areas/` põe a área nova no fim da ordem.
+
+## Desktop (P9, R2)
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `iniciar_bloco(bloco, *, minutos=None, checklist=None)` | `Bloco` | Sem os novos argumentos, igual a antes. `minutos` (1 a 180, senão `ValueError`) muda a duração do bloco: `fim_planejado = inicio_planejado + minutos`. `checklist` são os itens marcados em M07. O evento `iniciada` grava `{bloco, minutos, checklist}` |
+| `prioridades_da_semana(usuario, limite=4)` | `list[Tarefa]` | Tarefas abertas que podem entrar no plano de hoje (sem as adiadas), de maior prioridade primeiro; até `limite` |
+
+Na API, `POST /blocos/{id}/iniciar/` aceita `{minutos?, checklist?}`. No desktop (≥ 1024 px), Hoje tem três colunas: a navegação, a agenda e o painel de prioridades. Atalhos: Ctrl+K (ou ⌘K) abre a captura em qualquer tela; em Hoje, F inicia o foco no próximo bloco.
 
 ## IA que ajuda (P10, R3)
 

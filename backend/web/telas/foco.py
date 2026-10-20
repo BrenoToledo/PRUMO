@@ -4,7 +4,9 @@ Rotas reservadas pelo contrato:
 - GET `foco/` → `web:foco`, usa `services.bloco_em_foco`.
 - POST `blocos/<pk>/iniciar/` → `web:iniciar_bloco`, chama `services.iniciar_bloco`.
 - POST `blocos/<pk>/concluir/` → `web:concluir_bloco`, chama `services.concluir_bloco`.
-- POST `blocos/<pk>/sair/` → `web:sair_do_bloco`, chama `services.sair_do_bloco`.
+- POST `blocos/<pk>/distracao/` → `web:anotar_distracao`, chama `services.capturar` com origem `foco` (P6, #15).
+- POST `blocos/<pk>/sair/` → `web:sair_do_bloco`, chama `services.sair_do_bloco`; com `depois=replanejar` segue
+  para `web:meu_dia_quebrou` (P6, #14).
 
 O timer roda no navegador (`static/web/telas/foco.js`): a página entrega o término calculado a partir do início
 real e a duração do bloco, então recarregar não zera o tempo.
@@ -23,7 +25,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from nucleo import services
-from nucleo.models import Bloco
+from nucleo.models import Bloco, ItemCaptura
 
 ROTA_FOCO = "web:foco"
 ROTA_HOJE = "web:hoje"
@@ -39,6 +41,12 @@ class SairForm(forms.Form):
         widget=forms.RadioSelect,
         error_messages={"required": "Escolha um motivo.", "invalid_choice": "Escolha um motivo."},
     )
+
+
+class DistracaoForm(forms.Form):
+    """O que veio à cabeça no meio do foco (M09): vai para a caixa de entrada."""
+
+    texto = forms.CharField(max_length=2000, strip=True, error_messages={"required": "Escreva o que lembrou."})
 
 
 class FimDoBlocoForm(forms.Form):
@@ -120,6 +128,10 @@ def _contexto_foco(bloco: Bloco, **extra) -> dict:
     }
 
 
+def _contexto_distracao(bloco: Bloco, form: DistracaoForm) -> dict:
+    return {"bloco": bloco, "form_distracao": form, "distracoes": services.distracoes_do_bloco(bloco)}
+
+
 def _form_fim_inicial(bloco: Bloco) -> FimDoBlocoForm:
     # Este bloco conta como feito: sugere o que sobra da estimativa depois dele.
     restantes = max(0, bloco.tarefa.blocos_restantes - 1)
@@ -148,7 +160,14 @@ def foco(request):
         return redirect(ROTA_HOJE)
     if "fim" in request.GET:
         return render(request, "web/foco/fim.html", _contexto_fim(bloco, _form_fim_inicial(bloco)))
-    contexto = _contexto_foco(bloco, form_sair=SairForm(), sair_aberto="sair" in request.GET)
+    contexto = _contexto_foco(
+        bloco,
+        form_sair=SairForm(),
+        sair_aberto="sair" in request.GET,
+        distracao_aberta="anotar" in request.GET,
+        form_distracao=DistracaoForm(),
+        distracoes=services.distracoes_do_bloco(bloco),
+    )
     return render(request, "web/foco/foco.html", contexto)
 
 
@@ -176,7 +195,29 @@ def sair_do_bloco(request, pk):
         return render(request, "web/foco/_form_sair.html", {"bloco": bloco, "form_sair": form}, status=422)
     services.sair_do_bloco(bloco, form.cleaned_data["motivo"])
     aviso = f"Bloco encerrado · {bloco.minutos_focados} min registrados"
-    return _ir_para(request, reverse(ROTA_HOJE), aviso)
+    # "Sair e replanejar o dia" (M12 → M13, #14): registra a saída e abre o "meu dia quebrou".
+    destino = "web:meu_dia_quebrou" if request.POST.get("depois") == "replanejar" else ROTA_HOJE
+    return _ir_para(request, reverse(destino), aviso)
+
+
+@require_POST
+@login_required
+def anotar_distracao(request, pk):
+    bloco = _bloco_do_usuario(request, pk, Bloco.Status.EM_FOCO)
+    form = DistracaoForm(request.POST)
+    if not form.is_valid():
+        if not _htmx(request):
+            messages.error(request, form.errors["texto"][0])
+            return redirect(reverse(ROTA_FOCO) + "?anotar=1")
+        return render(request, "web/foco/_form_distracao.html", _contexto_distracao(bloco, form), status=422)
+    services.capturar(request.user, form.cleaned_data["texto"], origem=ItemCaptura.Origem.FOCO)
+    if not _htmx(request):
+        messages.success(request, "Anotado · vai para a caixa de entrada")
+        return redirect(ROTA_FOCO)
+    # O timer roda no navegador e a página não recarrega: o foco continua de onde estava.
+    resposta = render(request, "web/foco/_form_distracao.html", _contexto_distracao(bloco, DistracaoForm()))
+    resposta["HX-Trigger"] = "distracao-anotada"
+    return resposta
 
 
 @require_POST
@@ -206,4 +247,5 @@ urlpatterns = [
     path("blocos/<int:pk>/iniciar/", iniciar_bloco, name="iniciar_bloco"),
     path("blocos/<int:pk>/concluir/", concluir_bloco, name="concluir_bloco"),
     path("blocos/<int:pk>/sair/", sair_do_bloco, name="sair_do_bloco"),
+    path("blocos/<int:pk>/distracao/", anotar_distracao, name="anotar_distracao"),
 ]

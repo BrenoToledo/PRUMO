@@ -18,6 +18,7 @@ from .serializers import (
     ClarificarSerializer,
     ConcluirBlocoSerializer,
     EventoTarefaSerializer,
+    IniciarBlocoSerializer,
     ItemCapturaSerializer,
     ListaRapidaSerializer,
     MeuDiaQuebrouSerializer,
@@ -253,6 +254,14 @@ def meu_dia_quebrou(request):
     return Response(services.meu_dia_quebrou(request.user, dia=_dia(request), **ser.validated_data))
 
 
+@api_view(["POST"])
+def simular_meu_dia_quebrou(request):
+    ser = MeuDiaQuebrouSerializer(data=request.data)
+    ser.is_valid(raise_exception=True)
+    blocos_uteis = ser.validated_data["blocos_uteis"]
+    return Response(services.simular_meu_dia_quebrou(request.user, blocos_uteis=blocos_uteis, dia=_dia(request)))
+
+
 class BlocoViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = BlocoSerializer
 
@@ -276,7 +285,10 @@ class BlocoViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["post"])
     def iniciar(self, request, pk=None):
-        return self._executa(services.iniciar_bloco)
+        ser = IniciarBlocoSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        d = ser.validated_data
+        return self._executa(services.iniciar_bloco, minutos=d.get("minutos"), checklist=d.get("checklist"))
 
     @action(detail=True, methods=["post"])
     def concluir(self, request, pk=None):

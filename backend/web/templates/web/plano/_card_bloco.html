@@ -10,9 +10,6 @@
     {% include "web/plano/_chip_prioridade.html" %}
     <span class="card-bloco__blocos">{{ tarefa.blocos_restantes }} bloco{{ tarefa.blocos_restantes|pluralize }}</span>
   </div>
-  {% if bloco.pk == proximo_id %}{% url 'web:iniciar_bloco' bloco.pk as url_iniciar %}{% if url_iniciar %}
-  <form class="card-bloco__iniciar" method="post" action="{{ url_iniciar }}">
-    {% csrf_token %}
-    <button class="botao botao--primario" type="submit">Começar foco</button>
-  </form>{% endif %}{% endif %}
+  {% if bloco.pk == proximo_id %}
+  <a class="botao botao--primario card-bloco__iniciar" href="{% url 'web:preparar_foco' bloco.pk %}">Começar foco</a>{% endif %}
 </article>{% endwith %}
