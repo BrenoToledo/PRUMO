@@ -1,0 +1,35 @@
+/* Áreas da vida (M30): renomear, mudar cor, reordenar, excluir e criar. */
+.areas__dica { margin: var(--e2) 0 var(--e4); color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.areas { display: flex; flex-direction: column; gap: var(--e6); margin-bottom: var(--e12); }
+.areas__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.area-linha {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); padding: var(--e2) var(--e3);
+  background: var(--superficie); border: 1px solid var(--borda); border-left: 4px solid var(--cor-area); border-radius: var(--raio-card);
+}
+.area-linha__form { flex: 1 1 220px; min-width: 0; display: flex; align-items: center; gap: var(--e2); }
+.area-linha__cor {
+  flex: none; width: 36px; height: 36px; padding: 2px; cursor: pointer;
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+}
+.area-linha__nome {
+  flex: 1; min-width: 0; min-height: 40px; padding: 0 var(--e3);
+  font-family: inherit; font-size: 16px; line-height: 24px; color: var(--texto);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+}
+.area-linha__nome:focus { outline: 2px solid var(--primaria); outline-offset: -1px; }
+.area-linha__nome[aria-invalid="true"] { border-color: var(--prioridade-critica); }
+.area-linha__acoes { display: flex; gap: var(--e1); margin-left: auto; }
+.area-linha__acoes form { display: flex; }
+.area-linha__icone {
+  width: 40px; height: 40px; display: grid; place-items: center; padding: 0; cursor: pointer;
+  background: none; border: 1px solid transparent; border-radius: var(--raio-campo); color: var(--texto-secundario);
+}
+.area-linha__icone:hover:not(:disabled) { border-color: var(--borda); color: var(--texto); }
+.area-linha__icone:focus-visible { outline: 2px solid var(--primaria); outline-offset: 1px; }
+.area-linha__icone:disabled { opacity: .35; cursor: default; }
+.area-linha__icone--perigo:hover:not(:disabled) { color: var(--prioridade-critica); }
+.area-linha__icone svg { width: 18px; height: 18px; }
+.area-linha__erro { flex-basis: 100%; margin: 0; }
+
+.area-nova { display: flex; flex-direction: column; gap: var(--e2); }
+.area-nova__titulo { margin: 0; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }

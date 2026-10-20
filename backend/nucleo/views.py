@@ -54,6 +54,19 @@ class AreaViewSet(DoUsuarioViewSet):
     queryset = Area.objects.all()
     serializer_class = AreaSerializer
 
+    def perform_create(self, serializer):
+        extra = {"usuario": self.request.user}
+        if "ordem" not in self.request.data:
+            extra["ordem"] = services.proxima_ordem_de_area(self.request.user)  # a área nova vai para o fim
+        serializer.save(**extra)
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            services.excluir_area(self.get_object())
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class ProjetoViewSet(DoUsuarioViewSet):
     queryset = Projeto.objects.select_related("area")

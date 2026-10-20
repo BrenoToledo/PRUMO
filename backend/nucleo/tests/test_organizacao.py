@@ -155,3 +155,103 @@ def test_projetos_de_poe_ativos_primeiro_e_prazo_mais_proximo(usuario, outra):
     novo_projeto(outra, "Da outra")
 
     assert [p["projeto"] for p in services.projetos_de(usuario)] == [outubro, dezembro, sem_prazo, pausado]
+
+
+# ---------------------------------------------------------------- áreas da vida (#21)
+def _nomes(usuario) -> list[str]:
+    return list(Area.objects.filter(usuario=usuario).order_by("ordem", "nome").values_list("nome", flat=True))
+
+
+def test_criar_area_vai_para_o_fim(usuario):
+    area = services.criar_area(usuario, "  Finanças ", "#84cc16")
+    assert (area.nome, area.cor, area.usuario) == ("Finanças", "#84CC16", usuario)
+    assert _nomes(usuario)[-1] == "Finanças"
+
+
+@pytest.mark.parametrize(
+    ("nome", "cor"),
+    [("", "#84CC16"), ("   ", "#84CC16"), ("trabalho", "#84CC16"), ("Casa", "verde"), ("Casa", "#84CC1")],
+)
+def test_criar_area_invalida(usuario, nome, cor):
+    with pytest.raises(ValueError):
+        services.criar_area(usuario, nome, cor)
+    assert len(_nomes(usuario)) == 5
+
+
+def test_nome_igual_ao_de_outra_pessoa_pode(usuario, outra):
+    services.criar_area(outra, "Casa", "#F97316")
+    assert services.criar_area(usuario, "Casa", "#F97316").usuario == usuario
+
+
+def test_renomear_e_mudar_cor(usuario):
+    area = Area.objects.get(usuario=usuario, nome="Pessoal")
+    services.atualizar_area(area, nome="Casa", cor="#f97316")
+    area.refresh_from_db()
+    assert (area.nome, area.cor) == ("Casa", "#F97316")
+    services.atualizar_area(area, nome="casa")  # só muda a caixa: não conflita com ela mesma
+    area.refresh_from_db()
+    assert area.nome == "casa"
+
+
+def test_renomear_para_nome_de_outra_area(usuario):
+    with pytest.raises(ValueError):
+        services.atualizar_area(Area.objects.get(usuario=usuario, nome="Pessoal"), nome="Saúde")
+
+
+def test_mover_area(usuario):
+    services.mover_area(Area.objects.get(usuario=usuario, nome="Saúde"), -1)
+    assert _nomes(usuario) == ["Trabalho", "Saúde", "Educação", "Família", "Pessoal"]
+    services.mover_area(Area.objects.get(usuario=usuario, nome="Trabalho"), 1)
+    assert _nomes(usuario) == ["Saúde", "Trabalho", "Educação", "Família", "Pessoal"]
+    assert list(Area.objects.filter(usuario=usuario).order_by("ordem").values_list("ordem", flat=True)) == [
+        0,
+        1,
+        2,
+        3,
+        4,
+    ]
+
+
+def test_mover_nas_pontas_nao_faz_nada(usuario):
+    services.mover_area(Area.objects.get(usuario=usuario, nome="Trabalho"), -1)
+    services.mover_area(Area.objects.get(usuario=usuario, nome="Pessoal"), 1)
+    assert _nomes(usuario) == ["Trabalho", "Educação", "Saúde", "Família", "Pessoal"]
+
+
+def test_mover_so_um_passo(usuario):
+    with pytest.raises(ValueError):
+        services.mover_area(Area.objects.get(usuario=usuario, nome="Saúde"), 2)
+
+
+def test_excluir_area_vazia(usuario):
+    services.excluir_area(Area.objects.get(usuario=usuario, nome="Família"))
+    assert "Família" not in _nomes(usuario)
+
+
+def test_nao_exclui_area_com_tarefas(usuario):
+    nova_tarefa(usuario, status="concluida")  # até tarefa concluída segura a área
+    with pytest.raises(ValueError, match="tarefa"):
+        services.excluir_area(Area.objects.get(usuario=usuario, nome="Educação"))
+    assert "Educação" in _nomes(usuario)
+
+
+def test_nao_exclui_area_com_projetos(usuario):
+    novo_projeto(usuario)
+    with pytest.raises(ValueError, match="projeto"):
+        services.excluir_area(Area.objects.get(usuario=usuario, nome="Educação"))
+
+
+# ---------------------------------------------------------------- áreas na API
+def test_api_nao_exclui_area_com_tarefas(api, usuario):
+    nova_tarefa(usuario)
+    area = Area.objects.get(usuario=usuario, nome="Educação")
+    r = api.delete(f"/api/areas/{area.pk}/")
+    assert r.status_code == 409
+    assert "tarefa" in r.json()["detail"]
+    assert api.delete(f"/api/areas/{Area.objects.get(usuario=usuario, nome='Família').pk}/").status_code == 204
+
+
+def test_api_cria_area_no_fim(api, usuario):
+    r = api.post("/api/areas/", {"nome": "Casa", "cor": "#F97316"})
+    assert r.status_code == 201
+    assert r.json()["ordem"] == 5

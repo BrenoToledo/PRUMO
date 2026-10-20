@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 
@@ -620,17 +621,67 @@ def projetos_de(usuario) -> list[ProgressoProjeto]:
 
 
 # --------------------------------------------------------------------------- áreas da vida
+COR_HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
+def _validar_area(usuario, nome: str, cor: str, *, exceto: Area | None = None) -> tuple[str, str]:
+    nome = nome.strip()
+    if not nome:
+        raise ValueError("Dê um nome à área.")
+    if len(nome) > Area._meta.get_field("nome").max_length:
+        raise ValueError("Use até 60 caracteres.")
+    repetidas = Area.objects.filter(usuario=usuario, nome__iexact=nome)
+    if exceto is not None:
+        repetidas = repetidas.exclude(pk=exceto.pk)
+    if repetidas.exists():
+        raise ValueError("Já existe uma área com esse nome.")
+    if not COR_HEX.match(cor):
+        raise ValueError("Escolha uma cor no formato #RRGGBB.")
+    return nome, cor.upper()
+
+
+def proxima_ordem_de_area(usuario) -> int:
+    ultima = Area.objects.filter(usuario=usuario).order_by("-ordem").first()
+    return ultima.ordem + 1 if ultima else 0
+
+
 def criar_area(usuario, nome: str, cor: str) -> Area:
-    raise NotImplementedError
+    """Área nova no fim da lista; `ValueError` com a mensagem para a tela se o nome ou a cor não servirem."""
+    nome, cor = _validar_area(usuario, nome, cor)
+    return Area.objects.create(usuario=usuario, nome=nome, cor=cor, ordem=proxima_ordem_de_area(usuario))
 
 
 def atualizar_area(area: Area, *, nome: str | None = None, cor: str | None = None) -> Area:
-    raise NotImplementedError
+    area.nome, area.cor = _validar_area(
+        area.usuario, area.nome if nome is None else nome, area.cor if cor is None else cor, exceto=area
+    )
+    area.save(update_fields=["nome", "cor"])
+    return area
 
 
+@transaction.atomic
 def mover_area(area: Area, passo: int) -> None:
-    raise NotImplementedError
+    """Troca a área com a vizinha de cima (`-1`) ou de baixo (`1`) e renumera a ordem a partir de 0."""
+    if passo not in (-1, 1):
+        raise ValueError("a área anda uma posição por vez")
+    areas = list(Area.objects.select_for_update().filter(usuario_id=area.usuario_id).order_by("ordem", "nome"))
+    i = next(n for n, a in enumerate(areas) if a.pk == area.pk)
+    j = i + passo
+    if 0 <= j < len(areas):
+        areas[i], areas[j] = areas[j], areas[i]
+    for ordem, a in enumerate(areas):
+        a.ordem = ordem
+    Area.objects.bulk_update(areas, ["ordem"])
 
 
 def excluir_area(area: Area) -> None:
-    raise NotImplementedError
+    """Só exclui área sem tarefas (de qualquer status), projetos ou rotinas; senão `ValueError` dizendo o que há."""
+    em_uso = [
+        (area.tarefas.count(), "tarefa", "tarefas"),
+        (area.projetos.count(), "projeto", "projetos"),
+        (area.rotinas.count(), "rotina", "rotinas"),
+    ]
+    partes = [f"{n} {um if n == 1 else varios}" for n, um, varios in em_uso if n]
+    if partes:
+        raise ValueError(f"{area.nome} tem {' e '.join(partes)}. Mude para outra área antes de excluir.")
+    area.delete()
