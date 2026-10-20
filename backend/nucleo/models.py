@@ -271,6 +271,7 @@ class EventoTarefa(models.Model):
         INTERROMPIDA = "interrompida", "Interrompida"
         REPLANEJADA = "replanejada", "Replanejada"
         CANCELADA = "cancelada", "Cancelada"
+        QUEBRADA = "quebrada", "Quebrada em partes"
 
     tarefa = models.ForeignKey(Tarefa, on_delete=models.CASCADE, related_name="eventos")
     tipo = models.CharField(max_length=12, choices=Tipo.choices)
@@ -310,6 +311,8 @@ class Revisao(models.Model):
 
 
 class SugestaoIA(models.Model):
+    """O que a IA propôs. Nada é aplicado sozinho: o usuário aceita, edita ou recusa, e a escolha fica aqui."""
+
     class Status(models.TextChoices):
         PENDENTE = "pendente", "Pendente"
         ACEITA = "aceita", "Aceita"
@@ -318,11 +321,33 @@ class SugestaoIA(models.Model):
 
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="sugestoes")
     tarefa = models.ForeignKey(Tarefa, on_delete=models.CASCADE, null=True, blank=True, related_name="sugestoes")
+    item = models.ForeignKey(ItemCaptura, on_delete=models.CASCADE, null=True, blank=True, related_name="sugestoes")
     tipo = models.CharField(max_length=40, help_text="clarificacao, quebra, horario, replanejamento…")
     conteudo = models.JSONField(default=dict)
     evidencia = models.TextField(blank=True)
     status = models.CharField(max_length=8, choices=Status.choices, default=Status.PENDENTE)
+    resposta = models.JSONField(default=dict, blank=True, help_text="O que o usuário confirmou (aceita ou editada).")
     criada_em = models.DateTimeField(default=timezone.now)
+    respondida_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-criada_em", "-id"]
 
     def __str__(self):
         return f"{self.tipo} ({self.status})"
+
+
+class ChamadaIA(models.Model):
+    """Cada pedido feito ao provedor de IA: base dos limites de uso por usuário (RNF10)."""
+
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="chamadas_ia")
+    tipo = models.CharField(max_length=40)
+    modelo = models.CharField(max_length=120)
+    tokens_entrada = models.PositiveIntegerField(default=0)
+    tokens_saida = models.PositiveIntegerField(default=0)
+    custo_usd = models.DecimalField(max_digits=10, decimal_places=6, default=0)
+    ok = models.BooleanField(default=True)
+    em = models.DateTimeField(default=timezone.now, db_index=True)
+
+    def __str__(self):
+        return f"{self.tipo} · {self.modelo} · {self.em:%d/%m %H:%M}"

@@ -1,0 +1,15 @@
+/* IA e privacidade (M33): provedor, uso e limites. */
+.ia__dica { margin: var(--e2) 0 var(--e4); color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.ia__desligada { margin: 0 0 var(--e4); }
+.ia__provedores { display: flex; flex-direction: column; gap: var(--e3); margin-bottom: var(--e6); }
+.ia__provedores fieldset { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.ia__opcao {
+  display: flex; align-items: flex-start; gap: var(--e3); padding: var(--e3); cursor: pointer;
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+}
+.ia__opcao:has(input:checked) { border-color: var(--primaria); background: var(--primaria-suave); }
+.ia__opcao--off { cursor: default; opacity: .7; }
+.ia__opcao input { margin-top: 4px; accent-color: var(--primaria); }
+.ia__nome { display: block; font-weight: 600; }
+.ia__sub { display: block; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.ia__sub code { font-size: inherit; overflow-wrap: anywhere; }
