@@ -99,9 +99,12 @@ def test_secao_lista_tarefas_leves_abertas(usuario):
 
     html = _secao_leves(usuario)
 
-    assert "Tarefas leves" in html and "fim do dia" in html
-    assert "Pagar boleto da luz" in html and "5 min" in html
-    assert "Responder fornecedor" in html and "10 min" in html
+    assert "Tarefas leves" in html
+    assert "fim do dia" in html
+    assert "Pagar boleto da luz" in html
+    assert "5 min" in html
+    assert "Responder fornecedor" in html
+    assert "10 min" in html
     assert f'hx-post="{reverse("web:concluir_tarefa", args=[boleto.pk])}"' in html
     assert "<li" not in html  # lista sem <li> solto: os itens voltam sozinhos como parcial
 
@@ -189,7 +192,8 @@ def test_acoes_so_aceitam_post_e_pedem_login(client, logado, usuario, rota):
     assert logado.get(reverse(rota, args=[tarefa.pk])).status_code == 405
     logado.logout()
     resp = client.post(reverse(rota, args=[tarefa.pk]))
-    assert resp.status_code == 302 and reverse("web:login") in resp.url
+    assert resp.status_code == 302
+    assert reverse("web:login") in resp.url
 
 
 def test_tarefa_leve_abre_o_detalhe(usuario):
@@ -234,11 +238,14 @@ def test_detalhe_mostra_os_dados_da_tarefa(logado, tcc):
     html = resp.content.decode()
     assert "Escrever capítulo 3 do TCC" in html
     assert "Revisar os 5 artigos da tabela de trabalhos relacionados" in html
-    assert "TCC" in html and "Educação" in html
+    assert "TCC" in html
+    assert "Educação" in html
     assert "rígido" in html
-    assert "Orientadora" in html and "depende de mim" in html
+    assert "Orientadora" in html
+    assert "depende de mim" in html
     assert "2 de 6 feitos" in html
-    assert "Criada" in html and "Adiada" in html  # histórico
+    assert "Criada" in html
+    assert "Adiada" in html  # histórico
     assert "adiada 1 vez" in html
     assert "web/telas/tarefas.css" in html
 
@@ -250,10 +257,15 @@ def test_por_que_esta_prioridade_mostra_a_conta(logado, tcc):
 
     assert f"Por que {av.prioridade}?" in html
     assert av.rotulo in html
-    assert "Importância" in html and f">{av.importancia}<" in html
-    assert "Urgência" in html and f">{av.urgencia}<" in html
-    assert "Qual o impacto se não for feito?" in html and "4 de 4" in html and "3 de 4" in html
-    assert "Faltam 4 blocos e há" in html and f"(folga {av.folga:.1f}x)".replace(".", ",").replace(",0x", "x") in html
+    assert "Importância" in html
+    assert f">{av.importancia}<" in html
+    assert "Urgência" in html
+    assert f">{av.urgencia}<" in html
+    assert "Qual o impacto se não for feito?" in html
+    assert "4 de 4" in html
+    assert "3 de 4" in html
+    assert "Faltam 4 blocos e há" in html
+    assert f"(folga {av.folga:.1f}x)".replace(".", ",").replace(",0x", "x") in html
     assert f"0,6 × {av.importancia} + 0,4 × {av.urgencia}" in html
 
 
@@ -306,13 +318,15 @@ def test_editar_recalcula_a_prioridade(logado, tcc):
     assert tcc.prioridade < antes
     assert tcc.prioridade == services.avaliar_tarefa(tcc).prioridade
     html = resp.content.decode()
-    assert 'id="detalhe-tarefa"' in html and f"Por que {tcc.prioridade}?" in html
+    assert 'id="detalhe-tarefa"' in html
+    assert f"Por que {tcc.prioridade}?" in html
 
 
 def test_editar_sem_javascript_volta_ao_detalhe(logado, tcc):
     resp = logado.post(reverse("web:editar_tarefa", args=[tcc.pk]), _dados_edicao(tcc, titulo="Capítulo 3"))
 
-    assert resp.status_code == 302 and resp.url == reverse("web:tarefa", args=[tcc.pk])
+    assert resp.status_code == 302
+    assert resp.url == reverse("web:tarefa", args=[tcc.pk])
     tcc.refresh_from_db()
     assert tcc.titulo == "Capítulo 3"
 
@@ -326,7 +340,8 @@ def test_editar_invalido_volta_422_sem_salvar(logado, tcc, mudanca):
     assert resp.status_code == 422
     assert 'role="alert"' in resp.content.decode()
     tcc.refresh_from_db()
-    assert tcc.titulo == "Escrever capítulo 3 do TCC" and tcc.respostas_importancia == RESPOSTAS
+    assert tcc.titulo == "Escrever capítulo 3 do TCC"
+    assert tcc.respostas_importancia == RESPOSTAS
 
 
 def test_editar_invalido_sem_javascript_mostra_a_pagina_com_422(logado, tcc):
@@ -344,7 +359,8 @@ def test_editar_nao_aceita_area_nem_projeto_de_outra_pessoa(logado, tcc, outra):
         resp = logado.post(reverse("web:editar_tarefa", args=[tcc.pk]), _dados_edicao(tcc, **mudanca), **HTMX)
         assert resp.status_code == 422
     tcc.refresh_from_db()
-    assert tcc.area.usuario_id == tcc.usuario_id and tcc.projeto.nome == "TCC"
+    assert tcc.area.usuario_id == tcc.usuario_id
+    assert tcc.projeto.nome == "TCC"
 
 
 def test_detalhe_so_aceita_get_e_editar_so_post(logado, tcc):

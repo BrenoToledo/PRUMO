@@ -112,8 +112,9 @@ def test_criar_projeto_exige_nome(usuario):
 
 
 def test_criar_projeto_nao_aceita_area_de_outra_pessoa(usuario, outra):
+    dados = {"area": Area.objects.filter(usuario=outra).first(), "nome": "TCC"}
     with pytest.raises(ValidationError):
-        services.criar_projeto(usuario, {"area": Area.objects.filter(usuario=outra).first(), "nome": "TCC"})
+        services.criar_projeto(usuario, dados)
 
 
 def test_atualizar_projeto(usuario):
@@ -194,8 +195,9 @@ def test_renomear_e_mudar_cor(usuario):
 
 
 def test_renomear_para_nome_de_outra_area(usuario):
+    pessoal = Area.objects.get(usuario=usuario, nome="Pessoal")
     with pytest.raises(ValueError):
-        services.atualizar_area(Area.objects.get(usuario=usuario, nome="Pessoal"), nome="Saúde")
+        services.atualizar_area(pessoal, nome="Saúde")
 
 
 def test_mover_area(usuario):
@@ -219,8 +221,9 @@ def test_mover_nas_pontas_nao_faz_nada(usuario):
 
 
 def test_mover_so_um_passo(usuario):
+    saude = Area.objects.get(usuario=usuario, nome="Saúde")
     with pytest.raises(ValueError):
-        services.mover_area(Area.objects.get(usuario=usuario, nome="Saúde"), 2)
+        services.mover_area(saude, 2)
 
 
 def test_excluir_area_vazia(usuario):
@@ -230,15 +233,17 @@ def test_excluir_area_vazia(usuario):
 
 def test_nao_exclui_area_com_tarefas(usuario):
     nova_tarefa(usuario, status="concluida")  # até tarefa concluída segura a área
+    educacao = Area.objects.get(usuario=usuario, nome="Educação")
     with pytest.raises(ValueError, match="tarefa"):
-        services.excluir_area(Area.objects.get(usuario=usuario, nome="Educação"))
+        services.excluir_area(educacao)
     assert "Educação" in _nomes(usuario)
 
 
 def test_nao_exclui_area_com_projetos(usuario):
     novo_projeto(usuario)
+    educacao = Area.objects.get(usuario=usuario, nome="Educação")
     with pytest.raises(ValueError, match="projeto"):
-        services.excluir_area(Area.objects.get(usuario=usuario, nome="Educação"))
+        services.excluir_area(educacao)
 
 
 # ---------------------------------------------------------------- áreas na API

@@ -164,7 +164,8 @@ def test_foco_mostra_intencao_primeiro_passo_e_timer(logado, bloco, em_foco):
     assert ">80:00<" in html  # 90 min de bloco, 10 já passados
     assert 'data-termino="2026-10-19T12:30:00+00:00"' in html
     assert 'data-duracao="5400"' in html
-    assert "foco.js" in html and "foco.css" in html
+    assert "foco.js" in html
+    assert "foco.css" in html
     assert reverse("web:foco") + "?fim=1" in html  # Concluir bloco leva ao fim do bloco
     assert reverse("web:sair_do_bloco", args=[bloco.pk]) in html
 
@@ -419,7 +420,8 @@ def test_fim_do_bloco_mostra_as_tres_opcoes(logado, bloco, em_foco):
     for valor, rotulo in Bloco.Resultado.choices:
         assert f'value="{valor}"' in html
         assert rotulo in html
-    assert 'name="blocos_restantes"' in html and 'value="1"' in html  # 2 estimados, este conta como feito
+    assert 'name="blocos_restantes"' in html
+    assert 'value="1"' in html  # 2 estimados, este conta como feito
     assert 'name="nova_proxima_acao"' in html
     assert reverse("web:concluir_bloco", args=[bloco.pk]) in html
 

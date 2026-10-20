@@ -1,6 +1,7 @@
 /* Lista rápida (M17): itens de até 10 minutos, total e "Encaixar no fim do dia"; atalho na caixa de entrada (M15). */
 .rapida__dica { margin: var(--e2) 0 var(--e4); color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
 .rapida__resumo {
+  display: block;
   margin: var(--e4) 0; padding: var(--e3) var(--e4); border-radius: var(--raio-card);
   background: var(--primaria-suave); font-size: var(--legenda-tam); line-height: var(--legenda-alt);
 }
