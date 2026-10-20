@@ -4,6 +4,7 @@ from django.urls import path
 from . import views
 from .telas import (
     areas,
+    audio,
     clarificacao,
     foco,
     ia,
@@ -43,3 +44,4 @@ urlpatterns += lista_rapida.urlpatterns + projetos.urlpatterns + areas.urlpatter
 urlpatterns += imprevistos.urlpatterns
 urlpatterns += preparar.urlpatterns
 urlpatterns += ia.urlpatterns
+urlpatterns += audio.urlpatterns

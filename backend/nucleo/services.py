@@ -33,6 +33,7 @@ from .models import (
     Esforco,
     EventoTarefa,
     ItemCaptura,
+    PedidoIA,
     Perfil,
     Projeto,
     Revisao,
@@ -948,3 +949,36 @@ def motivo_para_quebrar(tarefa: Tarefa) -> str:
     if tarefa.status != Tarefa.Status.ABERTA or tarefa.partes.filter(status=Tarefa.Status.ABERTA).exists():
         return ""
     return plan.motivo_para_quebrar(tarefa.adiamentos, tarefa.blocos_restantes)
+
+
+# --------------------------------------------------------------------------- IA assíncrona e áudio (P11)
+def fila_assincrona() -> bool:
+    raise NotImplementedError
+
+
+def pedir_clarificacao(item: ItemCaptura, *, novo: bool = False) -> PedidoIA:
+    raise NotImplementedError
+
+
+def pedir_quebra(tarefa: Tarefa, *, novo: bool = False) -> PedidoIA:
+    raise NotImplementedError
+
+
+def pedido_em_andamento(usuario, *, item: ItemCaptura | None = None, tarefa: Tarefa | None = None) -> PedidoIA | None:
+    raise NotImplementedError
+
+
+def processar_pedido(pedido: PedidoIA) -> PedidoIA:
+    raise NotImplementedError
+
+
+def audio_disponivel(usuario) -> bool:
+    raise NotImplementedError
+
+
+def capturar_audio(usuario, conteudo: bytes, tipo_mime: str) -> PedidoIA:
+    raise NotImplementedError
+
+
+def salvar_itens_do_audio(sugestao: SugestaoIA, itens: list[str]) -> list[ItemCaptura]:
+    raise NotImplementedError

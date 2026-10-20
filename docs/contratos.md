@@ -25,6 +25,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `pacote-9-desktop` | #22, #23 | backend + interface | main (P1–P5, P7, P8) | `web/telas/preparar.py`, `web/templates/web/preparar/`, `web/static/web/telas/preparar.css`, `hoje.css`, `hoje.js`, `web/tests/test_preparar.py`, `web/tests/test_desktop.py`, `nucleo/tests/test_desktop.py`; em `plano` só o painel de prioridades, o botão "Iniciar foco · F" e o link do card "Agora" para M07; em `app.js` só o atalho Ctrl+K |
 | `pacote-7-fechar-o-dia` | #17, #19, #16 | backend + interface | main (P1–P5) | `web/telas/revisao.py`, `web/telas/pausa.py`, `web/templates/web/revisao/`, `web/templates/web/pausa/`, `web/static/web/telas/revisao.css`, `pausa.css`, `pausa.js`, `web/tests/test_revisao.py`, `web/tests/test_pausa.py`, `web/tests/test_adiar_cancelar.py`, `nucleo/tests/test_fechar_o_dia.py`, `nucleo/tests/test_adiar_cancelar.py`, `nucleo/tests/apoio.py` e as fixtures comuns em `backend/conftest.py`; em `tarefas` só adiar e cancelar, em `plano` só a intenção no topo de Hoje, em `foco` só o botão Pausar |
 | `claude/project-thread-2u8m3o` (P10 · IA) | #24, #25, #26 | backend + interface | main (P1–P5, P7, P8) | `backend/ia/` (com os testes em `ia/tests/`), `web/telas/ia.py`, `web/templates/web/ia/`, `web/templates/web/tarefas/quebrar.html` e `_quebra.html`, `web/static/web/telas/ia.css`, `web/tests/test_ia.py`, `web/tests/test_quebrar.py`, `web/tests/test_clarificacao_ia.py`, `nucleo/tests/test_ia.py`; em `clarificacao` só o botão da IA e as 4 respostas de importância, em `tarefas` só a rota de quebrar e o aviso de quebra, no perfil só o link para IA e privacidade |
+| `pacote-11-ia-assincrona` (P11) | #28, #27 | backend + interface + infra | P10 (empilhada sobre `claude/project-thread-2u8m3o`) | `nucleo/fila.py`, `config/celery.py`, `web/telas/audio.py`, `web/templates/web/audio/`, `web/templates/web/fila/`, `web/static/web/telas/audio.css`, `audio.js`, `web/tests/test_audio.py`, `web/tests/test_fila.py`, `nucleo/tests/test_fila.py`, `nucleo/tests/test_audio.py`; em `deploy/` os serviços `redis` e `worker`; em `clarificacao` e `tarefas` só o "processando"; na captura só o botão Gravar áudio |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -72,6 +73,11 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:sugerir_quebra` | `/tarefas/<pk>/quebrar/gerar/` | POST | tarefas | `sugerir_quebra(novo=True)` |
 | `web:aplicar_quebra` | `/tarefas/<pk>/quebrar/aplicar/` | POST | tarefas | `aplicar_quebra` |
 | `web:descartar_quebra` | `/tarefas/<pk>/quebrar/descartar/` | POST | tarefas | `recusar_sugestao` |
+| `web:capturar_audio` | `/capturar/audio/` | GET | audio | `audio_disponivel` |
+| `web:enviar_audio` | `/capturar/audio/enviar/` (multipart, campo `audio`) | POST | audio | `capturar_audio` |
+| `web:salvar_audio` | `/capturar/audio/<pk>/salvar/` (`item` repetido; `um=1` salva a transcrição inteira) | POST | audio | `salvar_itens_do_audio` |
+| `web:descartar_audio` | `/capturar/audio/<pk>/descartar/` | POST | audio | `recusar_sugestao` |
+| `web:pedido` | `/pedidos/<pk>/` | GET | audio | `processar_pedido` (só lê o status) |
 | `web:service_worker` | `/sw.js` | GET (público) | pwa | — |
 
 Convenções das telas (as mesmas do P1): views com `require_GET`/`require_POST` e `login_required`; objetos buscados com `usuario=request.user` (404 se não for do usuário); resposta HTMX é um parcial, sem HTMX é redirect com mensagem; erro de validação volta com status 422.
@@ -164,6 +170,23 @@ A IA só sugere: toda resposta vira uma `SugestaoIA` pendente e nada muda até o
 `SugestaoIA` ganha `item` (o `ItemCaptura`, opcional), `resposta` (JSON do que foi confirmado) e `respondida_em`. Um modelo novo, `ChamadaIA` (usuário, tipo, modelo, tokens, custo em dólar, ok, em), registra cada chamada e é a base dos limites. Uma tarefa com partes abertas não entra mais no plano do dia (as partes entram no lugar dela).
 
 Configuração por variável de ambiente (nada de chave no banco): `PRUMO_IA_MODELO` e `PRUMO_IA_CHAVE` para a IA do Prumo, `PRUMO_IA_MODELO_PROPRIO` e `PRUMO_IA_CHAVE_PROPRIA` para a chave própria, `PRUMO_IA_MODELO_LOCAL` e `PRUMO_IA_URL_LOCAL` para o modelo local, e os limites por usuário `PRUMO_IA_LIMITE_DIARIO` (chamadas, padrão 50) e `PRUMO_IA_LIMITE_MENSAL_USD` (padrão 2). Sem modelo, a IA fica desligada e as telas escondem os botões.
+
+## IA assíncrona e áudio (P11, R3)
+
+Chamar a IA e transcrever áudio pode levar segundos; com fila, isso roda num worker Celery (Redis como broker) e a tela mostra "processando" e se atualiza sozinha. Sem `CELERY_BROKER_URL`, o pedido roda na hora, como no P10 (é o modo dos testes e do desenvolvimento).
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `fila_assincrona()` | `bool` | Há `CELERY_BROKER_URL` configurado |
+| `pedir_clarificacao(item, *, novo=False)` | `PedidoIA` | Tipo `clarificacao`. Sem `novo` e com sugestão pendente do item, já nasce `pronto` com ela (cache). Senão vai para a fila (ou roda na hora) |
+| `pedir_quebra(tarefa, *, novo=False)` | `PedidoIA` | O mesmo para `quebra` (só tarefa aberta, `ValueError`) |
+| `pedido_em_andamento(usuario, *, item=None, tarefa=None)` | `PedidoIA \| None` | O pedido `na_fila` ou `processando` mais recente (dos últimos 5 minutos; mais antigo que isso conta como perdido) |
+| `processar_pedido(pedido)` | `PedidoIA` | O corpo do worker: `processando` → chama `sugerir_clarificacao`, `sugerir_quebra` ou transcreve e separa o áudio → `pronto` com a `sugestao`, ou `erro` com a mensagem (`ErroIA`, `ValueError`). O áudio é apagado no fim, com ou sem sucesso. Pedido que não está na fila volta como está |
+| `audio_disponivel(usuario)` | `bool` | `ia_disponivel` e o provedor escolhido tem modelo de transcrição |
+| `capturar_audio(usuario, conteudo, tipo_mime)` | `PedidoIA` | Guarda o áudio (`AudioCaptura`, até 10 MB, `audio/*`; senão `ValueError`) e pede a transcrição. Pronto, o pedido tem uma `SugestaoIA` tipo `separar` com `conteudo = {"transcricao": str, "itens": [str]}` |
+| `salvar_itens_do_audio(sugestao, itens)` | `list[ItemCaptura]` | Cria um item da caixa de entrada por texto não vazio (origem `audio`, `transcricao` = a transcrição inteira). Registra a resposta (aceita se igual aos itens sugeridos, senão editada). `ValueError` sem nenhum texto |
+
+Modelos novos: `AudioCaptura` (temporário) e `PedidoIA` (tipo, status, item, tarefa, áudio, sugestão, erro). O worker chama `nucleo.fila.processar(pedido_id)`. Variáveis novas: `CELERY_BROKER_URL` (no docker-compose, `redis://redis:6379/0`) e o modelo de transcrição de cada provedor, `PRUMO_IA_TRANSCRICAO`, `PRUMO_IA_TRANSCRICAO_PROPRIA` e `PRUMO_IA_TRANSCRICAO_LOCAL` (ex.: `whisper-1`, `groq/whisper-large-v3`; com `PRUMO_IA_MODELO=falso`, a transcrição também é falsa).
 
 ## Mudar um contrato
 

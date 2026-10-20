@@ -171,6 +171,16 @@ SERVICOS: dict[str, str] = {
     "registrar_resposta": "(sugestao: 'SugestaoIA', final: 'dict', *, tarefa: 'Tarefa | None' = None) -> 'SugestaoIA'",
     "aplicar_quebra": "(sugestao: 'SugestaoIA', partes: 'list[dict]') -> 'list[Tarefa]'",
     "motivo_para_quebrar": "(tarefa: 'Tarefa') -> 'str'",
+    # IA assíncrona e áudio (P11): pedidos à IA rodam no worker (Celery) quando há fila; sem fila, na hora
+    "fila_assincrona": "() -> 'bool'",
+    "pedir_clarificacao": "(item: 'ItemCaptura', *, novo: 'bool' = False) -> 'PedidoIA'",
+    "pedir_quebra": "(tarefa: 'Tarefa', *, novo: 'bool' = False) -> 'PedidoIA'",
+    "pedido_em_andamento": "(usuario, *, item: 'ItemCaptura | None' = None, tarefa: 'Tarefa | None' = None) "
+    "-> 'PedidoIA | None'",
+    "processar_pedido": "(pedido: 'PedidoIA') -> 'PedidoIA'",
+    "audio_disponivel": "(usuario) -> 'bool'",
+    "capturar_audio": "(usuario, conteudo: 'bytes', tipo_mime: 'str') -> 'PedidoIA'",
+    "salvar_itens_do_audio": "(sugestao: 'SugestaoIA', itens: 'list[str]') -> 'list[ItemCaptura]'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -260,4 +270,5 @@ TELAS_WEB = (
     "imprevistos",
     "preparar",
     "ia",
+    "audio",
 )

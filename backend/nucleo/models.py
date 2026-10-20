@@ -351,3 +351,52 @@ class ChamadaIA(models.Model):
 
     def __str__(self):
         return f"{self.tipo} · {self.modelo} · {self.em:%d/%m %H:%M}"
+
+
+class AudioCaptura(models.Model):
+    """Áudio gravado no navegador, guardado só até a transcrição (depois é apagado, com ou sem sucesso)."""
+
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="audios")
+    conteudo = models.BinaryField()
+    tipo_mime = models.CharField(max_length=60)
+    criado_em = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Áudio de {self.usuario} · {self.criado_em:%d/%m %H:%M}"
+
+
+class PedidoIA(models.Model):
+    """Um pedido à IA que roda no worker; a tela acompanha o status e se atualiza sozinha (#28)."""
+
+    class Tipo(models.TextChoices):
+        CLARIFICACAO = "clarificacao", "Clarificação"
+        QUEBRA = "quebra", "Quebra"
+        AUDIO = "audio", "Áudio"
+
+    class Status(models.TextChoices):
+        NA_FILA = "na_fila", "Na fila"
+        PROCESSANDO = "processando", "Processando"
+        PRONTO = "pronto", "Pronto"
+        ERRO = "erro", "Erro"
+
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="pedidos_ia")
+    tipo = models.CharField(max_length=12, choices=Tipo.choices)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.NA_FILA)
+    novo = models.BooleanField(default=False, help_text="Pedir outra sugestão mesmo havendo uma pendente.")
+    item = models.ForeignKey(ItemCaptura, on_delete=models.CASCADE, null=True, blank=True, related_name="pedidos")
+    tarefa = models.ForeignKey(Tarefa, on_delete=models.CASCADE, null=True, blank=True, related_name="pedidos")
+    audio = models.ForeignKey(AudioCaptura, on_delete=models.SET_NULL, null=True, blank=True, related_name="pedidos")
+    sugestao = models.ForeignKey(SugestaoIA, on_delete=models.SET_NULL, null=True, blank=True, related_name="pedidos")
+    erro = models.CharField(max_length=300, blank=True)
+    criado_em = models.DateTimeField(default=timezone.now)
+    concluido_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-criado_em", "-id"]
+
+    def __str__(self):
+        return f"{self.tipo} ({self.status})"
+
+    @property
+    def em_andamento(self) -> bool:
+        return self.status in (self.Status.NA_FILA, self.Status.PROCESSANDO)
