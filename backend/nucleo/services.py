@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
 
 from . import planejamento as plan
 from . import prioridade as motor
-from .contratos import PlanoDoDia, PropostaReplanejamento, ResumoRevisaoDiaria
+from .contratos import ListaRapida, PlanoDoDia, ProgressoProjeto, PropostaReplanejamento, ResumoRevisaoDiaria
 from .models import (
     Area,
     Bloco,
@@ -19,6 +21,7 @@ from .models import (
     EventoTarefa,
     ItemCaptura,
     Perfil,
+    Projeto,
     Revisao,
     Tarefa,
     TarefaPessoa,
@@ -35,6 +38,7 @@ DIAS_UTEIS = {0, 1, 2, 3, 4}  # seg a sex
 JANELA_REPLANEJAMENTO_DIAS = 14
 JANELA_INTENCAO_DIAS = 7  # a intenção de sexta ainda vale na segunda (e depois de um feriado)
 STATUS_ABERTOS = (Bloco.Status.PLANEJADO, Bloco.Status.EM_FOCO)
+LISTA_RAPIDA_MAX_MIN = 10
 
 
 # --------------------------------------------------------------------------- perfil e jornada
@@ -169,7 +173,7 @@ def clarificar(item: ItemCaptura, dados: dict, pessoas: list[tuple] | None = Non
 @transaction.atomic
 def para_lista_rapida(item: ItemCaptura, area: Area, minutos: int = 5) -> Tarefa:
     """Itens de menos de 10 minutos pulam a triagem e viram tarefas leves."""
-    if minutos > 10:
+    if minutos > LISTA_RAPIDA_MAX_MIN:
         raise ValueError("a lista rápida é para itens de até 10 minutos")
     tarefa = Tarefa.objects.create(
         usuario=item.usuario,
@@ -529,3 +533,155 @@ def cancelar_tarefa(tarefa: Tarefa, *, motivo: str = "") -> Tarefa:
     saem.delete()
     evento(tarefa, EventoTarefa.Tipo.CANCELADA, blocos_removidos=removidos, motivo=motivo[:200])
     return tarefa
+
+
+# --------------------------------------------------------------------------- lista rápida
+def _minutos_livres_no_fim_do_dia(usuario) -> int:
+    """Minutos do fim do último bloco ativo de hoje (ou de agora, se for mais tarde) até o fim da jornada."""
+    perfil = perfil_de(usuario)
+    tz = timezone.get_current_timezone()
+    dia = hoje()
+    inicio = max(datetime.combine(dia, perfil.inicio_trabalho, tzinfo=tz), timezone.now())
+    ultimo = _blocos_do_dia(usuario, dia).filter(status__in=STATUS_ABERTOS).order_by("-fim_planejado").first()
+    if ultimo is not None:
+        inicio = max(inicio, ultimo.fim_planejado)
+    fim = datetime.combine(dia, perfil.fim_trabalho, tzinfo=tz)
+    return max(0, int((fim - inicio).total_seconds() // 60))
+
+
+def lista_rapida(usuario) -> ListaRapida:
+    """Coisas de até 10 minutos, para resolver de uma vez no fim do dia (M17)."""
+    tarefas = list(
+        tarefas_leves(usuario)
+        .filter(minutos_estimados__isnull=False, minutos_estimados__lte=LISTA_RAPIDA_MAX_MIN)
+        .select_related("area")
+        .order_by("criada_em", "pk")
+    )
+    total = sum(t.minutos_estimados for t in tarefas)
+    livres = _minutos_livres_no_fim_do_dia(usuario)
+    return {"tarefas": tarefas, "total_minutos": total, "minutos_livres": livres, "cabe_hoje": total <= livres}
+
+
+# --------------------------------------------------------------------------- projetos
+CAMPOS_PROJETO = ("area", "nome", "porque", "fim", "prazo_rigido", "status")
+ORDEM_STATUS_PROJETO = {Projeto.Status.ATIVO: 0, Projeto.Status.PAUSADO: 1, Projeto.Status.CONCLUIDO: 2}
+
+
+def _gravar_projeto(projeto: Projeto, dados: dict) -> Projeto:
+    desconhecidos = set(dados) - set(CAMPOS_PROJETO)
+    if desconhecidos:
+        raise ValueError(f"campos que um projeto não tem: {', '.join(sorted(desconhecidos))}")
+    for campo, valor in dados.items():
+        setattr(projeto, campo, valor)
+    if projeto.area_id and projeto.area.usuario_id != projeto.usuario_id:
+        raise ValidationError({"area": "Escolha uma das suas áreas."})
+    projeto.full_clean(exclude=["usuario"])
+    projeto.save()
+    return projeto
+
+
+def criar_projeto(usuario, dados: dict) -> Projeto:
+    """Projeto novo (área, nome, por quê e prazo em `fim`); `ValidationError` se faltar algo ou a área não for dele."""
+    return _gravar_projeto(Projeto(usuario=usuario), dados)
+
+
+def atualizar_projeto(projeto: Projeto, dados: dict) -> Projeto:
+    return _gravar_projeto(projeto, dados)
+
+
+def progresso_do_projeto(projeto: Projeto) -> ProgressoProjeto:
+    """Progresso em blocos das tarefas não canceladas (M18, M19); a tarefa concluída conta todos os estimados."""
+    tarefas = [t for t in projeto.tarefas.all() if t.status != Tarefa.Status.CANCELADA]
+    estimados = sum(t.blocos_estimados for t in tarefas)
+    feitos = sum(
+        t.blocos_estimados if t.status == Tarefa.Status.CONCLUIDA else min(t.blocos_feitos, t.blocos_estimados)
+        for t in tarefas
+    )
+    restantes = estimados - feitos
+    folga = None
+    if projeto.fim and restantes:
+        folga = round(blocos_livres_ate(projeto.usuario, projeto.fim) / restantes, 1)
+    return {
+        "projeto": projeto,
+        "blocos_estimados": estimados,
+        "blocos_feitos": feitos,
+        "progresso": round(feitos / estimados, 2) if estimados else 0.0,
+        "tarefas_abertas": sum(t.status == Tarefa.Status.ABERTA for t in tarefas),
+        "folga": folga,
+    }
+
+
+def projetos_de(usuario) -> list[ProgressoProjeto]:
+    """Os projetos do usuário: ativos primeiro, depois pausados e concluídos; em cada grupo, o prazo mais próximo."""
+    projetos = Projeto.objects.filter(usuario=usuario).select_related("area").prefetch_related("tarefas")
+    ordenados = sorted(
+        projetos, key=lambda p: (ORDEM_STATUS_PROJETO.get(p.status, 3), p.fim is None, p.fim or date.max, p.nome)
+    )
+    return [progresso_do_projeto(p) for p in ordenados]
+
+
+# --------------------------------------------------------------------------- áreas da vida
+COR_HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
+def _validar_area(usuario, nome: str, cor: str, *, exceto: Area | None = None) -> tuple[str, str]:
+    nome = nome.strip()
+    if not nome:
+        raise ValueError("Dê um nome à área.")
+    if len(nome) > Area._meta.get_field("nome").max_length:
+        raise ValueError("Use até 60 caracteres.")
+    repetidas = Area.objects.filter(usuario=usuario, nome__iexact=nome)
+    if exceto is not None:
+        repetidas = repetidas.exclude(pk=exceto.pk)
+    if repetidas.exists():
+        raise ValueError("Já existe uma área com esse nome.")
+    if not COR_HEX.match(cor):
+        raise ValueError("Escolha uma cor no formato #RRGGBB.")
+    return nome, cor.upper()
+
+
+def proxima_ordem_de_area(usuario) -> int:
+    ultima = Area.objects.filter(usuario=usuario).order_by("-ordem").first()
+    return ultima.ordem + 1 if ultima else 0
+
+
+def criar_area(usuario, nome: str, cor: str) -> Area:
+    """Área nova no fim da lista; `ValueError` com a mensagem para a tela se o nome ou a cor não servirem."""
+    nome, cor = _validar_area(usuario, nome, cor)
+    return Area.objects.create(usuario=usuario, nome=nome, cor=cor, ordem=proxima_ordem_de_area(usuario))
+
+
+def atualizar_area(area: Area, *, nome: str | None = None, cor: str | None = None) -> Area:
+    area.nome, area.cor = _validar_area(
+        area.usuario, area.nome if nome is None else nome, area.cor if cor is None else cor, exceto=area
+    )
+    area.save(update_fields=["nome", "cor"])
+    return area
+
+
+@transaction.atomic
+def mover_area(area: Area, passo: int) -> None:
+    """Troca a área com a vizinha de cima (`-1`) ou de baixo (`1`) e renumera a ordem a partir de 0."""
+    if passo not in (-1, 1):
+        raise ValueError("a área anda uma posição por vez")
+    areas = list(Area.objects.select_for_update().filter(usuario_id=area.usuario_id).order_by("ordem", "nome"))
+    i = next(n for n, a in enumerate(areas) if a.pk == area.pk)
+    j = i + passo
+    if 0 <= j < len(areas):
+        areas[i], areas[j] = areas[j], areas[i]
+    for ordem, a in enumerate(areas):
+        a.ordem = ordem
+    Area.objects.bulk_update(areas, ["ordem"])
+
+
+def excluir_area(area: Area) -> None:
+    """Só exclui área sem tarefas (de qualquer status), projetos ou rotinas; senão `ValueError` dizendo o que há."""
+    em_uso = [
+        (area.tarefas.count(), "tarefa", "tarefas"),
+        (area.projetos.count(), "projeto", "projetos"),
+        (area.rotinas.count(), "rotina", "rotinas"),
+    ]
+    partes = [f"{n} {um if n == 1 else varios}" for n, um, varios in em_uso if n]
+    if partes:
+        raise ValueError(f"{area.nome} tem {' e '.join(partes)}. Mude para outra área antes de excluir.")
+    area.delete()

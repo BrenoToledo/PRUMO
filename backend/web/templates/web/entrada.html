@@ -1,6 +1,7 @@
 {% extends "web/base.html" %}
-{% load web_extras %}
+{% load static web_extras organizacao %}
 {% block titulo %}Caixa de entrada{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/lista_rapida.css' %}">{% endblock %}
 {% block conteudo %}
 <header class="cabecalho">
   <div>
@@ -9,6 +10,7 @@
   </div>
   {% include "web/_botao_sair.html" %}
 </header>
+{% atalho_lista_rapida %}
 <div id="lista-entrada" class="lista">
   {% for item, form in itens %}{% include "web/_item_entrada.html" %}{% endfor %}
 </div>

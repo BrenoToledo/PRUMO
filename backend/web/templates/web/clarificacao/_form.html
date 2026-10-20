@@ -20,6 +20,15 @@
     {% if form.area.errors %}<p id="erro-area" class="erro" role="alert">{{ form.area.errors|join:" " }}</p>{% endif %}
   </fieldset>
 
+  {% if form.fields.projeto.queryset %}<div class="clarificacao__campo"{% if form.projeto.errors %} aria-describedby="erro-projeto"{% endif %}>
+    <label class="clarificacao__rotulo" for="id_projeto">Projeto <span class="clarificacao__opcional">(opcional)</span></label>
+    <select id="id_projeto" name="projeto">
+      <option value="">Nenhum</option>
+      {% for projeto in form.fields.projeto.queryset %}<option value="{{ projeto.pk }}"{% if form.projeto.value|stringformat:"s" == projeto.pk|stringformat:"s" %} selected{% endif %}>{{ projeto.nome }}</option>{% endfor %}
+    </select>
+    {% if form.projeto.errors %}<p id="erro-projeto" class="erro" role="alert">{{ form.projeto.errors|join:" " }}</p>{% endif %}
+  </div>{% endif %}
+
   <div class="clarificacao__linha">
     {% include "web/clarificacao/_campo.html" with campo=form.prazo %}
     {% include "web/clarificacao/_campo.html" with campo=form.blocos_estimados %}

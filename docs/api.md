@@ -45,6 +45,6 @@ Base: `/api/`. Autenticação por sessão ou token (`POST /api/token/` com `user
 
 ## Cadastros
 
-`/areas/`, `/projetos/`, `/rotinas/`, `/pessoas/` (CRUD) e `GET/PATCH /perfil/` (jornada, pico de energia, folga diária, duração do bloco, pesos e provedor de IA).
+`/areas/`, `/projetos/`, `/rotinas/`, `/pessoas/` (CRUD) e `GET/PATCH /perfil/` (jornada, pico de energia, folga diária, duração do bloco, pesos e provedor de IA). `DELETE /areas/{id}/` devolve `409` se a área tiver tarefas, projetos ou rotinas, e `POST /areas/` põe a área nova no fim da ordem (M30).
 
 Os campos de cada resposta estão fixados em `backend/nucleo/contratos.py` e testados em `nucleo/tests/test_contratos.py`; ver [contratos.md](contratos.md).

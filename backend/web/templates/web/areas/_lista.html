@@ -1,0 +1,46 @@
+<div id="areas" class="areas">
+  <ul class="areas__lista">
+    {% for area in areas %}<li class="area-linha" style="--cor-area: {{ area.cor }}">
+      <form class="area-linha__form" method="post" action="{% url 'web:editar_area' area.pk %}"
+            hx-post="{% url 'web:editar_area' area.pk %}" hx-target="#areas" hx-swap="outerHTML">
+        {% csrf_token %}
+        <input class="area-linha__cor" type="color" name="cor" value="{{ area.cor }}" aria-label="Cor de {{ area.nome }}">
+        <input class="area-linha__nome" type="text" name="nome" value="{{ area.nome }}" maxlength="60" required aria-label="Nome da área {{ area.nome }}"{% if erro and erro_em == area.pk %} aria-invalid="true" aria-describedby="erro-area-{{ area.pk }}"{% endif %}>
+        <button class="botao botao--pequeno" type="submit">Salvar</button>
+      </form>
+      <div class="area-linha__acoes">
+        <form method="post" action="{% url 'web:mover_area' area.pk %}" hx-post="{% url 'web:mover_area' area.pk %}" hx-target="#areas" hx-swap="outerHTML">
+          {% csrf_token %}<input type="hidden" name="passo" value="-1">
+          <button class="area-linha__icone" type="submit" aria-label="Subir {{ area.nome }}" title="Subir"{% if forloop.first %} disabled{% endif %}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
+          </button>
+        </form>
+        <form method="post" action="{% url 'web:mover_area' area.pk %}" hx-post="{% url 'web:mover_area' area.pk %}" hx-target="#areas" hx-swap="outerHTML">
+          {% csrf_token %}<input type="hidden" name="passo" value="1">
+          <button class="area-linha__icone" type="submit" aria-label="Descer {{ area.nome }}" title="Descer"{% if forloop.last %} disabled{% endif %}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+        </form>
+        <form method="post" action="{% url 'web:excluir_area' area.pk %}" hx-post="{% url 'web:excluir_area' area.pk %}" hx-target="#areas" hx-swap="outerHTML"
+              hx-confirm="Excluir a área {{ area.nome }}?">
+          {% csrf_token %}
+          <button class="area-linha__icone area-linha__icone--perigo" type="submit" aria-label="Excluir {{ area.nome }}" title="Excluir">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          </button>
+        </form>
+      </div>
+      {% if erro and erro_em == area.pk %}<p id="erro-area-{{ area.pk }}" class="erro area-linha__erro" role="alert">{{ erro }}</p>{% endif %}
+    </li>{% endfor %}
+  </ul>
+
+  <form class="area-nova" method="post" action="{% url 'web:areas' %}" hx-post="{% url 'web:areas' %}" hx-target="#areas" hx-swap="outerHTML" novalidate>
+    {% csrf_token %}
+    <h2 class="area-nova__titulo">Criar outra área</h2>
+    <div class="area-linha__form">
+      <input class="area-linha__cor" type="color" name="cor" value="{{ nova.cor }}" aria-label="Cor da nova área">
+      <input class="area-linha__nome" type="text" name="nome" value="{{ nova.nome }}" maxlength="60" required placeholder="Finanças" aria-label="Nome da nova área"{% if erro and erro_em == "nova" %} aria-invalid="true" aria-describedby="erro-area-nova"{% endif %}>
+      <button class="botao botao--primario botao--pequeno" type="submit">Criar</button>
+    </div>
+    {% if erro and erro_em == "nova" %}<p id="erro-area-nova" class="erro area-linha__erro" role="alert">{{ erro }}</p>{% endif %}
+  </form>
+</div>
