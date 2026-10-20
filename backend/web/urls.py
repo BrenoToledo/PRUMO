@@ -11,6 +11,7 @@ from .telas import (
     pausa,
     perfil,
     plano,
+    preparar,
     projetos,
     pwa,
     revisao,
@@ -39,3 +40,4 @@ urlpatterns += perfil.urlpatterns + pwa.urlpatterns
 urlpatterns += revisao.urlpatterns + pausa.urlpatterns
 urlpatterns += lista_rapida.urlpatterns + projetos.urlpatterns + areas.urlpatterns
 urlpatterns += imprevistos.urlpatterns
+urlpatterns += preparar.urlpatterns

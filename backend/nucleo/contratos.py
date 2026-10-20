@@ -104,7 +104,8 @@ SERVICOS: dict[str, str] = {
     "plano_do_dia": "(usuario, dia: 'date | None' = None) -> 'PlanoDoDia'",
     "gerar_plano_do_dia": "(usuario, dia: 'date | None' = None) -> 'plan.Plano'",
     # Execução dos blocos (P3 usa)
-    "iniciar_bloco": "(bloco: 'Bloco') -> 'Bloco'",
+    "iniciar_bloco": "(bloco: 'Bloco', *, minutos: 'int | None' = None, checklist: 'list[str] | None' = None) "
+    "-> 'Bloco'",
     "concluir_bloco": "(bloco: 'Bloco', resultado: 'str', *, blocos_restantes: 'int | None' = None, "
     "nova_proxima_acao: 'str' = '') -> 'Bloco'",
     "sair_do_bloco": "(bloco: 'Bloco', motivo: 'str') -> 'Bloco'",
@@ -137,6 +138,8 @@ SERVICOS: dict[str, str] = {
     "atualizar_area": "(area: 'Area', *, nome: 'str | None' = None, cor: 'str | None' = None) -> 'Area'",
     "mover_area": "(area: 'Area', passo: 'int') -> 'None'",
     "excluir_area": "(area: 'Area') -> 'None'",
+    # Desktop (P9): painel de prioridades de Hoje
+    "prioridades_da_semana": "(usuario, limite: 'int' = 4) -> 'list[Tarefa]'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -224,4 +227,5 @@ TELAS_WEB = (
     "projetos",
     "areas",
     "imprevistos",
+    "preparar",
 )

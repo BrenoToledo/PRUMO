@@ -271,12 +271,21 @@ def plano_do_dia(usuario, dia: date | None = None) -> PlanoDoDia:
 
 
 # --------------------------------------------------------------------------- execução dos blocos
-def iniciar_bloco(bloco: Bloco) -> Bloco:
+MAX_MINUTOS_BLOCO = 180
+
+
+def iniciar_bloco(bloco: Bloco, *, minutos: int | None = None, checklist: list[str] | None = None) -> Bloco:
+    """Começa o foco. `minutos` muda a duração escolhida em M07; `checklist` são os itens marcados lá."""
     if bloco.status != Bloco.Status.PLANEJADO:
         raise ValueError("só um bloco planejado pode ser iniciado")
+    if minutos is not None:
+        if not 1 <= minutos <= MAX_MINUTOS_BLOCO:
+            raise ValueError(f"minutos precisa ficar entre 1 e {MAX_MINUTOS_BLOCO}")
+        bloco.fim_planejado = bloco.inicio_planejado + timedelta(minutes=minutos)
     bloco.status, bloco.inicio_real = Bloco.Status.EM_FOCO, timezone.now()
-    bloco.save(update_fields=["status", "inicio_real"])
-    evento(bloco.tarefa, EventoTarefa.Tipo.INICIADA, bloco=bloco.id)
+    bloco.save(update_fields=["status", "inicio_real", "fim_planejado"])
+    duracao = int((bloco.fim_planejado - bloco.inicio_planejado).total_seconds() // 60)
+    evento(bloco.tarefa, EventoTarefa.Tipo.INICIADA, bloco=bloco.id, minutos=duracao, checklist=list(checklist or []))
     return bloco
 
 
@@ -718,3 +727,9 @@ def excluir_area(area: Area) -> None:
     if partes:
         raise ValueError(f"{area.nome} tem {' e '.join(partes)}. Mude para outra área antes de excluir.")
     area.delete()
+
+
+# --------------------------------------------------------------------------- desktop
+def prioridades_da_semana(usuario, limite: int = 4) -> list[Tarefa]:
+    """Painel direito de Hoje no desktop (D01): as tarefas abertas de maior prioridade, sem as adiadas."""
+    return list(_abertas_no_dia(usuario, hoje()).select_related("area").order_by("-prioridade", "prazo", "id")[:limite])

@@ -1,0 +1,24 @@
+<aside class="painel-hoje" aria-labelledby="titulo-prioridades">
+  <div class="painel-hoje__topo">
+    <h2 id="titulo-prioridades" class="painel-hoje__cabecalho">Prioridades da semana</h2>
+    <span class="painel-hoje__nota">por nota</span>
+  </div>
+  {% if prioridades %}
+  <ol class="painel-hoje__lista">
+    {% for tarefa in prioridades %}
+    <li class="painel-hoje__item" style="--cor-area: {{ tarefa.area.cor }}">
+      <span class="painel-hoje__posicao">{{ forloop.counter }}</span>
+      <div>
+        <a class="painel-hoje__titulo" href="{% url 'web:tarefa' tarefa.pk %}">{{ tarefa.titulo }}</a>
+        <div class="painel-hoje__chips">
+          <span class="chip-area">{{ tarefa.area.nome }}</span>
+          {% include "web/plano/_chip_prioridade.html" %}
+        </div>
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="painel-hoje__vazio">Nenhuma tarefa aberta. <a href="{% url 'web:entrada' %}">Clarifique a entrada</a> para ver as prioridades.</p>
+  {% endif %}
+</aside>

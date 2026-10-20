@@ -17,6 +17,9 @@
 {% block corpo %}
   <div class="app">
     <nav class="nav" aria-label="Navegação principal">
+      <button class="nav__capturar" type="button" data-abrir-captura aria-keyshortcuts="Control+K Meta+K">
+        Capturar ideia… <kbd>Ctrl+K</kbd>
+      </button>
       <ul>
         <li>
           <a class="nav__item" href="{% url 'web:hoje' %}"{% if aba == "hoje" %} aria-current="page"{% endif %}>

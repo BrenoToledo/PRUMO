@@ -209,6 +209,11 @@ class BlocoSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class IniciarBlocoSerializer(serializers.Serializer):
+    minutos = serializers.IntegerField(required=False, min_value=1, max_value=180)
+    checklist = serializers.ListField(child=serializers.CharField(max_length=80), required=False, max_length=10)
+
+
 class ConcluirBlocoSerializer(serializers.Serializer):
     resultado = serializers.ChoiceField(choices=Bloco.Resultado.choices)
     blocos_restantes = serializers.IntegerField(required=False, min_value=0, max_value=200)
