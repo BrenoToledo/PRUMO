@@ -36,6 +36,7 @@ from .models import (
     Esforco,
     EventoTarefa,
     ItemCaptura,
+    PedidoIA,
     Perfil,
     Pessoa,
     Projeto,
@@ -1080,3 +1081,36 @@ def autenticar_token_api(chave: str) -> TokenAPI | None:
         token.ultimo_uso_em = timezone.now()
         token.save(update_fields=["ultimo_uso_em"])
     return token
+
+
+# --------------------------------------------------------------------------- IA assíncrona e áudio (P11)
+def fila_assincrona() -> bool:
+    raise NotImplementedError
+
+
+def pedir_clarificacao(item: ItemCaptura, *, novo: bool = False) -> PedidoIA:
+    raise NotImplementedError
+
+
+def pedir_quebra(tarefa: Tarefa, *, novo: bool = False) -> PedidoIA:
+    raise NotImplementedError
+
+
+def pedido_em_andamento(usuario, *, item: ItemCaptura | None = None, tarefa: Tarefa | None = None) -> PedidoIA | None:
+    raise NotImplementedError
+
+
+def processar_pedido(pedido: PedidoIA) -> PedidoIA:
+    raise NotImplementedError
+
+
+def audio_disponivel(usuario) -> bool:
+    raise NotImplementedError
+
+
+def capturar_audio(usuario, conteudo: bytes, tipo_mime: str) -> PedidoIA:
+    raise NotImplementedError
+
+
+def salvar_itens_do_audio(sugestao: SugestaoIA, itens: list[str]) -> list[ItemCaptura]:
+    raise NotImplementedError

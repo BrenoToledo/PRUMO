@@ -204,6 +204,16 @@ SERVICOS: dict[str, str] = {
     "tokens_api_de": "(usuario) -> 'list[TokenAPI]'",
     "revogar_token_api": "(token: 'TokenAPI') -> 'TokenAPI'",
     "autenticar_token_api": "(chave: 'str') -> 'TokenAPI | None'",
+    # IA assíncrona e áudio (P11): pedidos à IA rodam no worker (Celery) quando há fila; sem fila, na hora
+    "fila_assincrona": "() -> 'bool'",
+    "pedir_clarificacao": "(item: 'ItemCaptura', *, novo: 'bool' = False) -> 'PedidoIA'",
+    "pedir_quebra": "(tarefa: 'Tarefa', *, novo: 'bool' = False) -> 'PedidoIA'",
+    "pedido_em_andamento": "(usuario, *, item: 'ItemCaptura | None' = None, tarefa: 'Tarefa | None' = None) "
+    "-> 'PedidoIA | None'",
+    "processar_pedido": "(pedido: 'PedidoIA') -> 'PedidoIA'",
+    "audio_disponivel": "(usuario) -> 'bool'",
+    "capturar_audio": "(usuario, conteudo: 'bytes', tipo_mime: 'str') -> 'PedidoIA'",
+    "salvar_itens_do_audio": "(sugestao: 'SugestaoIA', itens: 'list[str]') -> 'list[ItemCaptura]'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -313,6 +323,7 @@ TELAS_WEB = (
     "preparar",
     "ia",
     "tokens",
+    "audio",
 )
 
 # --------------------------------------------------------------------------- servidor MCP (P12, #29)
