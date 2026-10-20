@@ -98,6 +98,7 @@ def _clarificacao_padrao(mensagens: list[dict]) -> str:
 
 def _quebra_padrao(mensagens: list[dict]) -> str:
     tarefa = str(_pedido(mensagens).get("tarefa", "")).strip() or "a tarefa"
+    tarefa = tarefa[:1].lower() + tarefa[1:]
     partes = [
         {"titulo": f"Levantar o que falta para {tarefa}", "blocos": 1, "esforco": "medio"},
         {"titulo": f"Fazer a parte principal de {tarefa}", "blocos": 2, "esforco": "alto"},
