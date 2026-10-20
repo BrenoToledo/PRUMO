@@ -18,6 +18,7 @@ from .serializers import (
     ClarificarSerializer,
     ConcluirBlocoSerializer,
     EventoTarefaSerializer,
+    IniciarBlocoSerializer,
     ItemCapturaSerializer,
     ListaRapidaSerializer,
     MeuDiaQuebrouSerializer,
@@ -276,7 +277,10 @@ class BlocoViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["post"])
     def iniciar(self, request, pk=None):
-        return self._executa(services.iniciar_bloco)
+        ser = IniciarBlocoSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        d = ser.validated_data
+        return self._executa(services.iniciar_bloco, minutos=d.get("minutos"), checklist=d.get("checklist"))
 
     @action(detail=True, methods=["post"])
     def concluir(self, request, pk=None):

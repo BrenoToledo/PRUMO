@@ -271,12 +271,21 @@ def plano_do_dia(usuario, dia: date | None = None) -> PlanoDoDia:
 
 
 # --------------------------------------------------------------------------- execução dos blocos
+MAX_MINUTOS_BLOCO = 180
+
+
 def iniciar_bloco(bloco: Bloco, *, minutos: int | None = None, checklist: list[str] | None = None) -> Bloco:
+    """Começa o foco. `minutos` muda a duração escolhida em M07; `checklist` são os itens marcados lá."""
     if bloco.status != Bloco.Status.PLANEJADO:
         raise ValueError("só um bloco planejado pode ser iniciado")
+    if minutos is not None:
+        if not 1 <= minutos <= MAX_MINUTOS_BLOCO:
+            raise ValueError(f"minutos precisa ficar entre 1 e {MAX_MINUTOS_BLOCO}")
+        bloco.fim_planejado = bloco.inicio_planejado + timedelta(minutes=minutos)
     bloco.status, bloco.inicio_real = Bloco.Status.EM_FOCO, timezone.now()
-    bloco.save(update_fields=["status", "inicio_real"])
-    evento(bloco.tarefa, EventoTarefa.Tipo.INICIADA, bloco=bloco.id)
+    bloco.save(update_fields=["status", "inicio_real", "fim_planejado"])
+    duracao = int((bloco.fim_planejado - bloco.inicio_planejado).total_seconds() // 60)
+    evento(bloco.tarefa, EventoTarefa.Tipo.INICIADA, bloco=bloco.id, minutos=duracao, checklist=list(checklist or []))
     return bloco
 
 

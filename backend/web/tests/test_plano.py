@@ -5,7 +5,7 @@ import re
 import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
-from django.urls import NoReverseMatch, reverse
+from django.urls import reverse
 from freezegun import freeze_time
 
 from nucleo import services
@@ -238,20 +238,15 @@ def test_proximo_bloco_e_o_agora_e_concluidos_aparecem(logado, usuario):
 
 
 @freeze_time(SEGUNDA)
-def test_botao_comecar_foco_so_com_a_rota_de_foco(logado, usuario):
-
+def test_botao_comecar_foco_leva_para_preparar_foco(logado, usuario):
+    """O card "Agora" abre M07 (preparar foco, #22) antes do timer."""
     tarefa(usuario)
     services.gerar_plano_do_dia(usuario)
     bloco = Bloco.objects.get(usuario=usuario)
 
     html = hoje_html(logado)
 
-    try:
-        url_iniciar = reverse("web:iniciar_bloco", args=[bloco.pk])
-    except NoReverseMatch:  # a rota chega com o pacote 3; até lá o card não quebra
-        assert "Começar foco" not in html
-    else:
-        assert f'action="{url_iniciar}"' in html and "Começar foco" in html
+    assert f'href="{reverse("web:preparar_foco", args=[bloco.pk])}"' in html and "Começar foco" in html
 
 
 # ---------------------------------------------------------------- junção com foco, tarefas e perfil

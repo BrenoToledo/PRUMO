@@ -1,0 +1,71 @@
+/* Preparar foco (M07): primeiro passo, checklist e duração antes do bloco. Tela sem navegação, como o foco. */
+.preparar {
+  width: 100%; max-width: 480px; min-height: 100dvh; margin: 0 auto;
+  padding: var(--e6) var(--e6) calc(var(--e6) + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: var(--e4);
+}
+.preparar p { margin: 0; }
+.preparar h1 {
+  margin: 0; font-size: var(--titulo-tam); line-height: var(--titulo-alt); font-weight: var(--titulo-peso);
+  overflow-wrap: anywhere;
+}
+
+.preparar__topo { display: flex; align-items: center; gap: var(--e2); }
+.preparar__voltar { display: inline-flex; color: var(--texto); }
+.preparar__voltar svg { width: 20px; height: 20px; }
+.preparar__titulo-tela { font-weight: var(--subtitulo-peso); }
+.preparar__rotulo {
+  margin: 0; padding: 0;
+  font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso);
+  letter-spacing: .04em; text-transform: uppercase; color: var(--texto-secundario);
+}
+.preparar__subtitulo {
+  padding: 0; margin-bottom: var(--e2);
+  font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso);
+}
+
+.preparar__passo {
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  padding: var(--e3) var(--e4); display: flex; flex-direction: column; gap: var(--e1);
+}
+.preparar__passo-topo { display: flex; align-items: center; justify-content: space-between; }
+.preparar__editar { display: inline-flex; color: var(--texto-secundario); }
+.preparar__editar svg { width: 16px; height: 16px; }
+
+.preparar__form { display: flex; flex-direction: column; gap: var(--e4); flex: 1; }
+.preparar__grupo { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+
+.preparar__item {
+  position: relative; display: flex; align-items: flex-start; gap: var(--e3); cursor: pointer;
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  padding: var(--e3) var(--e4); transition: background var(--transicao), border-color var(--transicao);
+}
+.preparar__item input { position: absolute; opacity: 0; pointer-events: none; }
+.preparar__marca {
+  flex: none; width: 20px; height: 20px; margin-top: 2px; border-radius: 50%;
+  border: 1.5px solid var(--texto-secundario); display: grid; place-items: center;
+}
+.preparar__texto { display: flex; flex-direction: column; }
+.preparar__dica { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.preparar__item:has(input:checked) { background: var(--primaria-suave); border-color: var(--primaria); }
+.preparar__item input:checked + .preparar__marca { background: var(--primaria); border-color: var(--primaria); }
+.preparar__item input:checked + .preparar__marca::after {
+  content: ""; width: 5px; height: 9px; margin-top: -2px;
+  border: solid var(--texto-na-primaria); border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.preparar__item:has(input:focus-visible) { outline: 2px solid var(--primaria); outline-offset: 2px; }
+
+.preparar__duracoes { display: flex; flex-wrap: wrap; gap: var(--e2); }
+.preparar__duracao { position: relative; cursor: pointer; }
+.preparar__duracao input { position: absolute; opacity: 0; pointer-events: none; }
+.preparar__duracao span {
+  display: inline-block; padding: var(--e1) var(--e3); border-radius: var(--raio-chip);
+  border: 1px solid var(--borda); background: var(--superficie);
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.preparar__duracao input:checked + span {
+  background: var(--primaria); border-color: var(--primaria); color: var(--texto-na-primaria);
+}
+.preparar__duracao input:focus-visible + span { outline: 2px solid var(--primaria); outline-offset: 2px; }
+
+.preparar__comecar { margin-top: auto; width: 100%; }
