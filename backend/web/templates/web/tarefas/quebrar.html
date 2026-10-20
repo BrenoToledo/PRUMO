@@ -1,0 +1,56 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Quebrar tarefa{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/tarefas.css' %}">{% endblock %}
+{% block conteudo %}
+<div class="quebra">
+  <a class="voltar" href="{% url 'web:tarefa' tarefa.pk %}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+    Quebrar tarefa
+  </a>
+  <h1 class="detalhe__titulo">{{ tarefa.titulo }}</h1>
+  {% if motivo %}<p class="quebra__motivo">{{ motivo }}</p>{% endif %}
+
+  {% if sugestao %}
+  <form class="quebra__form" method="post" action="{% url 'web:aplicar_quebra' tarefa.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="sugestao" value="{{ sugestao.pk }}">
+    <div class="cartao sugestao-ia" role="note">
+      <p class="sugestao-ia__rotulo">Sugestão da IA</p>
+      <p class="quebra__resumo">{{ sugestao.conteudo.partes|length }} partes, {{ total }} blocos</p>
+      <p class="sugestao-ia__texto">{{ sugestao.evidencia }}</p>
+    </div>
+    {% if erro %}<p class="erro" role="alert">{{ erro|capfirst }}.</p>{% endif %}
+
+    <ol class="quebra__partes">
+      {% for parte in partes %}<li class="cartao quebra__parte{% if forloop.last %} quebra__parte--nova{% endif %}">
+        <label class="quebra__rotulo" for="parte-{{ forloop.counter }}">{% if forloop.last %}Adicionar parte <span class="quebra__opcional">(opcional)</span>{% else %}Parte {{ forloop.counter }}{% endif %}</label>
+        <input id="parte-{{ forloop.counter }}" type="text" name="titulo" value="{{ parte.titulo }}" maxlength="200">
+        <div class="quebra__linha">
+          <label>Blocos <input type="number" name="blocos" value="{{ parte.blocos }}" min="1" max="20" inputmode="numeric"></label>
+          <label>Esforço
+            <select name="esforco">{% for valor, rotulo in esforcos %}<option value="{{ valor }}"{% if parte.esforco == valor %} selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>
+          </label>
+        </div>
+      </li>{% endfor %}
+    </ol>
+
+    <p class="cartao quebra__total">Total: {{ total }} bloco{{ total|pluralize }}{% if tarefa.prazo %} · {% if folga is not None and folga >= 1 %}cabe até {{ tarefa.prazo|date:"j b" }} com folga {{ folga|floatformat:1 }}x{% else %}não cabe até {{ tarefa.prazo|date:"j b" }} no ritmo atual{% endif %}{% endif %}</p>
+    <p class="quebra__dica">Cada parte vira uma tarefa com a área, o projeto e o prazo desta. Esta sai do plano até as partes acabarem.</p>
+    <div class="quebra__acoes">
+      <button class="botao" type="submit" formaction="{% url 'web:sugerir_quebra' tarefa.pk %}" formnovalidate>Gerar de novo</button>
+      <button class="botao botao--primario" type="submit">Aplicar</button>
+    </div>
+    <button class="botao botao--texto" type="submit" formaction="{% url 'web:descartar_quebra' tarefa.pk %}" formnovalidate>Descartar sugestão</button>
+  </form>
+  {% elif ia %}
+  <form class="quebra__pedir" method="post" action="{% url 'web:sugerir_quebra' tarefa.pk %}">
+    {% csrf_token %}
+    <p>A IA olha o título, a próxima ação, os blocos e o prazo e sugere partes menores, cada uma com blocos e esforço. Você edita antes de aplicar.</p>
+    <button class="botao botao--primario" type="submit">Sugerir partes</button>
+  </form>
+  {% else %}
+  <p class="cartao">A IA está desligada. Escolha um provedor em <a href="{% url 'web:ia' %}">IA e privacidade</a>.</p>
+  {% endif %}
+</div>
+{% endblock %}
