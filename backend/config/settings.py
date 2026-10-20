@@ -112,6 +112,13 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o]
 
+# Fila assíncrona (#28): sem broker, os pedidos à IA rodam na hora, dentro da requisição.
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "")
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TIMEZONE = TIME_ZONE
+
 # Logs no console (o `docker compose logs` mostra erros 500 em produção).
 LOGGING = {
     "version": 1,
