@@ -5,24 +5,38 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import Count, QuerySet, Sum
 from django.utils import timezone
+
+from ia import tarefas as ia_tarefas
+from ia.config import Config as ConfigIA
+from ia.provedores import ErroIA, Provedor
 
 from . import planejamento as plan
 from . import prioridade as motor
-from .contratos import ListaRapida, PlanoDoDia, ProgressoProjeto, PropostaReplanejamento, ResumoRevisaoDiaria
+from .contratos import (
+    ListaRapida,
+    PlanoDoDia,
+    ProgressoProjeto,
+    PropostaReplanejamento,
+    ResumoRevisaoDiaria,
+    UsoDeIA,
+)
 from .models import (
     Area,
     Bloco,
+    ChamadaIA,
     Esforco,
     EventoTarefa,
     ItemCaptura,
     Perfil,
     Projeto,
     Revisao,
+    SugestaoIA,
     Tarefa,
     TarefaPessoa,
 )
@@ -211,7 +225,8 @@ def caixa_de_entrada(usuario) -> QuerySet[ItemCaptura]:
 # --------------------------------------------------------------------------- plano do dia
 def _abertas_no_dia(usuario, dia: date) -> QuerySet[Tarefa]:
     """Tarefas abertas que podem entrar no plano de `dia` (as adiadas só voltam na data escolhida)."""
-    return Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA).exclude(adiada_ate__gt=dia)
+    abertas = Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA).exclude(adiada_ate__gt=dia)
+    return abertas.exclude(partes__status=Tarefa.Status.ABERTA)  # quebrada: as partes entram no lugar dela
 
 
 def tarefas_leves(usuario) -> QuerySet[Tarefa]:
@@ -733,3 +748,203 @@ def excluir_area(area: Area) -> None:
 def prioridades_da_semana(usuario, limite: int = 4) -> list[Tarefa]:
     """Painel direito de Hoje no desktop (D01): as tarefas abertas de maior prioridade, sem as adiadas."""
     return list(_abertas_no_dia(usuario, hoje()).select_related("area").order_by("-prioridade", "prazo", "id")[:limite])
+
+
+# --------------------------------------------------------------------------- IA que ajuda (P10)
+TIPO_CLARIFICACAO = "clarificacao"
+TIPO_QUEBRA = "quebra"
+
+
+def provedor_de_ia(usuario) -> Provedor | None:
+    """O provedor da escolha do perfil, se o servidor o configurou (os testes trocam por um falso)."""
+    return ConfigIA.do_ambiente().provedor(perfil_de(usuario).provedor_ia)
+
+
+def _consumo_de_ia(usuario) -> tuple[int, float]:
+    """Chamadas de hoje e gasto do mês (em dólar), no fuso do usuário."""
+    inicio_do_dia, _ = _limites_do_dia(hoje())
+    inicio_do_mes, _ = _limites_do_dia(hoje().replace(day=1))
+    chamadas = ChamadaIA.objects.filter(usuario=usuario)
+    gasto = chamadas.filter(em__gte=inicio_do_mes).aggregate(total=Sum("custo_usd"))["total"] or 0
+    return chamadas.filter(em__gte=inicio_do_dia).count(), float(gasto)
+
+
+def _limite_de_ia(usuario, config: ConfigIA) -> str:
+    """Por que o usuário não pode chamar a IA agora, ou "" se pode."""
+    chamadas_hoje, gasto_mes = _consumo_de_ia(usuario)
+    if chamadas_hoje >= config.limite_diario:
+        return f"Você usou as {config.limite_diario} sugestões de hoje. A IA volta amanhã."
+    if gasto_mes >= config.limite_mensal_usd:
+        return f"A IA chegou ao limite de gasto do mês (US$ {config.limite_mensal_usd:.2f})."
+    return ""
+
+
+def ia_disponivel(usuario) -> bool:
+    return provedor_de_ia(usuario) is not None and not _limite_de_ia(usuario, ConfigIA.do_ambiente())
+
+
+def uso_de_ia(usuario) -> UsoDeIA:
+    config = ConfigIA.do_ambiente()
+    provedor = provedor_de_ia(usuario)
+    chamadas_hoje, gasto_mes = _consumo_de_ia(usuario)
+    por_status = dict(
+        SugestaoIA.objects.filter(usuario=usuario).values_list("status").annotate(n=Count("id")).order_by()
+    )
+    return {
+        "disponivel": provedor is not None and not _limite_de_ia(usuario, config),
+        "provedor": perfil_de(usuario).provedor_ia,
+        "opcoes": config.opcoes(),
+        "modelo": provedor.modelo if provedor else "",
+        "chamadas_hoje": chamadas_hoje,
+        "limite_diario": config.limite_diario,
+        "gasto_mes_usd": round(gasto_mes, 4),
+        "limite_mes_usd": config.limite_mensal_usd,
+        "sugestoes": {status: por_status.get(status, 0) for status in SugestaoIA.Status.values},
+    }
+
+
+def _chamar_ia(usuario, tipo: str, mensagens: list[dict]) -> str:
+    """Pede ao provedor, respeitando os limites, e registra a chamada (custo e tokens) para os próximos limites."""
+    provedor = provedor_de_ia(usuario)
+    if provedor is None:
+        raise ErroIA("A IA está desligada. Escolha um provedor configurado em IA e privacidade.")
+    limite = _limite_de_ia(usuario, ConfigIA.do_ambiente())
+    if limite:
+        raise ErroIA(limite)
+    try:
+        resposta = provedor.completar(mensagens, tipo=tipo)
+    except ErroIA:
+        ChamadaIA.objects.create(usuario=usuario, tipo=tipo, modelo=provedor.modelo, ok=False)
+        raise
+    ChamadaIA.objects.create(
+        usuario=usuario,
+        tipo=tipo,
+        modelo=resposta.modelo,
+        tokens_entrada=resposta.tokens_entrada,
+        tokens_saida=resposta.tokens_saida,
+        custo_usd=Decimal(str(round(resposta.custo_usd, 6))),
+    )
+    return resposta.texto
+
+
+def _sugestao_pendente(**filtros) -> SugestaoIA | None:
+    return SugestaoIA.objects.filter(status=SugestaoIA.Status.PENDENTE, **filtros).first()
+
+
+def sugerir_clarificacao(item: ItemCaptura, *, novo: bool = False) -> SugestaoIA:
+    """Rascunho da tarefa a partir do texto capturado; a pendente do item é reaproveitada (cache)."""
+    if item.status != ItemCaptura.Status.PENDENTE:
+        raise ValueError("este item já foi processado")
+    anterior = _sugestao_pendente(item=item, tipo=TIPO_CLARIFICACAO)
+    if anterior and not novo:
+        return anterior
+    areas = {a.nome: a.pk for a in item.usuario.areas.all()}
+    texto = item.transcricao or item.texto
+    mensagens = ia_tarefas.mensagens_clarificacao(texto, list(areas), hoje())
+    conteudo = ia_tarefas.interpretar_clarificacao(_chamar_ia(item.usuario, TIPO_CLARIFICACAO, mensagens), areas)
+    if anterior:
+        recusar_sugestao(anterior)
+    return SugestaoIA.objects.create(
+        usuario=item.usuario,
+        item=item,
+        tipo=TIPO_CLARIFICACAO,
+        conteudo=conteudo,
+        evidencia="Com base no texto capturado. Revise antes de confirmar.",
+    )
+
+
+def sugerir_quebra(tarefa: Tarefa, *, novo: bool = False) -> SugestaoIA:
+    """Partes sugeridas para uma tarefa aberta; a pendente da tarefa é reaproveitada (cache)."""
+    if tarefa.status != Tarefa.Status.ABERTA:
+        raise ValueError("só uma tarefa aberta pode ser quebrada")
+    anterior = _sugestao_pendente(tarefa=tarefa, tipo=TIPO_QUEBRA)
+    if anterior and not novo:
+        return anterior
+    mensagens = ia_tarefas.mensagens_quebra(
+        tarefa.titulo, tarefa.proxima_acao, tarefa.blocos_restantes or tarefa.blocos_estimados, tarefa.prazo, hoje()
+    )
+    partes = ia_tarefas.interpretar_quebra(_chamar_ia(tarefa.usuario, TIPO_QUEBRA, mensagens))
+    if anterior:
+        recusar_sugestao(anterior)
+    base = "Com base no título, na próxima ação"
+    evidencia = f"{base} e no prazo de {_dia_curto(tarefa.prazo)}." if tarefa.prazo else f"{base} e nos blocos."
+    return SugestaoIA.objects.create(
+        usuario=tarefa.usuario,
+        tarefa=tarefa,
+        tipo=TIPO_QUEBRA,
+        conteudo={"partes": partes},
+        evidencia=f"{evidencia} Edite antes de aplicar.",
+    )
+
+
+MESES_CURTOS = ("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
+
+
+def _dia_curto(dia: date) -> str:
+    return f"{dia.day} {MESES_CURTOS[dia.month - 1]}"
+
+
+def _responder(sugestao: SugestaoIA, status: str, resposta: dict | None = None) -> SugestaoIA:
+    if sugestao.status != SugestaoIA.Status.PENDENTE:
+        raise ValueError("esta sugestão já foi respondida")
+    sugestao.status, sugestao.respondida_em = status, timezone.now()
+    sugestao.resposta = resposta or {}
+    sugestao.save(update_fields=["status", "respondida_em", "resposta", "tarefa"])
+    return sugestao
+
+
+def recusar_sugestao(sugestao: SugestaoIA) -> SugestaoIA:
+    return _responder(sugestao, SugestaoIA.Status.RECUSADA)
+
+
+def registrar_resposta(sugestao: SugestaoIA, final: dict, *, tarefa: Tarefa | None = None) -> SugestaoIA:
+    """Aceita se o usuário confirmou o que a IA sugeriu; editada se mudou alguma chave sugerida."""
+    igual = all(final.get(chave) == valor for chave, valor in sugestao.conteudo.items())
+    if tarefa is not None:
+        sugestao.tarefa = tarefa
+    return _responder(sugestao, SugestaoIA.Status.ACEITA if igual else SugestaoIA.Status.EDITADA, final)
+
+
+@transaction.atomic
+def aplicar_quebra(sugestao: SugestaoIA, partes: list[dict]) -> list[Tarefa]:
+    """Cria as partes como tarefas filhas; a mãe sai do plano enquanto houver parte aberta."""
+    mae = sugestao.tarefa
+    if sugestao.tipo != TIPO_QUEBRA or mae is None:
+        raise ValueError("esta sugestão não é de quebra")
+    if sugestao.status != SugestaoIA.Status.PENDENTE:
+        raise ValueError("esta sugestão já foi respondida")
+    if mae.status != Tarefa.Status.ABERTA:
+        raise ValueError("só uma tarefa aberta pode ser quebrada")
+    limpas = ia_tarefas.normalizar_partes(partes)
+    if not limpas:
+        raise ValueError("escreva ao menos uma parte")
+    criadas = []
+    for parte in limpas:
+        filha = Tarefa.objects.create(
+            usuario=mae.usuario,
+            tarefa_pai=mae,
+            area=mae.area,
+            projeto=mae.projeto,
+            prazo=mae.prazo,
+            prazo_rigido=mae.prazo_rigido,
+            respostas_importancia=mae.respostas_importancia,
+            titulo=parte["titulo"],
+            proxima_acao=parte["titulo"][:300],
+            blocos_estimados=parte["blocos"],
+            esforco=parte["esforco"],
+        )
+        recalcular_prioridade(filha)
+        evento(filha, EventoTarefa.Tipo.CRIADA, origem=TIPO_QUEBRA, tarefa_pai=mae.pk)
+        criadas.append(filha)
+    saem = _blocos_planejados_desde_hoje(mae)
+    removidos = saem.count()
+    saem.delete()
+    evento(mae, EventoTarefa.Tipo.QUEBRADA, partes=len(criadas), blocos_removidos=removidos, sugestao=sugestao.pk)
+    registrar_resposta(sugestao, {"partes": limpas})
+    return criadas
+
+
+def motivo_para_quebrar(tarefa: Tarefa) -> str:
+    if tarefa.status != Tarefa.Status.ABERTA or tarefa.partes.filter(status=Tarefa.Status.ABERTA).exists():
+        return ""
+    return plan.motivo_para_quebrar(tarefa.adiamentos, tarefa.blocos_restantes)

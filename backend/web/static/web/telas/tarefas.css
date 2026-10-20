@@ -182,3 +182,29 @@
   .leve__circulo:hover { border-color: var(--primaria); }
   .notas label:hover { border-color: var(--primaria); }
 }
+
+/* Quebrar com IA (P10, #26; M04 e M06). */
+.sugestao-ia { background: var(--primaria-suave); border-color: transparent; }
+.sugestao-ia__rotulo { margin: 0; color: var(--primaria); font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: 600; }
+.sugestao-ia__texto { margin: var(--e1) 0 0; font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.sugestao-ia__acoes { margin: var(--e1) 0 0; }
+.secao__topo { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e2); }
+.secao__acao { color: var(--primaria); font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: 600; }
+.secao__vazio { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.quebra { display: flex; flex-direction: column; gap: var(--e3); margin-bottom: var(--e12); }
+.quebra__motivo, .quebra__dica { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.quebra__form, .quebra__pedir { display: flex; flex-direction: column; gap: var(--e3); }
+.quebra__pedir p { margin: 0; }
+.quebra__resumo { margin: var(--e1) 0 0; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+.quebra__partes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.quebra__parte { display: flex; flex-direction: column; gap: var(--e2); }
+.quebra__parte--nova { border-style: dashed; }
+.quebra__rotulo, .quebra__linha label { font-size: var(--legenda-tam); line-height: var(--legenda-alt); color: var(--texto-secundario); }
+.quebra__opcional { font-weight: 400; }
+.quebra__parte input[type="text"] { min-height: 44px; padding: 0 var(--e3); font: inherit; font-size: 16px; color: var(--texto); background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo); }
+.quebra__linha { display: flex; flex-wrap: wrap; gap: var(--e3); }
+.quebra__linha label { display: flex; align-items: center; gap: var(--e2); }
+.quebra__linha input, .quebra__linha select { min-height: 40px; font: inherit; color: var(--texto); background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo); }
+.quebra__linha input { width: 72px; padding: 0 var(--e2); }
+.quebra__total { margin: 0; background: var(--fundo); }
+.quebra__acoes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e2); }

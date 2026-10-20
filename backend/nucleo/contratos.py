@@ -79,6 +79,28 @@ class ProgressoProjeto(TypedDict):
     folga: float | None  # blocos livres até o prazo ÷ blocos restantes; None sem prazo ou sem nada a fazer
 
 
+class UsoDeIA(TypedDict):
+    """`services.uso_de_ia`: o que a tela IA e privacidade (M33) mostra."""
+
+    disponivel: bool  # há provedor configurado para a escolha do perfil e o limite não estourou
+    provedor: str  # Perfil.ProvedorIA escolhido
+    opcoes: dict[str, bool]  # provedor → configurado no servidor
+    modelo: str  # "" quando desligada
+    chamadas_hoje: int
+    limite_diario: int
+    gasto_mes_usd: float
+    limite_mes_usd: float
+    sugestoes: dict[str, int]  # status da SugestaoIA → quantas
+
+
+class ParteSugerida(TypedDict):
+    """Uma parte de `SugestaoIA.conteudo["partes"]` (tipo quebra, M06)."""
+
+    titulo: str
+    blocos: int
+    esforco: str  # Esforco
+
+
 # --------------------------------------------------------------------------- assinaturas dos serviços
 # Nome → assinatura exata (`str(inspect.signature(...))`). Os marcados "a implementar" existem como esboço que
 # levanta NotImplementedError; a branch `backend-r1` escreve o corpo sem mudar a assinatura.
@@ -140,6 +162,15 @@ SERVICOS: dict[str, str] = {
     "excluir_area": "(area: 'Area') -> 'None'",
     # Desktop (P9): painel de prioridades de Hoje
     "prioridades_da_semana": "(usuario, limite: 'int' = 4) -> 'list[Tarefa]'",
+    # IA que ajuda (P10): harness, pré-preencher a clarificação e quebrar tarefa. A IA só sugere (SugestaoIA)
+    "ia_disponivel": "(usuario) -> 'bool'",
+    "uso_de_ia": "(usuario) -> 'UsoDeIA'",
+    "sugerir_clarificacao": "(item: 'ItemCaptura', *, novo: 'bool' = False) -> 'SugestaoIA'",
+    "sugerir_quebra": "(tarefa: 'Tarefa', *, novo: 'bool' = False) -> 'SugestaoIA'",
+    "recusar_sugestao": "(sugestao: 'SugestaoIA') -> 'SugestaoIA'",
+    "registrar_resposta": "(sugestao: 'SugestaoIA', final: 'dict', *, tarefa: 'Tarefa | None' = None) -> 'SugestaoIA'",
+    "aplicar_quebra": "(sugestao: 'SugestaoIA', partes: 'list[dict]') -> 'list[Tarefa]'",
+    "motivo_para_quebrar": "(tarefa: 'Tarefa') -> 'str'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -228,4 +259,5 @@ TELAS_WEB = (
     "areas",
     "imprevistos",
     "preparar",
+    "ia",
 )

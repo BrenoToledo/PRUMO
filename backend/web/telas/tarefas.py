@@ -13,6 +13,12 @@ Rotas do P7 (issue #19, branch pacote-7-fechar-o-dia):
 - POST `tarefas/<pk>/adiar/` → `web:adiar_tarefa` (`para=AAAA-MM-DD`, padrão amanhã), chama `services.adiar_tarefa`.
 - POST `tarefas/<pk>/cancelar/` → `web:cancelar_tarefa` (`motivo` opcional), chama `services.cancelar_tarefa`.
 
+Rotas do P10 (issue #26, quebrar tarefa com IA; tela M06):
+- GET `tarefas/<pk>/quebrar/` → `web:quebrar_tarefa`: a sugestão pendente, com as partes editáveis (não chama a IA).
+- POST `tarefas/<pk>/quebrar/gerar/` → `web:sugerir_quebra`, chama `services.sugerir_quebra` (troca a pendente).
+- POST `tarefas/<pk>/quebrar/aplicar/` → `web:aplicar_quebra`, chama `services.aplicar_quebra` com as partes editadas.
+- POST `tarefas/<pk>/quebrar/descartar/` → `web:descartar_quebra`, chama `services.recusar_sugestao`.
+
 As tarefas leves (#8) aparecem na tela Hoje pelo parcial `web/tarefas/_tarefas_leves.html`, que recebe
 `tarefas_leves` do `PlanoDoDia`. Concluir e reabrir respondem ao HTMX com um item desse parcial.
 """
@@ -27,12 +33,14 @@ from django.urls import path, reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST
 
+from ia.provedores import ErroIA
 from nucleo import prioridade as motor
 from nucleo import services
-from nucleo.models import Tarefa
+from nucleo.models import Esforco, SugestaoIA, Tarefa
 
 ERRO_DATA_ADIAR = "Escolha uma data depois de hoje."
 ROTA_TAREFA = "web:tarefa"
+ROTA_QUEBRAR = "web:quebrar_tarefa"
 PARCIAL_DETALHE = "web/tarefas/_detalhe.html"
 RESPOSTAS_IMPORTANCIA = [(n, str(n)) for n in range(motor.NOTA_MAXIMA_RESPOSTA + 1)]
 LIMIAR_FOLGA_EM_RISCO = 1.2  # abaixo disso a entrega está em risco (docs/contexto.md)
@@ -137,6 +145,8 @@ def _contexto(request, tarefa, form=None, editando=False):
         "aqui": reverse(ROTA_TAREFA, args=[tarefa.pk]),
         "hoje": services.hoje(),
         "amanha": services.hoje() + timedelta(days=1),
+        "ia": tarefa.status == Tarefa.Status.ABERTA and services.ia_disponivel(request.user),
+        "motivo_quebra": services.motivo_para_quebrar(tarefa),
     }
 
 
@@ -225,6 +235,88 @@ def cancelar_tarefa(request, pk):
     return render(request, PARCIAL_DETALHE, _contexto(request, tarefa))
 
 
+# --------------------------------------------------------------------------- quebrar com IA (P10, #26)
+def _quebra_pendente(tarefa, pk=None) -> SugestaoIA | None:
+    sugestoes = SugestaoIA.objects.filter(
+        usuario=tarefa.usuario, tarefa=tarefa, tipo=services.TIPO_QUEBRA, status=SugestaoIA.Status.PENDENTE
+    )
+    if pk is not None:
+        return sugestoes.filter(pk=pk).first() if str(pk).isdigit() else None
+    return sugestoes.first()
+
+
+def _partes_do_post(request) -> list[dict]:
+    campos = zip(
+        request.POST.getlist("titulo"), request.POST.getlist("blocos"), request.POST.getlist("esforco"), strict=False
+    )
+    return [{"titulo": titulo, "blocos": blocos, "esforco": esforco} for titulo, blocos, esforco in campos]
+
+
+def _contexto_quebra(request, tarefa, sugestao, partes=None, erro=""):
+    partes = partes if partes is not None else (sugestao.conteudo.get("partes", []) if sugestao else [])
+    total = sum(int(p["blocos"]) for p in partes if str(p.get("blocos", "")).isdigit() and p.get("titulo"))
+    folga = None
+    if tarefa.prazo and total:
+        folga = services.blocos_livres_ate(request.user, tarefa.prazo, excluir_tarefa=tarefa) / total
+    return {
+        "tarefa": tarefa,
+        "sugestao": sugestao,
+        "partes": [*partes, {"titulo": "", "blocos": 1, "esforco": Esforco.MEDIO}],  # a última é "Adicionar parte"
+        "esforcos": Esforco.choices,
+        "total": total,
+        "folga": folga,
+        "erro": erro,
+        "ia": services.ia_disponivel(request.user),
+        "motivo": services.motivo_para_quebrar(tarefa),
+    }
+
+
+@require_GET
+@login_required
+def quebrar_tarefa(request, pk):
+    tarefa = _tarefa_do_usuario(request, pk, Tarefa.Status.ABERTA)
+    return render(request, "web/tarefas/quebrar.html", _contexto_quebra(request, tarefa, _quebra_pendente(tarefa)))
+
+
+@require_POST
+@login_required
+def sugerir_quebra(request, pk):
+    tarefa = _tarefa_do_usuario(request, pk, Tarefa.Status.ABERTA)
+    try:
+        services.sugerir_quebra(tarefa, novo=True)
+    except ErroIA as erro:
+        messages.error(request, f"A IA não ajudou agora: {erro}")
+    return redirect(ROTA_QUEBRAR, pk=tarefa.pk)
+
+
+@require_POST
+@login_required
+def aplicar_quebra(request, pk):
+    tarefa = _tarefa_do_usuario(request, pk, Tarefa.Status.ABERTA)
+    sugestao = _quebra_pendente(tarefa, request.POST.get("sugestao", ""))
+    if sugestao is None:
+        messages.error(request, "Esta sugestão já foi respondida. Peça outra.")
+        return redirect(ROTA_QUEBRAR, pk=tarefa.pk)
+    partes = _partes_do_post(request)
+    try:
+        criadas = services.aplicar_quebra(sugestao, partes)
+    except ValueError as erro:
+        contexto = _contexto_quebra(request, tarefa, sugestao, [p for p in partes if p["titulo"].strip()], str(erro))
+        return render(request, "web/tarefas/quebrar.html", contexto, status=422)
+    messages.success(request, f"Tarefa quebrada em {len(criadas)} {'partes' if len(criadas) > 1 else 'parte'}")
+    return redirect(ROTA_TAREFA, pk=tarefa.pk)
+
+
+@require_POST
+@login_required
+def descartar_quebra(request, pk):
+    tarefa = _tarefa_do_usuario(request, pk, Tarefa.Status.ABERTA)
+    sugestao = _quebra_pendente(tarefa, request.POST.get("sugestao", ""))
+    if sugestao:
+        services.recusar_sugestao(sugestao)
+    return redirect(ROTA_TAREFA, pk=tarefa.pk)
+
+
 urlpatterns = [
     path("tarefas/<int:pk>/", tarefa, name="tarefa"),
     path("tarefas/<int:pk>/editar/", editar_tarefa, name="editar_tarefa"),
@@ -232,4 +324,8 @@ urlpatterns = [
     path("tarefas/<int:pk>/reabrir/", reabrir_tarefa, name="reabrir_tarefa"),
     path("tarefas/<int:pk>/adiar/", adiar_tarefa, name="adiar_tarefa"),
     path("tarefas/<int:pk>/cancelar/", cancelar_tarefa, name="cancelar_tarefa"),
+    path("tarefas/<int:pk>/quebrar/", quebrar_tarefa, name="quebrar_tarefa"),
+    path("tarefas/<int:pk>/quebrar/gerar/", sugerir_quebra, name="sugerir_quebra"),
+    path("tarefas/<int:pk>/quebrar/aplicar/", aplicar_quebra, name="aplicar_quebra"),
+    path("tarefas/<int:pk>/quebrar/descartar/", descartar_quebra, name="descartar_quebra"),
 ]

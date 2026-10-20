@@ -58,14 +58,24 @@
     <p class="porque__conta">{{ conta }}</p>
   </details>
 
-  {% if partes %}<section class="secao" aria-labelledby="titulo-partes">
-    <h2 id="titulo-partes">Partes</h2>
+  {% if motivo_quebra and ia %}<div class="cartao sugestao-ia" role="note">
+    <p class="sugestao-ia__rotulo">Sugestão</p>
+    <p class="sugestao-ia__texto">{{ motivo_quebra }}</p>
+    <p class="sugestao-ia__acoes"><a class="botao botao--texto" href="{% url 'web:quebrar_tarefa' tarefa.pk %}">Quebrar com IA</a></p>
+  </div>{% endif %}
+
+  {% if partes or ia %}<section class="secao" aria-labelledby="titulo-partes">
+    <div class="secao__topo">
+      <h2 id="titulo-partes">Partes</h2>
+      {% if ia and not motivo_quebra %}<a class="secao__acao" href="{% url 'web:quebrar_tarefa' tarefa.pk %}">Quebrar com IA</a>{% endif %}
+    </div>
+    {% if partes %}
     <ul class="cartao partes">
       {% for parte in partes %}<li class="partes__item{% if parte.status == 'concluida' %} partes__item--feita{% endif %}">
         <a href="{% url 'web:tarefa' parte.pk %}">{{ parte.titulo }}</a>
         <span>{{ parte.blocos_estimados }} bloco{{ parte.blocos_estimados|pluralize }}</span>
       </li>{% endfor %}
-    </ul>
+    </ul>{% else %}<p class="secao__vazio">Grande ou vaga demais? A IA sugere partes menores e você aprova.</p>{% endif %}
   </section>{% endif %}
 
   {% if historico %}<section class="secao" aria-labelledby="titulo-historico">

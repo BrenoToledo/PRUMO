@@ -26,3 +26,13 @@ def api(usuario):
     c = APIClient()
     c.force_authenticate(usuario)
     return c
+
+
+@pytest.fixture
+def ia_falsa(monkeypatch):
+    """Liga a IA com o provedor falso (sem rede); o teste ajusta `respostas`, `custo_usd` ou `erro` dele."""
+    from ia.provedores import ProvedorFalso
+
+    falsa = ProvedorFalso()
+    monkeypatch.setattr("nucleo.services.provedor_de_ia", lambda usuario: falsa)
+    return falsa

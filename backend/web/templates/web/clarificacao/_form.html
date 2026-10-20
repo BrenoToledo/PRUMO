@@ -2,6 +2,23 @@
       hx-post="{% url 'web:clarificar' item.pk %}" hx-target="#clarificacao" hx-swap="outerHTML">
   {% csrf_token %}
   <p class="clarificacao__origem">Capturado {{ item.criado_em|idade }}: <q>{{ item.texto }}</q></p>
+  {% if sugestao %}<div class="sugestao-ia" role="note">
+    <p class="sugestao-ia__rotulo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M12 8l1.5 2.5L16 12l-2.5 1.5L12 16l-1.5-2.5L8 12l2.5-1.5z"/></svg> Sugestão da IA</p>
+    <p class="sugestao-ia__texto">{{ sugestao.evidencia }}</p>
+    <input type="hidden" name="sugestao" value="{{ sugestao.pk }}">
+    <p class="sugestao-ia__acoes">
+      <button class="botao botao--texto" type="submit" name="novo" value="1" formnovalidate
+              formaction="{% url 'web:sugerir_clarificacao' item.pk %}" hx-post="{% url 'web:sugerir_clarificacao' item.pk %}">Gerar de novo</button>
+      <button class="botao botao--texto" type="submit" formnovalidate
+              formaction="{% url 'web:recusar_clarificacao' item.pk %}" hx-post="{% url 'web:recusar_clarificacao' item.pk %}">Recusar</button>
+    </p>
+  </div>{% elif ia %}<p class="sugestao-ia__pedir">
+    <button class="botao" type="submit" formnovalidate
+            formaction="{% url 'web:sugerir_clarificacao' item.pk %}" hx-post="{% url 'web:sugerir_clarificacao' item.pk %}"
+            hx-disabled-elt="this">Preencher com IA</button>
+    <span class="clarificacao__opcional">a IA sugere, você revisa</span>
+  </p>{% endif %}
+  {% if erro_ia %}<p class="erro" role="alert">A IA não ajudou agora: {{ erro_ia }}</p>{% endif %}
   {% if form.non_field_errors %}<p class="erro" role="alert">{{ form.non_field_errors|join:" " }}</p>{% endif %}
 
   {% include "web/clarificacao/_campo.html" with campo=form.titulo %}
@@ -46,6 +63,16 @@
     </select>
     {% if form.esforco.errors %}<p id="erro-esforco" class="erro" role="alert">{{ form.esforco.errors|join:" " }}</p>{% endif %}
   </div>
+
+  <details class="clarificacao__importancia"{% if sugestao %} open{% endif %}>
+    <summary class="clarificacao__rotulo">Importância <span class="clarificacao__opcional">(de 0, nada, a 4, muito)</span></summary>
+    {% for pergunta in form.perguntas %}<fieldset class="clarificacao__pergunta">
+      <legend>{{ pergunta.label }}</legend>
+      <div class="clarificacao__notas">
+        {% for valor, rotulo in pergunta.field.choices %}<label><input type="radio" name="{{ pergunta.html_name }}" value="{{ valor }}"{% if pergunta.value|stringformat:"s" == valor|stringformat:"s" %} checked{% endif %}> {{ rotulo }}</label>{% endfor %}
+      </div>
+    </fieldset>{% endfor %}
+  </details>
 
   <div class="clarificacao__acoes">
     <a class="botao" href="{% url 'web:entrada' %}">Voltar</a>

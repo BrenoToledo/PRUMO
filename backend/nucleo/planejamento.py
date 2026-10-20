@@ -170,3 +170,17 @@ def replanejar(
             risco = bool(p.prazo and dia > p.prazo)
             movidos.append(Movimento(p.tarefa_id, usa, dia, em_risco=risco))
     return fica, movidos
+
+
+# --------------------------------------------------------------------------- quando sugerir quebrar uma tarefa
+ADIAMENTOS_PARA_QUEBRAR = 3  # adiada 3 vezes: grande ou vaga demais (especificação, 4.8)
+BLOCOS_PARA_QUEBRAR = 3  # mais de 3 blocos restantes (M16, sugestão de quebra)
+
+
+def motivo_para_quebrar(adiamentos: int, blocos_restantes: int) -> str:
+    """Por que vale quebrar a tarefa em partes, ou "" se não vale."""
+    if adiamentos >= ADIAMENTOS_PARA_QUEBRAR:
+        return f"Adiada {adiamentos} vezes. Em partes menores, ela costuma destravar."
+    if blocos_restantes > BLOCOS_PARA_QUEBRAR:
+        return f"Faltam {blocos_restantes} blocos. Em partes menores, fica mais fácil planejar e começar."
+    return ""

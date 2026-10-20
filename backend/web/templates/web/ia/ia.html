@@ -1,0 +1,40 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}IA e privacidade{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/tarefas.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/ia.css' %}">{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'web:perfil' %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+  IA e privacidade
+</a>
+<p class="ia__dica">A IA só sugere: nada é criado ou mudado sem você confirmar. A chave fica no servidor, nunca no banco.</p>
+
+{% if not uso.modelo %}<p class="cartao ia__desligada" role="alert"><strong>IA desligada.</strong> Defina o modelo do provedor escolhido nas variáveis de ambiente do servidor (veja abaixo) e reinicie.</p>{% endif %}
+
+<form class="ia__provedores" method="post" action="{% url 'web:ia' %}">
+  {% csrf_token %}
+  <fieldset>
+    <legend class="rotulo">Qual IA o Prumo deve usar?</legend>
+    {% for p in provedores %}<label class="ia__opcao{% if not p.configurado %} ia__opcao--off{% endif %}">
+      <input type="radio" name="provedor_ia" value="{{ p.valor }}"{% if not p.configurado %} disabled{% endif %}{% if p.marcado %} checked{% endif %}>
+      <span>
+        <span class="ia__nome">{{ p.rotulo }}</span>
+        <span class="ia__sub">{% if p.configurado %}{{ p.dica }}{% else %}Defina <code>{{ p.variavel }}</code> no servidor{% endif %}</span>
+      </span>
+    </label>{% endfor %}
+  </fieldset>
+  {% if erro %}<p class="erro" role="alert">{{ erro }}</p>{% endif %}
+  <button class="botao botao--primario" type="submit">Usar esta IA</button>
+</form>
+
+<section class="secao" aria-labelledby="titulo-uso">
+  <h2 id="titulo-uso">Uso</h2>
+  <dl class="cartao fatos">
+    <div class="fatos__linha"><dt>Modelo</dt><dd>{{ uso.modelo|default:"nenhum" }}</dd></div>
+    <div class="fatos__linha"><dt>Sugestões hoje</dt><dd>{{ uso.chamadas_hoje }} de {{ uso.limite_diario }}</dd></div>
+    <div class="fatos__linha"><dt>Gasto no mês</dt><dd>{{ gasto }}</dd></div>
+    <div class="fatos__linha"><dt>Suas respostas</dt><dd>{% for rotulo, n in sugestoes %}{{ n }} {{ rotulo }}{% if not forloop.last %} · {% endif %}{% endfor %}</dd></div>
+  </dl>
+</section>
+{% endblock %}

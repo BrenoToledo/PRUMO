@@ -67,6 +67,10 @@ Por HTTP o login só funciona em `http://localhost:8000/` (no próprio servidor)
 | `BACKUP_HORA`, `BACKUP_RETENCAO_DIAS`, `PRUMO_BACKUP_DIR` | `03:00`, `7`, `./backups` | Pasta relativa a `deploy/`; aponte para outro disco se tiver |
 | `DJANGO_LOG_LEVEL` | `INFO` | Opcional |
 | `GUNICORN_WORKERS` | `2` | Opcional |
+| `PRUMO_IA_MODELO`, `PRUMO_IA_CHAVE` | `anthropic/claude-haiku-5-5`, `sk-ant-…` | Opcional: a "IA do Prumo". Sem modelo, a IA fica desligada. `falso` demonstra sem rede |
+| `PRUMO_IA_MODELO_PROPRIO`, `PRUMO_IA_CHAVE_PROPRIA` | `openai/gpt-4o-mini` | Opcional: a opção "Minha chave de API" |
+| `PRUMO_IA_MODELO_LOCAL`, `PRUMO_IA_URL_LOCAL` | `ollama/llama3.2`, `http://ollama:11434` | Opcional: a opção "Modelo local" |
+| `PRUMO_IA_LIMITE_DIARIO`, `PRUMO_IA_LIMITE_MENSAL_USD` | `50`, `2` | Limites por usuário: sugestões por dia e gasto por mês em dólar |
 
 ## HTTPS (obrigatório para o celular)
 
