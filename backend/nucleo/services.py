@@ -13,7 +13,14 @@ from django.utils import timezone
 
 from . import planejamento as plan
 from . import prioridade as motor
-from .contratos import ListaRapida, PlanoDoDia, ProgressoProjeto, PropostaReplanejamento, ResumoRevisaoDiaria
+from .contratos import (
+    ListaRapida,
+    PlanoDoDia,
+    ProgressoProjeto,
+    PropostaReplanejamento,
+    ResumoRevisaoDiaria,
+    UsoDeIA,
+)
 from .models import (
     Area,
     Bloco,
@@ -23,6 +30,7 @@ from .models import (
     Perfil,
     Projeto,
     Revisao,
+    SugestaoIA,
     Tarefa,
     TarefaPessoa,
 )
@@ -685,3 +693,36 @@ def excluir_area(area: Area) -> None:
     if partes:
         raise ValueError(f"{area.nome} tem {' e '.join(partes)}. Mude para outra área antes de excluir.")
     area.delete()
+
+
+# --------------------------------------------------------------------------- IA que ajuda (P10)
+def ia_disponivel(usuario) -> bool:
+    raise NotImplementedError
+
+
+def uso_de_ia(usuario) -> UsoDeIA:
+    raise NotImplementedError
+
+
+def sugerir_clarificacao(item: ItemCaptura, *, novo: bool = False) -> SugestaoIA:
+    raise NotImplementedError
+
+
+def sugerir_quebra(tarefa: Tarefa, *, novo: bool = False) -> SugestaoIA:
+    raise NotImplementedError
+
+
+def recusar_sugestao(sugestao: SugestaoIA) -> SugestaoIA:
+    raise NotImplementedError
+
+
+def registrar_resposta(sugestao: SugestaoIA, final: dict, *, tarefa: Tarefa | None = None) -> SugestaoIA:
+    raise NotImplementedError
+
+
+def aplicar_quebra(sugestao: SugestaoIA, partes: list[dict]) -> list[Tarefa]:
+    raise NotImplementedError
+
+
+def motivo_para_quebrar(tarefa: Tarefa) -> str:
+    raise NotImplementedError

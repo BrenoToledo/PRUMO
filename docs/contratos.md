@@ -22,6 +22,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `pacote-5-acabamento` | #8, #11, #12 | interface | contratos (+ tarefas do backend-r1) | `web/telas/tarefas.py`, `web/telas/perfil.py`, `web/templates/web/tarefas/`, `web/templates/web/perfil/`, `web/tests/test_tarefas.py`, `web/tests/test_perfil.py` |
 | `pacote-8-organizacao` | #18, #20, #21 | backend + interface | main (P1–P5, P7) | `web/telas/lista_rapida.py`, `web/telas/projetos.py`, `web/telas/areas.py`, `web/templates/web/lista_rapida/`, `web/templates/web/projetos/`, `web/templates/web/areas/`, `web/static/web/telas/lista_rapida.css`, `projetos.css`, `areas.css`, `web/tests/test_lista_rapida.py`, `web/tests/test_projetos.py`, `web/tests/test_areas.py`, `nucleo/tests/test_organizacao.py`; em `clarificacao` só o campo projeto, na entrada só o atalho da lista rápida, no perfil só o link para as áreas |
 | `pacote-7-fechar-o-dia` | #17, #19, #16 | backend + interface | main (P1–P5) | `web/telas/revisao.py`, `web/telas/pausa.py`, `web/templates/web/revisao/`, `web/templates/web/pausa/`, `web/static/web/telas/revisao.css`, `pausa.css`, `pausa.js`, `web/tests/test_revisao.py`, `web/tests/test_pausa.py`, `web/tests/test_adiar_cancelar.py`, `nucleo/tests/test_fechar_o_dia.py`, `nucleo/tests/test_adiar_cancelar.py`, `nucleo/tests/apoio.py` e as fixtures comuns em `backend/conftest.py`; em `tarefas` só adiar e cancelar, em `plano` só a intenção no topo de Hoje, em `foco` só o botão Pausar |
+| `claude/project-thread-2u8m3o` (P10 · IA) | #24, #25, #26 | backend + interface | main (P1–P5, P7, P8) | `backend/ia/`, `web/telas/ia.py`, `web/templates/web/ia/`, `web/templates/web/tarefas/quebrar.html` e `_quebra.html`, `web/static/web/telas/ia.css`, `web/tests/test_ia.py`, `web/tests/test_quebrar.py`, `web/tests/test_clarificacao_ia.py`, `nucleo/tests/test_ia.py`; em `clarificacao` só o botão da IA e as 4 respostas de importância, em `tarefas` só a rota de quebrar e o aviso de quebra, no perfil só o link para IA e privacidade |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -58,6 +59,13 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:editar_area` | `/areas/<pk>/editar/` | POST | areas | `atualizar_area` |
 | `web:mover_area` | `/areas/<pk>/mover/` (`passo=-1\|1`) | POST | areas | `mover_area` |
 | `web:excluir_area` | `/areas/<pk>/excluir/` | POST | areas | `excluir_area` |
+| `web:ia` | `/ia/` | GET, POST (escolher provedor) | ia | `uso_de_ia` |
+| `web:sugerir_clarificacao` | `/entrada/<pk>/clarificar/ia/` (`novo=1` pede outra) | POST | clarificacao | `sugerir_clarificacao` |
+| `web:recusar_clarificacao` | `/entrada/<pk>/clarificar/ia/recusar/` | POST | clarificacao | `recusar_sugestao` |
+| `web:quebrar_tarefa` | `/tarefas/<pk>/quebrar/` | GET | tarefas | `sugerir_quebra` (só a pendente), `motivo_para_quebrar` |
+| `web:sugerir_quebra` | `/tarefas/<pk>/quebrar/gerar/` | POST | tarefas | `sugerir_quebra(novo=True)` |
+| `web:aplicar_quebra` | `/tarefas/<pk>/quebrar/aplicar/` | POST | tarefas | `aplicar_quebra` |
+| `web:descartar_quebra` | `/tarefas/<pk>/quebrar/descartar/` | POST | tarefas | `recusar_sugestao` |
 | `web:service_worker` | `/sw.js` | GET (público) | pwa | — |
 
 Convenções das telas (as mesmas do P1): views com `require_GET`/`require_POST` e `login_required`; objetos buscados com `usuario=request.user` (404 se não for do usuário); resposta HTMX é um parcial, sem HTMX é redirect com mensagem; erro de validação volta com status 422.
@@ -110,6 +118,25 @@ A pausa (M10) é só interface: o timer roda no navegador e não grava nada.
 | `excluir_area(area)` | `None` | `ValueError` se a área tiver tarefas (de qualquer status), projetos ou rotinas |
 
 O "Encaixar no fim do dia" da lista rápida não grava nada: as tarefas da lista já são tarefas leves e aparecem no fim de Hoje; o botão leva para lá. Na API, `DELETE /areas/{id}/` passa por `excluir_area` (`409` se a área estiver em uso) e `POST /areas/` põe a área nova no fim da ordem.
+
+## IA que ajuda (P10, R3)
+
+A IA só sugere: toda resposta vira uma `SugestaoIA` pendente e nada muda até o usuário aceitar, editar ou recusar. O módulo `backend/ia/` (sem Django) é a interface única: `ia.provedores` fala com o LiteLLM (`ProvedorLiteLLM`) ou devolve respostas prontas (`ProvedorFalso`, usado nos testes e com `PRUMO_IA_MODELO=falso`); `ia.tarefas` monta os prompts e interpreta o JSON de volta.
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `ia_disponivel(usuario)` | `bool` | Há provedor configurado para `Perfil.provedor_ia` e o usuário não passou do limite do dia nem do mês |
+| `uso_de_ia(usuario)` | `UsoDeIA` | Provedor escolhido, quais estão configurados, modelo, chamadas de hoje e gasto do mês contra os limites, e quantas sugestões há por status |
+| `sugerir_clarificacao(item, *, novo=False)` | `SugestaoIA` | Tipo `clarificacao`, ligada ao item. Devolve a pendente do item se houver (cache); com `novo=True` recusa a anterior e pede outra. `conteudo`: `titulo`, `proxima_acao`, `area` (id de uma área do usuário ou `None`), `esforco`, `blocos_estimados`, `respostas_importancia` (as 4 chaves, 0–4). `ErroIA` se a IA estiver desligada, no limite ou falhar |
+| `sugerir_quebra(tarefa, *, novo=False)` | `SugestaoIA` | Tipo `quebra`, ligada à tarefa (só aberta, `ValueError`). `conteudo`: `{"partes": [ParteSugerida, …]}` com 2 a 6 partes. Mesmo cache e `novo` |
+| `recusar_sugestao(sugestao)` | `SugestaoIA` | Status `recusada` e `respondida_em`; `ValueError` se já foi respondida |
+| `registrar_resposta(sugestao, final, *, tarefa=None)` | `SugestaoIA` | Grava o que o usuário confirmou em `resposta`: `aceita` se `final` é igual ao `conteudo` nas chaves sugeridas, senão `editada`; liga a `tarefa` criada |
+| `aplicar_quebra(sugestao, partes)` | `list[Tarefa]` | `partes`: `[{titulo, blocos, esforco}]` (as sem título são ignoradas; ao menos uma, `ValueError`). Cria tarefas filhas (`tarefa_pai`) com a área, o projeto, o prazo e as respostas da mãe, grava o evento `criada` (`origem: quebra`) em cada uma, apaga os blocos planejados da mãe e registra a resposta |
+| `motivo_para_quebrar(tarefa)` | `str` | Texto do aviso de quebra (adiada 3 vezes ou mais, ou mais de 3 blocos restantes) para tarefa aberta sem partes abertas; `""` se não houver |
+
+`SugestaoIA` ganha `item` (o `ItemCaptura`, opcional), `resposta` (JSON do que foi confirmado) e `respondida_em`. Um modelo novo, `ChamadaIA` (usuário, tipo, modelo, tokens, custo em dólar, ok, em), registra cada chamada e é a base dos limites. Uma tarefa com partes abertas não entra mais no plano do dia (as partes entram no lugar dela).
+
+Configuração por variável de ambiente (nada de chave no banco): `PRUMO_IA_MODELO` e `PRUMO_IA_CHAVE` para a IA do Prumo, `PRUMO_IA_MODELO_PROPRIO` e `PRUMO_IA_CHAVE_PROPRIA` para a chave própria, `PRUMO_IA_MODELO_LOCAL` e `PRUMO_IA_URL_LOCAL` para o modelo local, e os limites por usuário `PRUMO_IA_LIMITE_DIARIO` (chamadas, padrão 50) e `PRUMO_IA_LIMITE_MENSAL_USD` (padrão 2). Sem modelo, a IA fica desligada e as telas escondem os botões.
 
 ## Mudar um contrato
 
