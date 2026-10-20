@@ -1,0 +1,31 @@
+<form id="form-quebrou" class="quebrou" method="get" action="{% url 'web:meu_dia_quebrou' %}">
+  <fieldset class="quebrou__grupo">
+    <legend class="quebrou__pergunta">O que aconteceu?</legend>
+    <p class="quebrou__dica">Sem culpa: o plano se ajusta ao dia real.</p>
+    {% for motivo in motivos %}
+    <label class="quebrou__opcao">
+      <input type="radio" name="motivo" value="{{ motivo.valor }}"{% if motivo.marcado %} checked{% endif %}>
+      <span class="quebrou__texto">
+        <span>{{ motivo.valor }}</span>
+        {% if motivo.dica %}<span class="quebrou__opcao-dica">{{ motivo.dica }}</span>{% endif %}
+      </span>
+    </label>
+    {% endfor %}
+  </fieldset>
+
+  <fieldset class="quebrou__grupo">
+    <legend class="quebrou__rotulo">Quanto tempo útil ainda resta hoje?</legend>
+    <div class="quebrou__chips">
+      {% for tempo in tempos %}
+      <label class="quebrou__chip"><input type="radio" name="blocos_uteis" value="{{ tempo.valor }}"{% if tempo.marcado %} checked{% endif %}><span>{{ tempo.rotulo }}</span></label>
+      {% endfor %}
+    </div>
+  </fieldset>
+
+  {% if form.errors %}<p class="erro" role="alert">{{ form.primeiro_erro }}</p>{% endif %}
+
+  <div class="quebrou__acoes">
+    <a class="botao" href="{% url 'web:hoje' %}">Cancelar</a>
+    <button class="botao botao--primario" type="submit">Ver proposta</button>
+  </div>
+</form>

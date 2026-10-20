@@ -1,0 +1,75 @@
+/* Meu dia quebrou (M13) e proposta de replanejamento (M14). */
+.quebrou__topo { display: flex; align-items: center; gap: var(--e2); margin-bottom: var(--e4); }
+.quebrou__topo h1 { margin: 0; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+.quebrou__fechar {
+  display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: calc(-1 * var(--e3));
+  color: var(--texto);
+}
+.quebrou__fechar svg { width: 22px; height: 22px; }
+
+.quebrou { display: flex; flex-direction: column; gap: var(--e6); }
+.quebrou__grupo { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--e3); }
+.quebrou__pergunta { padding: 0; font-size: var(--titulo-tam); line-height: var(--titulo-alt); font-weight: var(--titulo-peso); }
+.quebrou__dica { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.quebrou__rotulo {
+  padding: 0; margin-bottom: var(--e2); color: var(--texto-secundario); text-transform: uppercase; letter-spacing: .04em;
+  font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso);
+}
+
+.quebrou__opcao {
+  display: flex; align-items: center; gap: var(--e3); min-height: 56px; padding: var(--e3) var(--e4);
+  border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--superficie); cursor: pointer;
+}
+.quebrou__opcao input { accent-color: var(--primaria); width: 20px; height: 20px; margin: 0; flex: none; }
+.quebrou__opcao:has(input:checked) { border-color: var(--primaria); background: var(--primaria-suave); }
+.quebrou__texto { display: flex; flex-direction: column; }
+.quebrou__opcao-dica { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+
+.quebrou__chips { display: flex; flex-wrap: wrap; gap: var(--e2); }
+.quebrou__chip { position: relative; cursor: pointer; }
+.quebrou__chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.quebrou__chip span {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--e3);
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); background: var(--superficie);
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: var(--micro-peso);
+}
+.quebrou__chip input:checked + span { background: var(--primaria); border-color: var(--primaria); color: var(--texto-na-primaria); }
+.quebrou__chip input:focus-visible + span { outline: 2px solid var(--primaria); outline-offset: 2px; }
+
+.quebrou__acoes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); margin-top: var(--e6); }
+.quebrou__acoes .botao { width: 100%; text-decoration: none; }
+
+.proposta__resumo {
+  padding: var(--e4); border-radius: var(--raio-card); background: var(--primaria-suave); margin-bottom: var(--e4);
+}
+.proposta__resumo h2 { margin: 0 0 var(--e1); font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+.proposta__resumo p { margin: 0; font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+
+.proposta__lista {
+  list-style: none; margin: 0 0 var(--e4); padding: var(--e2) var(--e4);
+  border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--superficie);
+}
+.proposta__item { display: flex; flex-direction: column; padding: var(--e2) 0; }
+.proposta__titulo { font-weight: var(--subtitulo-peso); }
+.proposta__quando {
+  display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--e1);
+  color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.proposta__quando svg { width: 14px; height: 14px; color: var(--primaria); }
+.proposta__para { color: var(--primaria); }
+
+.proposta__risco {
+  padding: var(--e4); margin-bottom: var(--e4); border: 1px solid var(--aviso); border-radius: var(--raio-card);
+  background: color-mix(in srgb, var(--aviso) 12%, var(--superficie));
+}
+.proposta__risco h2 {
+  display: flex; align-items: center; gap: var(--e2); margin: 0 0 var(--e1);
+  font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso);
+}
+.proposta__risco h2 svg { width: 20px; height: 20px; color: var(--aviso); }
+.proposta__risco p { margin: 0; font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+
+@media (min-width: 1024px) {
+  .quebrou__acoes { display: flex; justify-content: flex-end; }
+  .quebrou__acoes .botao { width: auto; min-width: 160px; }
+}

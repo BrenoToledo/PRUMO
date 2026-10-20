@@ -4,6 +4,7 @@
 com `monkeypatch` por uma função que devolve o bloco em foco criado no teste, ou None.
 """
 
+import re
 from datetime import timedelta
 
 import pytest
@@ -13,7 +14,7 @@ from django.utils import timezone
 from freezegun import freeze_time
 
 from nucleo import services
-from nucleo.models import Area, Bloco, EventoTarefa
+from nucleo.models import Area, Bloco, EventoTarefa, ItemCaptura
 
 HTMX = {"HTTP_HX_REQUEST": "true"}
 AGORA = "2026-10-19 11:10:00"  # 08:10 em São Paulo
@@ -244,6 +245,163 @@ def test_sair_de_bloco_de_outra_pessoa_da_404(logado, outra):
     alheio = iniciado(criar_bloco(outra))
 
     assert logado.post(reverse("web:sair_do_bloco", args=[alheio.pk]), {"motivo": "Cansaço"}).status_code == 404
+
+
+# ---------------------------------------------------------------- sair e replanejar (#14)
+def test_dialogo_de_saida_oferece_os_tres_caminhos(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    html = logado.get(reverse("web:foco") + "?sair=1").content.decode()
+
+    for motivo in ("Interrupção urgente", "Cansaço", "Terminei antes", "Outro"):
+        assert motivo in html
+    assert "Continuar focado" in html
+    assert "Sair e registrar" in html
+    assert 'name="depois" value="replanejar"' in html
+    assert "Sair e replanejar o dia" in html
+
+
+def test_sair_e_replanejar_registra_e_abre_meu_dia_quebrou(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    with freeze_time("2026-10-19 11:30:00"):
+        resposta = logado.post(
+            reverse("web:sair_do_bloco", args=[bloco.pk]), {"motivo": "Interrupção urgente", "depois": "replanejar"}
+        )
+
+    assert resposta.status_code == 302
+    assert resposta["Location"] == reverse("web:meu_dia_quebrou")
+    bloco.refresh_from_db()
+    assert bloco.status == Bloco.Status.INTERROMPIDO
+    assert bloco.motivo == "Interrupção urgente"
+
+
+def test_sair_e_replanejar_por_htmx(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    resposta = logado.post(
+        reverse("web:sair_do_bloco", args=[bloco.pk]), {"motivo": "Cansaço", "depois": "replanejar"}, **HTMX
+    )
+
+    assert resposta["HX-Redirect"] == reverse("web:meu_dia_quebrou")
+
+
+def test_sair_e_replanejar_sem_motivo_nao_sai(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    resposta = logado.post(reverse("web:sair_do_bloco", args=[bloco.pk]), {"depois": "replanejar"}, **HTMX)
+
+    assert resposta.status_code == 422
+    bloco.refresh_from_db()
+    assert bloco.status == Bloco.Status.EM_FOCO
+
+
+def test_depois_desconhecido_volta_para_hoje(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    resposta = logado.post(reverse("web:sair_do_bloco", args=[bloco.pk]), {"motivo": "Outro", "depois": "x"})
+
+    assert resposta["Location"] == reverse("web:hoje")
+
+
+# ---------------------------------------------------------------- anotar distração (#15)
+def anotar(cliente, bloco, texto, **extra):
+    return cliente.post(reverse("web:anotar_distracao", args=[bloco.pk]), {"texto": texto}, **extra)
+
+
+def test_rota_de_anotar_distracao():
+    assert reverse("web:anotar_distracao", args=[7]) == "/blocos/7/distracao/"
+
+
+def test_foco_tem_botao_de_anotar_distracao(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    html = logado.get(reverse("web:foco")).content.decode()
+
+    assert "Anotar distração" in html
+    assert reverse("web:anotar_distracao", args=[bloco.pk]) in html
+    assert "O timer continua rodando" in html
+
+
+def test_anotar_por_htmx_cria_item_do_foco_e_lista_no_bloco(logado, usuario, bloco, em_foco):
+    iniciado(bloco)
+
+    with freeze_time("2026-10-19 11:20:00"):
+        anotar(logado, bloco, "Pagar a DARF", **HTMX)
+    with freeze_time("2026-10-19 11:25:00"):
+        resposta = anotar(logado, bloco, "  Mandar e-mail pedindo acesso ao servidor  ", **HTMX)
+
+    assert resposta.status_code == 200
+    itens = ItemCaptura.objects.filter(usuario=usuario, origem=ItemCaptura.Origem.FOCO).order_by("criado_em")
+    assert [i.texto for i in itens] == ["Pagar a DARF", "Mandar e-mail pedindo acesso ao servidor"]
+    assert all(i.status == ItemCaptura.Status.PENDENTE for i in itens)  # vai para a caixa de entrada
+    html = resposta.content.decode()
+    assert "Já anotadas neste bloco" in html
+    assert "Pagar a DARF" in html and "Mandar e-mail pedindo acesso ao servidor" in html
+    assert resposta["HX-Trigger"] == "distracao-anotada"
+
+
+def test_anotar_nao_mexe_no_bloco_nem_no_timer(logado, bloco, em_foco):
+    iniciado(bloco)
+    inicio = Bloco.objects.get(pk=bloco.pk).inicio_real
+
+    with freeze_time("2026-10-19 11:20:00"):
+        anotar(logado, bloco, "Pagar a DARF", **HTMX)
+
+    bloco.refresh_from_db()
+    assert bloco.status == Bloco.Status.EM_FOCO
+    assert bloco.inicio_real == inicio
+
+
+def test_anotar_sem_htmx_volta_ao_foco(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    resposta = anotar(logado, bloco, "Pagar a DARF", follow=True)
+
+    assert resposta.redirect_chain[-1][0] == reverse("web:foco")
+    html = resposta.content.decode()
+    assert "Anotado · vai para a caixa de entrada" in html
+    assert "Pagar a DARF" in html  # lista do bloco
+
+
+def test_anotar_vazio_da_422_e_nao_cria_item(logado, usuario, bloco, em_foco):
+    iniciado(bloco)
+
+    resposta = anotar(logado, bloco, "   ", **HTMX)
+
+    assert resposta.status_code == 422
+    assert "Escreva o que lembrou" in resposta.content.decode()
+    assert not ItemCaptura.objects.filter(usuario=usuario).exclude(origem=ItemCaptura.Origem.TEXTO).exists()
+
+
+def test_anotar_vazio_sem_htmx_reabre_o_campo(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    resposta = anotar(logado, bloco, "")
+
+    assert resposta["Location"] == reverse("web:foco") + "?anotar=1"
+
+
+def test_foco_com_anotar_abre_o_campo(logado, bloco, em_foco):
+    iniciado(bloco)
+
+    html = logado.get(reverse("web:foco") + "?anotar=1").content.decode()
+
+    assert re.search(r'<dialog id="dialogo-distracao"[^>]* open', html)
+
+
+def test_anotar_em_bloco_que_nao_esta_em_foco_da_404(logado, bloco):
+    assert anotar(logado, bloco, "x").status_code == 404
+
+
+def test_anotar_em_bloco_de_outra_pessoa_da_404(logado, outra):
+    alheio = iniciado(criar_bloco(outra))
+
+    assert anotar(logado, alheio, "x").status_code == 404
+
+
+def test_anotar_so_aceita_post(logado, bloco):
+    assert logado.get(reverse("web:anotar_distracao", args=[bloco.pk])).status_code == 405
 
 
 # ---------------------------------------------------------------- fim do bloco (#7)

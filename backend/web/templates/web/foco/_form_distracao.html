@@ -1,0 +1,16 @@
+<form id="form-distracao" class="foco__form-distracao" method="post" action="{% url 'web:anotar_distracao' bloco.pk %}"
+      hx-post="{% url 'web:anotar_distracao' bloco.pk %}" hx-target="this" hx-swap="outerHTML">
+  {% csrf_token %}
+  <label class="visualmente-oculto" for="id_distracao">O que você lembrou?</label>
+  <textarea id="id_distracao" class="foco__campo" name="texto" rows="3" maxlength="2000" required
+            placeholder="Ex.: mandar e-mail pedindo acesso ao servidor">{{ form_distracao.texto.value|default_if_none:'' }}</textarea>
+  {% if form_distracao.texto.errors %}<p class="erro" role="alert">{{ form_distracao.texto.errors.0 }}</p>{% endif %}
+  <p class="foco__dica">Vai para a caixa de entrada. O timer continua rodando.</p>
+  {% if distracoes %}
+  <section class="foco__anotadas" aria-labelledby="anotadas">
+    <p class="foco__rotulo" id="anotadas">Já anotadas neste bloco</p>
+    <ul>{% for item in distracoes %}<li>{{ item.texto }}</li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+  <button class="botao botao--primario foco__largo" type="submit">Anotar e voltar ao foco</button>
+</form>
