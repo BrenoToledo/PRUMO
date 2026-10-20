@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from . import planejamento as plan
 from . import prioridade as motor
-from .contratos import PlanoDoDia, PropostaReplanejamento, ResumoRevisaoDiaria
+from .contratos import ListaRapida, PlanoDoDia, ProgressoProjeto, PropostaReplanejamento, ResumoRevisaoDiaria
 from .models import (
     Area,
     Bloco,
@@ -19,6 +19,7 @@ from .models import (
     EventoTarefa,
     ItemCaptura,
     Perfil,
+    Projeto,
     Revisao,
     Tarefa,
     TarefaPessoa,
@@ -529,3 +530,42 @@ def cancelar_tarefa(tarefa: Tarefa, *, motivo: str = "") -> Tarefa:
     saem.delete()
     evento(tarefa, EventoTarefa.Tipo.CANCELADA, blocos_removidos=removidos, motivo=motivo[:200])
     return tarefa
+
+
+# --------------------------------------------------------------------------- lista rápida
+def lista_rapida(usuario) -> ListaRapida:
+    raise NotImplementedError
+
+
+# --------------------------------------------------------------------------- projetos
+def criar_projeto(usuario, dados: dict) -> Projeto:
+    raise NotImplementedError
+
+
+def atualizar_projeto(projeto: Projeto, dados: dict) -> Projeto:
+    raise NotImplementedError
+
+
+def progresso_do_projeto(projeto: Projeto) -> ProgressoProjeto:
+    raise NotImplementedError
+
+
+def projetos_de(usuario) -> list[ProgressoProjeto]:
+    raise NotImplementedError
+
+
+# --------------------------------------------------------------------------- áreas da vida
+def criar_area(usuario, nome: str, cor: str) -> Area:
+    raise NotImplementedError
+
+
+def atualizar_area(area: Area, *, nome: str | None = None, cor: str | None = None) -> Area:
+    raise NotImplementedError
+
+
+def mover_area(area: Area, passo: int) -> None:
+    raise NotImplementedError
+
+
+def excluir_area(area: Area) -> None:
+    raise NotImplementedError
