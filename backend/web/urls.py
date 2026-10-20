@@ -2,7 +2,20 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import views
-from .telas import areas, clarificacao, foco, lista_rapida, pausa, perfil, plano, projetos, pwa, revisao, tarefas
+from .telas import (
+    areas,
+    clarificacao,
+    foco,
+    imprevistos,
+    lista_rapida,
+    pausa,
+    perfil,
+    plano,
+    projetos,
+    pwa,
+    revisao,
+    tarefas,
+)
 
 app_name = "web"
 
@@ -25,3 +38,4 @@ urlpatterns += plano.urlpatterns + clarificacao.urlpatterns + foco.urlpatterns +
 urlpatterns += perfil.urlpatterns + pwa.urlpatterns
 urlpatterns += revisao.urlpatterns + pausa.urlpatterns
 urlpatterns += lista_rapida.urlpatterns + projetos.urlpatterns + areas.urlpatterns
+urlpatterns += imprevistos.urlpatterns

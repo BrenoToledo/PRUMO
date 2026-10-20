@@ -1,4 +1,4 @@
-// Modo foco (M08): timer regressivo no navegador e diálogo de sair do bloco (M12).
+// Modo foco (M08): timer regressivo no navegador, anotar distração (M09) e sair do bloco (M12).
 // O término vem do servidor, calculado a partir do início real; recarregar a página não zera o tempo.
 (function () {
   "use strict";
@@ -40,15 +40,15 @@
     });
   }
 
-  function iniciarDialogoSair() {
-    const dialogo = document.getElementById("dialogo-sair");
-    if (!dialogo || typeof dialogo.showModal !== "function") return;
+  // Diálogos do foco: sair do bloco (M12) e anotar distração (M09). Sem JS, abrem pela URL (?sair=1, ?anotar=1).
+  function iniciarDialogo(dialogo) {
+    if (typeof dialogo.showModal !== "function") return;
     if (dialogo.open) {
-      // Sem JS o diálogo vem aberto pela URL (?sair=1); com JS vira modal de verdade.
+      // Veio aberto pela URL; com JS vira modal de verdade.
       dialogo.close();
       dialogo.showModal();
     }
-    document.querySelectorAll("[data-abrir-sair]").forEach(function (link) {
+    document.querySelectorAll('[data-abrir="' + dialogo.id + '"]').forEach(function (link) {
       link.addEventListener("click", function (e) {
         e.preventDefault();
         dialogo.showModal();
@@ -58,6 +58,12 @@
       if (e.target === dialogo) dialogo.close(); // toque fora do diálogo
     });
   }
+
+  // Distração anotada (resposta do HTMX): fecha o campo e volta ao foco; o timer nunca parou.
+  document.body.addEventListener("distracao-anotada", function () {
+    const dialogo = document.getElementById("dialogo-distracao");
+    if (dialogo && dialogo.open) dialogo.close();
+  });
 
   // Fim do bloco (M11): botões − e + dos blocos restantes. Delegado no documento porque o formulário
   // pode ser trocado pelo HTMX (erro de validação).
@@ -74,6 +80,6 @@
   document.addEventListener("DOMContentLoaded", function () {
     const timer = document.querySelector("[data-timer]");
     if (timer) iniciarTimer(timer);
-    iniciarDialogoSair();
+    document.querySelectorAll("dialog[id^=dialogo-]").forEach(iniciarDialogo);
   });
 })();

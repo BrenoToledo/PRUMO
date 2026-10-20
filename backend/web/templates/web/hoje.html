@@ -24,4 +24,5 @@
 <div id="plano" class="plano">
   {% include "web/plano/_plano.html" %}
 </div>
+{% if plano.blocos %}<a class="botao" href="{% url 'web:meu_dia_quebrou' %}">Meu dia quebrou</a>{% endif %}
 {% endblock %}

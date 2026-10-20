@@ -253,6 +253,14 @@ def meu_dia_quebrou(request):
     return Response(services.meu_dia_quebrou(request.user, dia=_dia(request), **ser.validated_data))
 
 
+@api_view(["POST"])
+def simular_meu_dia_quebrou(request):
+    ser = MeuDiaQuebrouSerializer(data=request.data)
+    ser.is_valid(raise_exception=True)
+    blocos_uteis = ser.validated_data["blocos_uteis"]
+    return Response(services.simular_meu_dia_quebrou(request.user, blocos_uteis=blocos_uteis, dia=_dia(request)))
+
+
 class BlocoViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = BlocoSerializer
 

@@ -1,0 +1,62 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Nova proposta{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/imprevistos.css' %}">{% endblock %}
+{% block conteudo %}
+<header class="quebrou__topo">
+  <a class="quebrou__fechar" href="{% url 'web:meu_dia_quebrou' %}?motivo={{ form.cleaned_data.motivo|urlencode }}&amp;blocos_uteis={{ form.cleaned_data.blocos_uteis }}&amp;editar=1"
+     aria-label="Voltar e mudar as respostas" title="Voltar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+  </a>
+  <h1>Nova proposta</h1>
+</header>
+
+{% if not tem_mudanca %}
+<section class="proposta__resumo">
+  <h2>Nada a mudar</h2>
+  <p>Não há blocos planejados ainda por fazer hoje. O plano fica como está.</p>
+</section>
+<div class="quebrou__acoes">
+  <a class="botao botao--primario" href="{% url 'web:hoje' %}">Voltar para Hoje</a>
+</div>
+{% else %}
+<section class="proposta__resumo" aria-labelledby="resumo">
+  <h2 id="resumo">{% if tarefas_movidas %}{{ tarefas_movidas }} tarefa{{ tarefas_movidas|pluralize }} muda{{ tarefas_movidas|pluralize:"m" }} de dia{% else %}Tudo cabe hoje{% endif %}</h2>
+  <p>Fica hoje o que tem prazo rígido e mais prioridade; o resto vai para os próximos blocos livres, respeitando a folga do dia.</p>
+</section>
+
+<ul class="proposta__lista">
+  {% for linha in linhas %}
+  <li class="proposta__item">
+    <span class="proposta__titulo">{{ linha.titulo }}</span>
+    {% if linha.fica %}
+    <span class="proposta__quando">continua hoje · {{ linha.blocos }} bloco{{ linha.blocos|pluralize }}</span>
+    {% else %}
+    <span class="proposta__quando">hoje {{ linha.de|time:"H:i" }}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="vai para"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      <span class="proposta__para">{% if linha.amanha %}amanhã{% else %}{{ linha.para|date:"l, j/m"|lower }}{% endif %} · {{ linha.blocos }} bloco{{ linha.blocos|pluralize }}</span>
+    </span>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+
+{% for risco in proposta.expectativas_em_risco %}
+<section class="proposta__risco" aria-labelledby="risco-{{ risco.tarefa }}">
+  <h2 id="risco-{{ risco.tarefa }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg>
+    Expectativa afetada
+  </h2>
+  <p>{{ risco.titulo }} fica para {{ risco.nova_data|date:"l, j/m"|lower }}; o combinado era {{ risco.prazo|date:"l, j/m"|lower }}.{% if risco.pessoas %} Combine o novo prazo com {{ risco.pessoas|join:", " }}.{% endif %}</p>
+</section>
+{% endfor %}
+
+<form class="quebrou__acoes" method="post" action="{% url 'web:aplicar_replanejamento' %}">
+  {% csrf_token %}
+  <input type="hidden" name="motivo" value="{{ form.cleaned_data.motivo }}">
+  <input type="hidden" name="blocos_uteis" value="{{ form.cleaned_data.blocos_uteis }}">
+  <a class="botao" href="{% url 'web:meu_dia_quebrou' %}?motivo={{ form.cleaned_data.motivo|urlencode }}&amp;blocos_uteis={{ form.cleaned_data.blocos_uteis }}&amp;editar=1">Recusar</a>
+  <button class="botao botao--primario" type="submit">Aplicar</button>
+</form>
+{% endif %}
+{% endblock %}
