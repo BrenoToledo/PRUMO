@@ -1,0 +1,68 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Revisão do dia{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/revisao.css' %}">{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <p class="data">{{ resumo.dia|date:"l, j \d\e F" }}</p>
+    <h1>Revisão do dia</h1>
+  </div>
+</header>
+
+<div class="revisao">
+  <ul class="revisao__numeros" aria-label="Resumo do dia">
+    <li class="revisao__numero"><strong>{{ resumo.blocos_feitos }} de {{ resumo.blocos_planejados }}</strong> <span>blocos feitos</span></li>
+    <li class="revisao__numero"><strong>{{ resumo.imprevistos }}</strong> <span>imprevisto{{ resumo.imprevistos|pluralize }}</span></li>
+    <li class="revisao__numero"><strong>{{ focado }}</strong> <span>focados</span></li>
+  </ul>
+
+  <section class="revisao__cartao" aria-labelledby="titulo-real">
+    <h2 id="titulo-real" class="revisao__subtitulo">Planejado vs. real</h2>
+    {% if linhas %}
+    <ul class="revisao__linhas">
+      {% for linha in linhas %}<li class="revisao__linha">
+        <span class="revisao__tarefa"><time datetime="{{ linha.inicio|date:'c' }}">{{ linha.inicio|date:"H:i" }}</time> {{ linha.tarefa }}</span>
+        <span class="revisao__chip revisao__chip--{{ linha.estilo }}">{{ linha.rotulo }}</span>
+      </li>{% endfor %}
+    </ul>
+    {% else %}
+    <p class="revisao__dica">Nenhum bloco planejado hoje.</p>
+    {% endif %}
+  </section>
+
+  {% if resumo.distracoes %}
+  <a class="revisao__cartao revisao__distracoes" href="{% url 'web:entrada' %}">
+    <span>
+      <strong>{{ resumo.distracoes|length }} distraç{{ resumo.distracoes|length|pluralize:"ão,ões" }} anotada{{ resumo.distracoes|length|pluralize }}</strong>
+      <span class="revisao__dica">já {{ resumo.distracoes|length|pluralize:"está,estão" }} na caixa de entrada: {{ resumo.distracoes|join:" · " }}</span>
+    </span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+  </a>
+  {% endif %}
+
+  <form class="revisao__form" method="post" action="{% url 'web:revisao' %}" novalidate>
+    {% csrf_token %}
+    <fieldset class="revisao__atencao">
+      <legend class="revisao__rotulo">Onde foi sua atenção?</legend>
+      {% for opcao in form.atencao %}
+      <label class="revisao__pilula">
+        <input type="radio" name="atencao" value="{{ opcao.data.value }}"{% if opcao.data.selected %} checked{% endif %}>
+        <span>{{ opcao.choice_label }}</span>
+      </label>
+      {% endfor %}
+    </fieldset>
+    {% if form.atencao.errors %}<p class="erro" role="alert">{{ form.atencao.errors.0 }}</p>{% endif %}
+
+    <div class="campo">
+      <label class="revisao__rotulo" for="id_intencao_amanha">Intenção de amanhã</label>
+      <input id="id_intencao_amanha" name="intencao_amanha" type="text" maxlength="300"
+             placeholder="A tarefa mais importante de amanhã"
+             value="{{ form.intencao_amanha.value|default_if_none:'' }}"{% if form.intencao_amanha.errors %} aria-invalid="true" aria-describedby="erro-intencao"{% endif %}>
+      {% if form.intencao_amanha.errors %}<p id="erro-intencao" class="erro" role="alert">{{ form.intencao_amanha.errors.0 }}</p>{% endif %}
+    </div>
+
+    <button class="botao botao--primario revisao__concluir" type="submit">Concluir revisão</button>
+  </form>
+</div>
+{% endblock %}

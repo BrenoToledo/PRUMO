@@ -1,0 +1,67 @@
+/* Revisão diária (M25): resumo do dia, planejado vs. real, distrações, atenção e intenção de amanhã. */
+.revisao { display: flex; flex-direction: column; gap: var(--e4); margin-bottom: var(--e12); }
+
+.revisao__numeros { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--e2); }
+.revisao__numero {
+  flex: 1; min-width: 0; text-align: center; padding: var(--e3) var(--e2);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  display: flex; flex-direction: column;
+}
+.revisao__numero strong {
+  color: var(--primaria); font-size: var(--titulo-tam); line-height: var(--titulo-alt); font-weight: var(--titulo-peso);
+  font-variant-numeric: tabular-nums;
+}
+.revisao__numero span { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+
+.revisao__cartao {
+  padding: var(--e3) var(--e4);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+}
+.revisao__subtitulo { margin: 0 0 var(--e2); font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+.revisao__dica { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.revisao__linhas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.revisao__linha { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); }
+.revisao__tarefa { min-width: 0; overflow-wrap: anywhere; }
+.revisao__tarefa time { color: var(--texto-secundario); font-size: var(--legenda-tam); font-variant-numeric: tabular-nums; }
+.revisao__chip {
+  flex: none; padding: 2px var(--e2); border-radius: var(--raio-chip);
+  font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso);
+}
+.revisao__chip--feito { background: var(--primaria-suave); color: var(--primaria); }
+.revisao__chip--aviso { background: color-mix(in srgb, var(--aviso) 15%, transparent); color: var(--aviso); }
+.revisao__chip--perigo { background: color-mix(in srgb, var(--prioridade-critica) 12%, transparent); color: var(--prioridade-critica); }
+.revisao__chip--neutro { background: var(--borda); color: var(--texto-secundario); }
+
+.revisao__distracoes { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); color: var(--texto); text-decoration: none; }
+.revisao__distracoes > span { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; overflow-wrap: anywhere; }
+.revisao__distracoes svg { flex: none; width: 20px; height: 20px; color: var(--texto-secundario); }
+
+.revisao__form { display: flex; flex-direction: column; gap: var(--e3); }
+.revisao__form .campo { margin: 0; }
+.revisao__form .erro { margin: 0; }
+.revisao__rotulo {
+  color: var(--texto-secundario); text-transform: uppercase; letter-spacing: .04em;
+  font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso);
+}
+.revisao__atencao { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--e2); }
+.revisao__atencao legend { padding: 0; margin-bottom: var(--e2); }
+.revisao__pilula {
+  position: relative; display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--e3);
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); background: var(--superficie); cursor: pointer;
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.revisao__pilula input { position: absolute; opacity: 0; pointer-events: none; }
+.revisao__pilula:has(input:checked) { background: var(--primaria); border-color: var(--primaria); color: var(--texto-na-primaria); }
+.revisao__pilula:has(input:focus-visible) { outline: 2px solid var(--primaria); outline-offset: 2px; }
+.revisao__concluir { width: 100%; margin-top: var(--e3); }
+
+/* Intenção de hoje no topo da tela Hoje: vem da revisão de ontem. */
+.intencao {
+  margin: 0 0 var(--e4); padding: var(--e3) var(--e4);
+  border-radius: var(--raio-card); background: var(--primaria-suave);
+}
+.intencao__rotulo {
+  margin: 0; color: var(--primaria); text-transform: uppercase; letter-spacing: .04em;
+  font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso);
+}
+.intencao__texto { margin: var(--e1) 0 0; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); overflow-wrap: anywhere; }

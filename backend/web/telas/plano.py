@@ -12,14 +12,9 @@ from django.urls import path
 from django.views.decorators.http import require_GET, require_POST
 
 from nucleo import services
-from nucleo.models import Bloco, Esforco, Tarefa
+from nucleo.models import Bloco
 
 SABADO = 5
-
-
-def _tem_tarefas_para_planejar(usuario) -> bool:
-    """Tarefas que o plano em blocos usa: abertas e que não são leves (as leves ficam para o fim do dia)."""
-    return Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA).exclude(esforco=Esforco.BAIXO).exists()
 
 
 def _contexto(usuario, **extra) -> dict:
@@ -35,9 +30,10 @@ def _contexto(usuario, **extra) -> dict:
         "barra_pct": min(ocupacao, 100),
         "folga_pct": round(plano["folga_diaria"] * 100),
         "fim_de_semana": plano["dia"].weekday() >= SABADO,
-        "sem_tarefas": not blocos and not _tem_tarefas_para_planejar(usuario),
+        "sem_tarefas": not blocos and not services.tem_tarefas_para_planejar(usuario),
         "tem_planejados": bool(planejados),
         "proximo_id": planejados[0].pk if planejados and not em_foco else None,
+        "intencao": services.intencao_do_dia(usuario),  # da revisão de ontem (#17)
         **extra,
     }
 

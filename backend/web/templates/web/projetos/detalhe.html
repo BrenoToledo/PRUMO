@@ -1,0 +1,49 @@
+{% extends "web/base.html" %}
+{% block titulo %}{{ progresso.projeto.nome }}{% endblock %}
+{% block estilos %}{% include "web/projetos/_cabeca.html" %}{% endblock %}
+{% block conteudo %}
+{% with projeto=progresso.projeto %}
+<div class="detalhe">
+  <div class="projeto__topo">
+    <a class="voltar" href="{% url 'web:projetos' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      Projeto
+    </a>
+    <a class="botao botao--pequeno" href="{% url 'web:editar_projeto' projeto.pk %}">Editar</a>
+  </div>
+  <h1 class="detalhe__titulo">{{ projeto.nome }}</h1>
+  <p class="chips">
+    <span class="chip chip--area" style="--cor-area: {{ projeto.area.cor }}">{{ projeto.area.nome }}</span>
+    {% if projeto.status != "ativo" %}<span class="chip">{{ projeto.get_status_display }}</span>{% endif %}
+  </p>
+
+  {% if projeto.porque %}<section class="cartao" aria-labelledby="rotulo-porque">
+    <h2 id="rotulo-porque" class="rotulo">Por quê</h2>
+    <p class="detalhe__acao">{{ projeto.porque }}</p>
+  </section>{% endif %}
+
+  <div class="cartao blocos">
+    <p class="blocos__linha">
+      <span>{% if projeto.fim %}Prazo {{ projeto.fim|date:"j b" }} · {% if projeto.prazo_rigido %}rígido{% else %}flexível{% endif %}{% else %}Sem prazo{% endif %}</span>
+      {% if progresso.folga is not None %}<span class="projeto__folga{% if progresso.folga < 1.2 %} projeto__folga--risco{% endif %}">folga {{ progresso.folga|floatformat:"-1" }}x</span>{% endif %}
+    </p>
+    <progress class="barra" value="{{ progresso.blocos_feitos }}" max="{{ progresso.blocos_estimados|default:1 }}" aria-label="Blocos feitos">{% widthratio progresso.progresso 1 100 %}%</progress>
+    <p class="projeto__dica">{{ progresso.blocos_feitos }} de {{ progresso.blocos_estimados }} blocos feitos</p>
+  </div>
+
+  <h2 class="projeto__subtitulo">Tarefas</h2>
+  {% if tarefas %}
+  <ul class="projeto__tarefas">
+    {% for tarefa in tarefas %}<li>
+      <a class="projeto__tarefa{% if tarefa.status != 'aberta' %} projeto__tarefa--feita{% endif %}" href="{% url 'web:tarefa' tarefa.pk %}">
+        <span class="projeto__tarefa-titulo">{{ tarefa.titulo }}</span>
+        {% if tarefa.status == "aberta" %}<span class="chip chip--{{ tarefa.faixa }}">{{ tarefa.prioridade }}</span>{% else %}<span class="chip">{{ tarefa.get_status_display }}</span>{% endif %}
+      </a>
+    </li>{% endfor %}
+  </ul>
+  {% else %}
+  <p class="projeto__dica">Nenhuma tarefa ainda. Ao clarificar um item da caixa de entrada, escolha este projeto.</p>
+  {% endif %}
+</div>
+{% endwith %}
+{% endblock %}

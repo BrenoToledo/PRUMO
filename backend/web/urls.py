@@ -2,7 +2,20 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import views
-from .telas import clarificacao, foco, imprevistos, perfil, plano, pwa, tarefas
+from .telas import (
+    areas,
+    clarificacao,
+    foco,
+    imprevistos,
+    lista_rapida,
+    pausa,
+    perfil,
+    plano,
+    projetos,
+    pwa,
+    revisao,
+    tarefas,
+)
 
 app_name = "web"
 
@@ -22,4 +35,7 @@ urlpatterns = [
 
 # Cada etapa acrescenta rotas só no próprio módulo (docs/contratos.md); esta lista não muda ao juntar as branches.
 urlpatterns += plano.urlpatterns + clarificacao.urlpatterns + foco.urlpatterns + tarefas.urlpatterns
-urlpatterns += perfil.urlpatterns + pwa.urlpatterns + imprevistos.urlpatterns
+urlpatterns += perfil.urlpatterns + pwa.urlpatterns
+urlpatterns += revisao.urlpatterns + pausa.urlpatterns
+urlpatterns += lista_rapida.urlpatterns + projetos.urlpatterns + areas.urlpatterns
+urlpatterns += imprevistos.urlpatterns

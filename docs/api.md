@@ -16,10 +16,12 @@ Base: `/api/`. Autenticação por sessão ou token (`POST /api/token/` com `user
 
 | Método e rota | O que faz | Tela |
 | --- | --- | --- |
-| `GET/POST /tarefas/`, `GET/PATCH/DELETE /tarefas/{id}/` | CRUD; prioridade recalculada a cada gravação. `PATCH` com `status=concluida` numa tarefa aberta passa pela conclusão abaixo, e com `status=aberta` numa concluída, pela reabertura. Filtros: `status`, `area`, `projeto`, `esforco` | M04 |
+| `GET/POST /tarefas/`, `GET/PATCH/DELETE /tarefas/{id}/` | CRUD; prioridade recalculada a cada gravação. `PATCH` com `status=concluida` numa tarefa aberta passa pela conclusão abaixo, com `status=aberta` numa concluída, pela reabertura, e com `status=cancelada` numa aberta, pelo cancelamento. Filtros: `status`, `area`, `projeto`, `esforco` | M04 |
 | `GET /tarefas/{id}/prioridade/` | Nota, faixa, folga, destino, explicação e as 4 perguntas | M05 |
 | `POST /tarefas/{id}/concluir/` | Conclui, grava `concluida_em` e o evento `concluida` e remove os blocos ainda planejados. Devolve a tarefa; `400` se ela não estiver aberta | M17, M18 |
 | `POST /tarefas/{id}/reabrir/` | Volta a aberta, limpa `concluida_em`, grava o evento `reaberta` e recalcula a prioridade. Devolve a tarefa; `400` se ela não estiver concluída | M18 |
+| `POST /tarefas/{id}/adiar/` `{para?, motivo?}` | Não planeja antes de `para` (padrão amanhã): grava `adiada_ate`, soma 1 em `adiamentos`, apaga os blocos planejados antes dessa data e grava o evento `adiada`. `400` se não estiver aberta ou se `para` não for depois de hoje | M04 |
+| `POST /tarefas/{id}/cancelar/` `{motivo?}` | Status `cancelada`, apaga os blocos planejados e grava o evento `cancelada`; some dos planos futuros. `400` se não estiver aberta | M04 |
 | `GET /tarefas/{id}/historico/` | Eventos da tarefa `[{tipo, em, dados}]`, mais antigos primeiro | M18 |
 
 ## Dia e foco
@@ -44,6 +46,6 @@ Base: `/api/`. Autenticação por sessão ou token (`POST /api/token/` com `user
 
 ## Cadastros
 
-`/areas/`, `/projetos/`, `/rotinas/`, `/pessoas/` (CRUD) e `GET/PATCH /perfil/` (jornada, pico de energia, folga diária, duração do bloco, pesos e provedor de IA).
+`/areas/`, `/projetos/`, `/rotinas/`, `/pessoas/` (CRUD) e `GET/PATCH /perfil/` (jornada, pico de energia, folga diária, duração do bloco, pesos e provedor de IA). `DELETE /areas/{id}/` devolve `409` se a área tiver tarefas, projetos ou rotinas, e `POST /areas/` põe a área nova no fim da ordem (M30).
 
 Os campos de cada resposta estão fixados em `backend/nucleo/contratos.py` e testados em `nucleo/tests/test_contratos.py`; ver [contratos.md](contratos.md).

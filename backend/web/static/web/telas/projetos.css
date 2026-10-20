@@ -1,0 +1,69 @@
+/* Projetos (M18, M19): lista com progresso, detalhe com as tarefas e o formulário de criar e editar. */
+.projetos { list-style: none; margin: 0 0 var(--e4); padding: 0; display: flex; flex-direction: column; gap: var(--e3); }
+.projeto-card {
+  display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3) var(--e4);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  color: var(--texto); text-decoration: none;
+}
+.projeto-card--inativo { opacity: .7; }
+.projeto-card__topo { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); }
+.projeto-card__nome { min-width: 0; overflow-wrap: anywhere; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+.projeto-card__topo svg { flex: none; width: 16px; height: 16px; color: var(--texto-secundario); }
+.projeto-card__meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2);
+  color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.projetos__novo {
+  display: inline-flex; align-items: center; gap: var(--e2); min-height: 44px; margin-bottom: var(--e12);
+  color: var(--primaria); text-decoration: none; font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: var(--legenda-peso);
+}
+.projetos__novo svg { width: 18px; height: 18px; }
+
+.projeto__topo { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); }
+.projeto__subtitulo { margin: var(--e2) 0 0; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+.projeto__dica { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.projeto__folga { color: var(--texto-secundario); }
+.projeto__folga--risco { color: var(--aviso); }
+.projeto__tarefas { list-style: none; margin: 0 0 var(--e12); padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.projeto__tarefa {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e3);
+  min-height: 52px; padding: var(--e2) var(--e4);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  color: var(--texto); text-decoration: none;
+}
+.projeto__tarefa-titulo { min-width: 0; overflow-wrap: anywhere; }
+.projeto__tarefa--feita .projeto__tarefa-titulo { color: var(--texto-secundario); text-decoration: line-through; }
+
+.projeto-form {
+  display: flex; flex-direction: column; gap: var(--e4); margin: var(--e2) 0 var(--e12); padding: var(--e4);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+}
+.projeto-form__campo { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; margin: 0; padding: 0; border: 0; }
+.projeto-form__rotulo {
+  padding: 0; color: var(--texto-secundario); letter-spacing: .04em; text-transform: uppercase;
+  font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso);
+}
+.projeto-form__opcional { text-transform: none; letter-spacing: 0; }
+.projeto-form__campo input,
+.projeto-form__campo select,
+.projeto-form__campo textarea {
+  width: 100%; min-height: 44px; padding: var(--e2) var(--e3);
+  font-family: inherit; font-size: 16px; line-height: 24px; color: var(--texto);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+}
+.projeto-form__campo textarea { resize: vertical; }
+.projeto-form__campo :focus { outline: 2px solid var(--primaria); outline-offset: -1px; }
+.projeto-form__campo [aria-invalid="true"] { border-color: var(--prioridade-critica); }
+.projeto-form__campo .erro { margin: 0; }
+.projeto-form__areas { display: flex; flex-wrap: wrap; gap: var(--e2); }
+.projeto-form__area { position: relative; }
+.projeto-form__area input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.projeto-form__area span {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 var(--e3);
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); cursor: pointer;
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.projeto-form__area span::before { content: ""; width: 8px; height: 8px; border-radius: var(--raio-chip); background: var(--cor-area); }
+.projeto-form__area input:checked + span { border-color: var(--cor-area); background: color-mix(in srgb, var(--cor-area) 15%, transparent); }
+.projeto-form__area input:focus-visible + span { outline: 2px solid var(--primaria); outline-offset: 2px; }
+.projeto-form__check { display: flex; align-items: center; gap: var(--e2); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }

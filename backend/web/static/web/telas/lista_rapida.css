@@ -1,0 +1,16 @@
+/* Lista rápida (M17): itens de até 10 minutos, total e "Encaixar no fim do dia"; atalho na caixa de entrada (M15). */
+.rapida__dica { margin: var(--e2) 0 var(--e4); color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.rapida__resumo {
+  margin: var(--e4) 0; padding: var(--e3) var(--e4); border-radius: var(--raio-card);
+  background: var(--primaria-suave); font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.rapida__resumo--aviso { background: color-mix(in srgb, var(--aviso) 15%, transparent); }
+.rapida__encaixar { width: 100%; margin-bottom: var(--e12); }
+
+.rapida__atalho {
+  display: flex; align-items: center; gap: var(--e3); margin: 0 0 var(--e4); padding: var(--e3) var(--e4);
+  border-radius: var(--raio-card); background: var(--primaria-suave); color: var(--texto); text-decoration: none;
+}
+.rapida__atalho > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rapida__atalho small { color: var(--texto-secundario); font-size: var(--micro-tam); line-height: var(--micro-alt); }
+.rapida__atalho svg { flex: none; width: 18px; height: 18px; color: var(--primaria); }

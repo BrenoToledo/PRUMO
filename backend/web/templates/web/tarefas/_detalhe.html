@@ -30,7 +30,7 @@
     </div>{% endif %}
     <div class="fatos__linha">
       <dt>Histórico</dt>
-      <dd>{% if tarefa.adiamentos %}adiada {{ tarefa.adiamentos }} vez{{ tarefa.adiamentos|pluralize:"es" }} · {% endif %}criada {{ tarefa.criada_em|date:"j b" }}</dd>
+      <dd>{% if tarefa.adiamentos %}adiada {{ tarefa.adiamentos }} vez{{ tarefa.adiamentos|pluralize:"es" }} · {% endif %}{% if tarefa.status == "aberta" and tarefa.adiada_ate and tarefa.adiada_ate > hoje %}fora do plano até {{ tarefa.adiada_ate|date:"j b" }} · {% endif %}criada {{ tarefa.criada_em|date:"j b" }}</dd>
     </div>
   </dl>
 
@@ -106,7 +106,33 @@
 
   <div class="detalhe__acoes">
     {% if tarefa.status == "aberta" %}
-    <form method="post" action="{% url 'web:concluir_tarefa' tarefa.pk %}">
+    <details class="acao-extra"{% if erro_adiar %} open{% endif %}>
+      <summary class="botao">Adiar</summary>
+      <form class="acao-extra__form" method="post" action="{% url 'web:adiar_tarefa' tarefa.pk %}"
+            hx-post="{% url 'web:adiar_tarefa' tarefa.pk %}" hx-target="#detalhe-tarefa" hx-swap="outerHTML">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ aqui }}">
+        <label for="adiar-para">Não planejar antes de</label>
+        <input id="adiar-para" type="date" name="para" value="{{ amanha|date:'Y-m-d' }}" min="{{ amanha|date:'Y-m-d' }}">
+        <label for="adiar-motivo">Motivo (opcional)</label>
+        <input id="adiar-motivo" type="text" name="motivo" maxlength="200">
+        {% if erro_adiar %}<p class="erro" role="alert">{{ erro_adiar }}</p>{% endif %}
+        <p class="acao-extra__dica">Sai do plano até lá e conta um adiamento.</p>
+        <button class="botao botao--primario" type="submit">Adiar tarefa</button>
+      </form>
+    </details>
+    <details class="acao-extra">
+      <summary class="botao botao--texto-perigo">Cancelar</summary>
+      <form class="acao-extra__form" method="post" action="{% url 'web:cancelar_tarefa' tarefa.pk %}"
+            hx-post="{% url 'web:cancelar_tarefa' tarefa.pk %}" hx-target="#detalhe-tarefa" hx-swap="outerHTML">
+        {% csrf_token %}
+        <label for="cancelar-motivo">Motivo (opcional)</label>
+        <input id="cancelar-motivo" type="text" name="motivo" maxlength="200">
+        <p class="acao-extra__dica">A tarefa sai de todos os planos. O histórico fica.</p>
+        <button class="botao botao--texto-perigo" type="submit">Sim, cancelar tarefa</button>
+      </form>
+    </details>
+    <form class="detalhe__concluir" method="post" action="{% url 'web:concluir_tarefa' tarefa.pk %}">
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ aqui }}">
       <button class="botao botao--primario" type="submit">Concluir tarefa</button>

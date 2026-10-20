@@ -180,6 +180,7 @@ class Tarefa(models.Model):
     explicacao_prioridade = models.CharField(max_length=300, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.ABERTA)
     adiamentos = models.PositiveSmallIntegerField(default=0)
+    adiada_ate = models.DateField(null=True, blank=True, help_text="Não entra no plano antes desta data.")
     pessoas = models.ManyToManyField(Pessoa, through="TarefaPessoa", related_name="tarefas", blank=True)
     criada_em = models.DateTimeField(default=timezone.now)
     concluida_em = models.DateTimeField(null=True, blank=True)
@@ -269,6 +270,7 @@ class EventoTarefa(models.Model):
         REABERTA = "reaberta", "Reaberta"
         INTERROMPIDA = "interrompida", "Interrompida"
         REPLANEJADA = "replanejada", "Replanejada"
+        CANCELADA = "cancelada", "Cancelada"
 
     tarefa = models.ForeignKey(Tarefa, on_delete=models.CASCADE, related_name="eventos")
     tipo = models.CharField(max_length=12, choices=Tipo.choices)

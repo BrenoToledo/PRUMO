@@ -1,0 +1,39 @@
+{% extends "web/base.html" %}
+{% block titulo %}Projetos{% endblock %}
+{% block estilos %}{% include "web/projetos/_cabeca.html" %}{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Projetos</h1>
+    <p class="cabecalho__sub">Tarefas agrupadas por objetivo, com o progresso em blocos.</p>
+  </div>
+  {% include "web/_botao_sair.html" %}
+</header>
+
+{% if projetos %}
+<ul class="projetos">
+  {% for p in projetos %}<li>
+    <a class="projeto-card{% if p.projeto.status != 'ativo' %} projeto-card--inativo{% endif %}" href="{% url 'web:projeto' p.projeto.pk %}">
+      <span class="projeto-card__topo">
+        <span class="projeto-card__nome">{{ p.projeto.nome }}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </span>
+      <span class="projeto-card__meta">
+        <span class="chip chip--area" style="--cor-area: {{ p.projeto.area.cor }}">{{ p.projeto.area.nome }}</span>
+        <span>{% if p.projeto.fim %}{{ p.projeto.fim|date:"j b" }}{% else %}sem prazo{% endif %} · {% widthratio p.progresso 1 100 %}%{% if p.projeto.status != "ativo" %} · {{ p.projeto.get_status_display|lower }}{% endif %}</span>
+      </span>
+      <progress class="barra" value="{{ p.blocos_feitos }}" max="{{ p.blocos_estimados|default:1 }}" aria-label="Progresso de {{ p.projeto.nome }}">{% widthratio p.progresso 1 100 %}%</progress>
+    </a>
+  </li>{% endfor %}
+</ul>
+{% else %}
+<div class="vazio">
+  <p class="vazio__titulo">Nenhum projeto ainda.</p>
+  <p>Um projeto junta as tarefas de um mesmo objetivo, como o TCC, e mostra quanto já foi feito.</p>
+</div>
+{% endif %}
+<a class="projetos__novo" href="{% url 'web:novo_projeto' %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  Novo projeto
+</a>
+{% endblock %}

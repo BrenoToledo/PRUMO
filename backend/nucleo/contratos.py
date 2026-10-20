@@ -14,7 +14,7 @@ from datetime import date
 from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
-    from .models import Bloco, Revisao, Tarefa
+    from .models import Bloco, Projeto, Revisao, Tarefa
 
 # --------------------------------------------------------------------------- formatos devolvidos pelos serviços
 
@@ -59,6 +59,26 @@ class PropostaReplanejamento(TypedDict):
     expectativas_em_risco: list[dict]  # {tarefa, titulo, nova_data, prazo, pessoas}
 
 
+class ListaRapida(TypedDict):
+    """`services.lista_rapida`: coisas de até 10 minutos para encaixar no fim do dia (M17)."""
+
+    tarefas: list[Tarefa]  # abertas, esforço baixo e até 10 min, mais antigas primeiro
+    total_minutos: int
+    minutos_livres: int  # do fim do último bloco de hoje (ou de agora) até o fim da jornada
+    cabe_hoje: bool  # total_minutos <= minutos_livres
+
+
+class ProgressoProjeto(TypedDict):
+    """`services.projetos_de` e `services.progresso_do_projeto`: progresso em blocos (M18, M19)."""
+
+    projeto: Projeto
+    blocos_estimados: int  # soma das tarefas não canceladas
+    blocos_feitos: int  # tarefa concluída conta todos os blocos estimados
+    progresso: float  # blocos_feitos / blocos_estimados, de 0 a 1
+    tarefas_abertas: int
+    folga: float | None  # blocos livres até o prazo ÷ blocos restantes; None sem prazo ou sem nada a fazer
+
+
 # --------------------------------------------------------------------------- assinaturas dos serviços
 # Nome → assinatura exata (`str(inspect.signature(...))`). Os marcados "a implementar" existem como esboço que
 # levanta NotImplementedError; a branch `backend-r1` escreve o corpo sem mudar a assinatura.
@@ -80,6 +100,7 @@ SERVICOS: dict[str, str] = {
     # Plano do dia (P2 usa)
     "hoje": "() -> 'date'",
     "tarefas_leves": "(usuario) -> 'QuerySet[Tarefa]'",
+    "tem_tarefas_para_planejar": "(usuario) -> 'bool'",
     "plano_do_dia": "(usuario, dia: 'date | None' = None) -> 'PlanoDoDia'",
     "gerar_plano_do_dia": "(usuario, dia: 'date | None' = None) -> 'plan.Plano'",
     # Execução dos blocos (P3 usa)
@@ -102,6 +123,20 @@ SERVICOS: dict[str, str] = {
     "resumo_revisao_diaria": "(usuario, dia: 'date | None' = None) -> 'ResumoRevisaoDiaria'",
     "salvar_revisao_diaria": "(usuario, *, dia: 'date | None' = None, atencao: 'str' = '', "
     "intencao_amanha: 'str' = '', notas: 'str' = '') -> 'Revisao'",
+    # Fechar o dia (P7): intenção de amanhã no topo de Hoje, adiar e cancelar tarefa
+    "intencao_do_dia": "(usuario, dia: 'date | None' = None) -> 'str'",
+    "adiar_tarefa": "(tarefa: 'Tarefa', *, para: 'date | None' = None, motivo: 'str' = '') -> 'Tarefa'",
+    "cancelar_tarefa": "(tarefa: 'Tarefa', *, motivo: 'str' = '') -> 'Tarefa'",
+    # Organização (P8): lista rápida, projetos e áreas da vida
+    "lista_rapida": "(usuario) -> 'ListaRapida'",
+    "criar_projeto": "(usuario, dados: 'dict') -> 'Projeto'",
+    "atualizar_projeto": "(projeto: 'Projeto', dados: 'dict') -> 'Projeto'",
+    "progresso_do_projeto": "(projeto: 'Projeto') -> 'ProgressoProjeto'",
+    "projetos_de": "(usuario) -> 'list[ProgressoProjeto]'",
+    "criar_area": "(usuario, nome: 'str', cor: 'str') -> 'Area'",
+    "atualizar_area": "(area: 'Area', *, nome: 'str | None' = None, cor: 'str | None' = None) -> 'Area'",
+    "mover_area": "(area: 'Area', passo: 'int') -> 'None'",
+    "excluir_area": "(area: 'Area') -> 'None'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -134,6 +169,7 @@ CAMPOS_TAREFA = (
     "explicacao_prioridade",
     "status",
     "adiamentos",
+    "adiada_ate",
     "vinculos",
     "criada_em",
     "concluida_em",
@@ -175,4 +211,17 @@ CAMPOS_HOJE = ("dia", "capacidade", "planejados", "ocupacao", "folga_diaria", "b
 # módulo, os próprios templates (`web/templates/web/<modulo>/`), o próprio CSS (`web/static/web/telas/<modulo>.css`)
 # e os próprios testes (`web/tests/test_<modulo>.py`).
 
-TELAS_WEB = ("clarificacao", "plano", "foco", "tarefas", "perfil", "pwa", "imprevistos")
+TELAS_WEB = (
+    "clarificacao",
+    "plano",
+    "foco",
+    "tarefas",
+    "perfil",
+    "pwa",
+    "revisao",
+    "pausa",
+    "lista_rapida",
+    "projetos",
+    "areas",
+    "imprevistos",
+)

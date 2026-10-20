@@ -1,0 +1,28 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Lista rápida{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/tarefas.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/lista_rapida.css' %}">{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'web:entrada' %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+  Lista rápida
+</a>
+<p class="rapida__dica">Coisas de até 10 minutos. Pulam a triagem e entram nas tarefas leves do fim do dia.</p>
+
+{% if lista.tarefas %}
+<div class="leves__lista">
+  {% for tarefa in lista.tarefas %}{% include "web/tarefas/_tarefa_leve.html" %}{% endfor %}
+</div>
+<p class="rapida__resumo{% if not lista.cabe_hoje %} rapida__resumo--aviso{% endif %}" role="status">
+  Total: {{ lista.total_minutos }} min.
+  {% if lista.cabe_hoje %}Cabe no fim do dia de hoje.{% else %}Não cabe no que resta da jornada ({{ lista.minutos_livres }} min livres).{% endif %}
+</p>
+<a class="botao botao--primario rapida__encaixar" href="{% url 'web:hoje' %}#titulo-leves">Encaixar no fim do dia</a>
+{% else %}
+<div class="vazio">
+  <p class="vazio__titulo">Nada na lista rápida.</p>
+  <p>Na caixa de entrada, mande para cá o que leva até 10 minutos.</p>
+</div>
+{% endif %}
+{% endblock %}
