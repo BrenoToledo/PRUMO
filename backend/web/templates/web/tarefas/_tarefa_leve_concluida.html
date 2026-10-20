@@ -2,7 +2,7 @@
   <span class="leve__circulo leve__circulo--feito" aria-hidden="true">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>
   </span>
-  <span class="leve__titulo" role="status">{{ tarefa.titulo }}<span class="visualmente-oculto"> concluída</span></span>
+  <output class="leve__titulo">{{ tarefa.titulo }}<span class="visualmente-oculto"> concluída</span></output>
   <form method="post" action="{% url 'web:reabrir_tarefa' tarefa.pk %}"
         hx-post="{% url 'web:reabrir_tarefa' tarefa.pk %}" hx-target="#tarefa-leve-{{ tarefa.pk }}" hx-swap="outerHTML">
     {% csrf_token %}

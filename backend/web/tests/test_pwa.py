@@ -38,7 +38,9 @@ def _cores_png(caminho):
     """Cores RGB de um PNG de 8 bits (RGB ou RGBA, sem entrelaçamento), só com a biblioteca padrão."""
     blocos = list(_blocos_png(caminho))
     largura, altura, profundidade, tipo_cor, _, _, entrelacado = struct.unpack(">IIBBBBB", blocos[0][1])
-    assert profundidade == 8 and tipo_cor in (2, 6) and not entrelacado
+    assert profundidade == 8
+    assert tipo_cor in (2, 6)
+    assert not entrelacado
     canais = 3 if tipo_cor == 2 else 4
     bruto = zlib.decompress(b"".join(d for t, d in blocos if t == b"IDAT"))
     passo = largura * canais

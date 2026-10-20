@@ -61,7 +61,8 @@ def test_formulario_mostra_texto_capturado_e_campos(logado, usuario, educacao):
     assert "capítulo 3 do tcc" in html
     for campo in ("titulo", "proxima_acao", "area", "prazo", "prazo_rigido", "blocos_estimados", "esforco"):
         assert f'name="{campo}"' in html
-    assert "Educação" in html and "Pessoal" in html
+    assert "Educação" in html
+    assert "Pessoal" in html
 
 
 def test_item_da_entrada_tem_botao_clarificar(logado, usuario):
@@ -84,8 +85,10 @@ def test_cria_tarefa_marca_item_e_grava_evento(logado, usuario, educacao):
     assert tarefa.titulo == "Escrever capítulo 3 do TCC"
     assert tarefa.proxima_acao == "Revisar os 5 artigos da tabela"
     assert tarefa.area == educacao
-    assert tarefa.prazo == date(2026, 11, 28) and tarefa.prazo_rigido
-    assert tarefa.blocos_estimados == 2 and tarefa.esforco == "alto"
+    assert tarefa.prazo == date(2026, 11, 28)
+    assert tarefa.prazo_rigido
+    assert tarefa.blocos_estimados == 2
+    assert tarefa.esforco == "alto"
     assert tarefa.prioridade > 0
     item.refresh_from_db()
     assert item.status == ItemCaptura.Status.CLARIFICADO
@@ -98,8 +101,10 @@ def test_opcionais_tem_padrao(logado, usuario, educacao):
     logado.post(url(item), {"titulo": "X", "proxima_acao": "Abrir o arquivo", "area": educacao.pk})
 
     tarefa = Tarefa.objects.get(item_origem=item)
-    assert tarefa.prazo is None and not tarefa.prazo_rigido
-    assert tarefa.blocos_estimados == 1 and tarefa.esforco == "medio"
+    assert tarefa.prazo is None
+    assert not tarefa.prazo_rigido
+    assert tarefa.blocos_estimados == 1
+    assert tarefa.esforco == "medio"
 
 
 def test_salvar_abre_o_proximo_item_pendente(logado, usuario, educacao):
@@ -109,7 +114,8 @@ def test_salvar_abre_o_proximo_item_pendente(logado, usuario, educacao):
 
     resp = logado.post(url(item), dados(educacao))
 
-    assert resp.status_code == 302 and resp.url == url(proximo)
+    assert resp.status_code == 302
+    assert resp.url == url(proximo)
     assert [str(m) for m in get_messages(resp.wsgi_request)] == ["Tarefa criada"]
 
 
@@ -203,4 +209,5 @@ def test_exige_login(client, usuario):
 
     resp = client.get(url(item))
 
-    assert resp.status_code == 302 and reverse("web:login") in resp.url
+    assert resp.status_code == 302
+    assert reverse("web:login") in resp.url

@@ -2,7 +2,7 @@
       hx-post="{% url 'web:perfil' %}" hx-target="this" hx-swap="outerHTML">
   {% csrf_token %}
   {% if form.errors %}<p class="erro" role="alert">{% for erro in form.non_field_errors %}{{ erro }} {% empty %}Confira os campos marcados.{% endfor %}</p>{% endif %}
-  {% if salvo %}<p class="perfil__salvo" role="status">Perfil salvo · {{ capacidade }} blocos por dia útil.</p>{% endif %}
+  {% if salvo %}<output class="perfil__salvo">Perfil salvo · {{ capacidade }} blocos por dia útil.</output>{% endif %}
 
   <fieldset class="perfil__grupo">
     <legend>Jornada</legend>

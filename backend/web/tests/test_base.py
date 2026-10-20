@@ -58,7 +58,8 @@ def test_layout_tem_navegacao_tokens_e_htmx(logado):
     assert 'name="viewport"' in html
     assert "web/tokens.css" in html
     assert "web/vendor/htmx-2.0.4.min.js" in html  # versão fixa, servida localmente
-    assert "googleapis" not in html and "unpkg" not in html
+    assert "googleapis" not in html
+    assert "unpkg" not in html
     assert 'href="' + reverse("web:hoje") + '"' in html
     assert 'href="' + reverse("web:entrada") + '"' in html
     for aba in ("Projetos", "Pessoas", "Revisão"):

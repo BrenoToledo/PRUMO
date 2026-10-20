@@ -23,6 +23,19 @@ self.addEventListener("activate", function (evento) {
   );
 });
 
+async function responderDoCache(evento, pedido) {
+  const cache = await caches.open(CACHE);
+  const guardada = await cache.match(pedido);
+  const daRede = fetch(pedido).then(async function (resposta) {
+    if (resposta.ok) await cache.put(pedido, resposta.clone());
+    return resposta;
+  });
+  if (!guardada) return daRede;
+  // Atualiza o cache em segundo plano; sem rede, fica a cópia guardada.
+  evento.waitUntil(daRede.catch(function () { return undefined; }));
+  return guardada;
+}
+
 // Responde do cache na hora e atualiza em segundo plano (em produção os nomes têm hash e quase nunca mudam).
 self.addEventListener("fetch", function (evento) {
   const pedido = evento.request;
@@ -30,19 +43,5 @@ self.addEventListener("fetch", function (evento) {
   const url = new URL(pedido.url);
   if (url.origin !== self.location.origin || !url.pathname.startsWith(PREFIXO_ESTATICOS)) return;
 
-  evento.respondWith(
-    caches.open(CACHE).then(function (cache) {
-      return cache.match(pedido).then(function (guardada) {
-        const daRede = fetch(pedido).then(function (resposta) {
-          if (resposta.ok) cache.put(pedido, resposta.clone());
-          return resposta;
-        });
-        if (guardada) {
-          evento.waitUntil(daRede.catch(function () { return undefined; }));
-          return guardada;
-        }
-        return daRede;
-      });
-    })
-  );
+  evento.respondWith(responderDoCache(evento, pedido));
 });

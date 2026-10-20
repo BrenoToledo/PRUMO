@@ -55,7 +55,7 @@ def _projeto_do_usuario(request, pk) -> Projeto:
     return get_object_or_404(Projeto.objects.select_related("area"), pk=pk, usuario=request.user)
 
 
-def _salvar(request, form, gravar):
+def _salvar(form, gravar):
     """Valida, chama o serviço e devolve o projeto, ou None com os erros do serviço no formulário."""
     if not form.is_valid():
         return None
@@ -85,7 +85,7 @@ def novo_projeto(request):
     if request.method == "GET":
         return _form(request, ProjetoForm(request.user))
     form = ProjetoForm(request.user, request.POST)
-    projeto = _salvar(request, form, lambda dados: services.criar_projeto(request.user, dados))
+    projeto = _salvar(form, lambda dados: services.criar_projeto(request.user, dados))
     if projeto is None:
         return _form(request, form, status=422)
     messages.success(request, "Projeto criado")
@@ -116,7 +116,7 @@ def editar_projeto(request, pk):
         inicial = {campo: getattr(projeto, campo) for campo in services.CAMPOS_PROJETO}
         return _form(request, ProjetoForm(request.user, initial=inicial, editando=True), projeto)
     form = ProjetoForm(request.user, request.POST, editando=True)
-    if _salvar(request, form, lambda dados: services.atualizar_projeto(projeto, dados)) is None:
+    if _salvar(form, lambda dados: services.atualizar_projeto(projeto, dados)) is None:
         projeto.refresh_from_db()  # o serviço pode ter escrito valores inválidos na instância
         return _form(request, form, projeto, status=422)
     messages.success(request, "Projeto salvo")

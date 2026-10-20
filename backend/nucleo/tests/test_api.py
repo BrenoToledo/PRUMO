@@ -66,7 +66,8 @@ def test_fluxo_completo(api, usuario, educacao):
     assert r.status_code == 201, r.data
     tarefa_id = r.data["id"]
     assert r.data["importancia"] == 88
-    assert r.data["prioridade"] > 0 and r.data["explicacao_prioridade"]
+    assert r.data["prioridade"] > 0
+    assert r.data["explicacao_prioridade"]
     assert r.data["vinculos"][0]["pessoa_nome"] == "Orientadora"
     assert ItemCaptura.objects.get(id=item_id).status == "clarificado"
 
@@ -82,11 +83,13 @@ def test_fluxo_completo(api, usuario, educacao):
 
     # plano do dia
     r = api.post(f"/api/hoje/gerar/?dia={SEG}")
-    assert r.status_code == 201 and r.data["blocos"] == 3
+    assert r.status_code == 201
+    assert r.data["blocos"] == 3
     r = api.get(f"/api/hoje/?dia={SEG}")
     blocos = r.data["blocos"]
     assert [b["tarefa"] for b in blocos].count(tarefa_id) == 2
-    assert blocos[0]["tarefa"] == tarefa_id and blocos[0]["inicio_planejado"].startswith(f"{SEG}T08:00")
+    assert blocos[0]["tarefa"] == tarefa_id
+    assert blocos[0]["inicio_planejado"].startswith(f"{SEG}T08:00")
     assert leve.id in [b["tarefa"] for b in blocos]
 
     # foco: iniciar e concluir com "avancei"
@@ -123,7 +126,8 @@ def test_fluxo_completo(api, usuario, educacao):
     r = api.post(
         f"/api/revisao/diaria/?dia={SEG}", {"atencao": "algumas", "intencao_amanha": "Fechar 3.2"}, format="json"
     )
-    assert r.status_code == 201 and r.data["metricas"]["blocos_feitos"] == 1
+    assert r.status_code == 201
+    assert r.data["metricas"]["blocos_feitos"] == 1
 
 
 @freeze_time(f"{SEG} 07:30:00-03:00")
@@ -143,7 +147,8 @@ def test_concluir_a_tarefa_remove_blocos_futuros(api, usuario, educacao):
 def test_lista_rapida_e_descartar(api, usuario, educacao):
     a = api.post("/api/captura/", {"texto": "pagar boleto"}, format="json").data["id"]
     r = api.post(f"/api/captura/{a}/lista-rapida/", {"area": educacao.id, "minutos": 5}, format="json")
-    assert r.status_code == 201 and r.data["esforco"] == "baixo"
+    assert r.status_code == 201
+    assert r.data["esforco"] == "baixo"
     assert (
         api.post(f"/api/captura/{a}/lista-rapida/", {"area": educacao.id, "minutos": 30}, format="json").status_code
         == 400
@@ -172,7 +177,8 @@ def test_respostas_de_importancia_invalidas(api, educacao):
 def test_campos_minimos_obrigatorios(api):
     item = api.post("/api/captura/", {"texto": "x"}, format="json").data["id"]
     r = api.post(f"/api/captura/{item}/clarificar/", {"titulo": "x"}, format="json")
-    assert r.status_code == 400 and {"proxima_acao", "area"} <= set(r.data)
+    assert r.status_code == 400
+    assert {"proxima_acao", "area"} <= set(r.data)
 
 
 def test_isolamento_entre_usuarios(api, usuario):
@@ -198,12 +204,14 @@ def test_isolamento_entre_usuarios(api, usuario):
 def test_fim_de_semana_nao_tem_blocos(api, usuario, educacao):
     Tarefa.objects.create(usuario=usuario, area=educacao, titulo="X", proxima_acao="y", esforco="alto")
     r = api.post("/api/hoje/gerar/?dia=2026-10-18")
-    assert r.data["capacidade"] == 0 and r.data["blocos"] == 0
+    assert r.data["capacidade"] == 0
+    assert r.data["blocos"] == 0
 
 
 def test_perfil_editavel(api):
     r = api.patch("/api/perfil/", {"pico_energia": "tarde", "folga_diaria": 0.2}, format="json")
-    assert r.status_code == 200 and r.data["pico_energia"] == "tarde"
+    assert r.status_code == 200
+    assert r.data["pico_energia"] == "tarde"
     assert api.patch("/api/perfil/", {"folga_diaria": 2}, format="json").status_code == 400
 
 

@@ -60,7 +60,7 @@ def test_barra_de_capacidade_e_folga(logado, usuario):
     assert cap > 0
     assert f"{plano['planejados']} de {cap} blocos · {round(plano['ocupacao'] * 100)}%" in html
     assert "30% do dia livre para imprevistos" in html
-    assert 'role="progressbar"' in html
+    assert '<progress class="capacidade__barra"' in html
 
 
 @freeze_time(SEGUNDA)
@@ -102,7 +102,8 @@ def test_tarefas_leves(logado, usuario):
     html = hoje_html(logado)
 
     assert "Tarefas leves" in html
-    assert "Pagar boleto da luz" in html and "5 min" in html
+    assert "Pagar boleto da luz" in html
+    assert "5 min" in html
 
 
 # ---------------------------------------------------------------- estados vazios
@@ -156,7 +157,8 @@ def test_gerar_plano_sem_javascript_volta_para_hoje(logado, usuario):
 
     resp = logado.post(reverse("web:gerar_plano"))
 
-    assert resp.status_code == 302 and resp.url == reverse("web:hoje")
+    assert resp.status_code == 302
+    assert resp.url == reverse("web:hoje")
     assert Bloco.objects.filter(usuario=usuario).exists()
     assert "Plano gerado" in [str(m) for m in get_messages(resp.wsgi_request)][0]
 
@@ -198,7 +200,8 @@ def test_refazer_confirmado_refaz(logado, usuario):
 
     assert resp.status_code == 200
     depois = set(Bloco.objects.values_list("pk", flat=True))
-    assert depois and depois.isdisjoint(antes)
+    assert depois
+    assert depois.isdisjoint(antes)
 
 
 @freeze_time(SEGUNDA)
@@ -218,7 +221,8 @@ def test_gerar_plano_so_aceita_post(logado):
 def test_gerar_plano_exige_login(client, db):
     resp = client.post(reverse("web:gerar_plano"))
 
-    assert resp.status_code == 302 and reverse("web:login") in resp.url
+    assert resp.status_code == 302
+    assert reverse("web:login") in resp.url
 
 
 # ---------------------------------------------------------------- estado de cada bloco
@@ -232,9 +236,12 @@ def test_proximo_bloco_e_o_agora_e_concluidos_aparecem(logado, usuario):
 
     html = hoje_html(logado)
 
-    assert f'id="bloco-{primeiro.pk}"' in html and "card-bloco--concluido" in html and "Concluído" in html
+    assert f'id="bloco-{primeiro.pk}"' in html
+    assert "card-bloco--concluido" in html
+    assert "Concluído" in html
     card = re.search(rf'<article id="bloco-{segundo.pk}"[^>]*>.*?</article>', html, re.S).group(0)
-    assert "card-bloco--agora" in card and ">Agora<" in card
+    assert "card-bloco--agora" in card
+    assert ">Agora<" in card
 
 
 @freeze_time(SEGUNDA)
@@ -251,7 +258,8 @@ def test_botao_comecar_foco_so_com_a_rota_de_foco(logado, usuario):
     except NoReverseMatch:  # a rota chega com o pacote 3; até lá o card não quebra
         assert "Começar foco" not in html
     else:
-        assert f'action="{url_iniciar}"' in html and "Começar foco" in html
+        assert f'action="{url_iniciar}"' in html
+        assert "Começar foco" in html
 
 
 # ---------------------------------------------------------------- junção com foco, tarefas e perfil

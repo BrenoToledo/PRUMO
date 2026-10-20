@@ -25,6 +25,8 @@ from django.views.decorators.http import require_GET, require_POST
 from nucleo import services
 from nucleo.models import Bloco
 
+ROTA_FOCO = "web:foco"
+ROTA_HOJE = "web:hoje"
 MAX_BLOCOS_RESTANTES = 20
 MOTIVOS_SAIDA = ["Interrupção urgente", "Cansaço", "Terminei antes", "Outro"]
 
@@ -143,7 +145,7 @@ def foco(request):
     bloco = services.bloco_em_foco(request.user)
     if bloco is None:
         messages.info(request, "Nenhum bloco em foco agora.")
-        return redirect("web:hoje")
+        return redirect(ROTA_HOJE)
     if "fim" in request.GET:
         return render(request, "web/foco/fim.html", _contexto_fim(bloco, _form_fim_inicial(bloco)))
     contexto = _contexto_foco(bloco, form_sair=SairForm(), sair_aberto="sair" in request.GET)
@@ -157,9 +159,9 @@ def iniciar_bloco(request, pk):
     if bloco.status == Bloco.Status.PLANEJADO:
         if services.bloco_em_foco(request.user) is not None:
             aviso = "Já há um bloco em foco. Conclua ou saia dele antes de começar outro."
-            return _ir_para(request, reverse("web:foco"), aviso, messages.ERROR)
+            return _ir_para(request, reverse(ROTA_FOCO), aviso, messages.ERROR)
         services.iniciar_bloco(bloco)
-    return _ir_para(request, reverse("web:foco"))
+    return _ir_para(request, reverse(ROTA_FOCO))
 
 
 @require_POST
@@ -170,11 +172,11 @@ def sair_do_bloco(request, pk):
     if not form.is_valid():
         if not _htmx(request):
             messages.error(request, form.errors["motivo"][0])
-            return redirect(reverse("web:foco") + "?sair=1")
+            return redirect(reverse(ROTA_FOCO) + "?sair=1")
         return render(request, "web/foco/_form_sair.html", {"bloco": bloco, "form_sair": form}, status=422)
     services.sair_do_bloco(bloco, form.cleaned_data["motivo"])
     aviso = f"Bloco encerrado · {bloco.minutos_focados} min registrados"
-    return _ir_para(request, reverse("web:hoje"), aviso)
+    return _ir_para(request, reverse(ROTA_HOJE), aviso)
 
 
 @require_POST
@@ -185,7 +187,7 @@ def concluir_bloco(request, pk):
     if not form.is_valid():
         if not _htmx(request):
             messages.error(request, form.primeiro_erro())
-            return redirect(reverse("web:foco") + "?fim=1")
+            return redirect(reverse(ROTA_FOCO) + "?fim=1")
         return render(request, "web/foco/_form_fim.html", _contexto_fim(bloco, form), status=422)
     resultado = form.cleaned_data["resultado"]
     services.concluir_bloco(
@@ -196,7 +198,7 @@ def concluir_bloco(request, pk):
         nova_proxima_acao=form.cleaned_data["nova_proxima_acao"],
     )
     aviso = "Bloco registrado · tarefa concluída" if resultado == Bloco.Resultado.CONCLUIU else "Bloco registrado"
-    return _ir_para(request, reverse("web:hoje"), aviso)
+    return _ir_para(request, reverse(ROTA_HOJE), aviso)
 
 
 urlpatterns = [

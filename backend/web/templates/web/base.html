@@ -75,7 +75,7 @@
     {% include "web/_form_captura.html" %}
   </dialog>
 {% endblock %}
-<div id="aviso" class="aviso" role="status" aria-live="polite" hidden>{% for m in messages %}{% if forloop.first %}{{ m }}{% endif %}{% endfor %}</div>
+<output id="aviso" class="aviso" aria-live="polite" hidden>{% for m in messages %}{% if forloop.first %}{{ m }}{% endif %}{% endfor %}</output>
 {% block scripts %}{% endblock %}
 </body>
 </html>
