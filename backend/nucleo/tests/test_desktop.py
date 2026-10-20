@@ -1,6 +1,6 @@
 """Serviços do pacote 9: duração e checklist ao iniciar o bloco (#22) e prioridades da semana em Hoje (#23)."""
 
-from datetime import timedelta
+from datetime import date, timedelta
 
 import pytest
 from django.urls import reverse
@@ -8,7 +8,7 @@ from django.utils import timezone
 from freezegun import freeze_time
 
 from nucleo import services
-from nucleo.models import Bloco, EventoTarefa
+from nucleo.models import Bloco, EventoTarefa, Tarefa
 from nucleo.tests.apoio import nova_tarefa
 
 pytestmark = pytest.mark.django_db
@@ -90,3 +90,23 @@ def test_api_iniciar_recusa_minutos_invalidos(api, usuario):
     assert r.status_code == 400
     bloco.refresh_from_db()
     assert bloco.status == Bloco.Status.PLANEJADO
+
+
+@freeze_time(AGORA)
+def test_prioridades_da_semana_ordena_pela_nota_e_respeita_o_limite(usuario):
+    for titulo, nota in [("Média", 58), ("Alta", 82), ("Baixa", 20), ("Quase", 79), ("Outra", 74)]:
+        nova_tarefa(usuario, titulo, prioridade=nota)
+
+    assert [t.titulo for t in services.prioridades_da_semana(usuario)] == ["Alta", "Quase", "Outra", "Média"]
+    assert [t.titulo for t in services.prioridades_da_semana(usuario, limite=2)] == ["Alta", "Quase"]
+
+
+@freeze_time(AGORA)
+def test_prioridades_da_semana_ignora_fechadas_adiadas_e_de_outra_pessoa(usuario, outra):
+    nova_tarefa(usuario, "Aberta", prioridade=50)
+    nova_tarefa(usuario, "Concluída", prioridade=90, status=Tarefa.Status.CONCLUIDA)
+    nova_tarefa(usuario, "Cancelada", prioridade=90, status=Tarefa.Status.CANCELADA)
+    nova_tarefa(usuario, "Adiada", prioridade=90, adiada_ate=date(2026, 10, 25))
+    nova_tarefa(outra, "Dela", prioridade=99)
+
+    assert [t.titulo for t in services.prioridades_da_semana(usuario)] == ["Aberta"]

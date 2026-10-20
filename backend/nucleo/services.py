@@ -698,4 +698,5 @@ def excluir_area(area: Area) -> None:
 
 # --------------------------------------------------------------------------- desktop
 def prioridades_da_semana(usuario, limite: int = 4) -> list[Tarefa]:
-    raise NotImplementedError
+    """Painel direito de Hoje no desktop (D01): as tarefas abertas de maior prioridade, sem as adiadas."""
+    return list(_abertas_no_dia(usuario, hoje()).select_related("area").order_by("-prioridade", "prazo", "id")[:limite])

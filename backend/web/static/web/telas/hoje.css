@@ -1,0 +1,33 @@
+/* Hoje no desktop (D01): agenda ao centro e painel de prioridades à direita. No celular o painel não aparece (M01). */
+.painel-hoje { display: none; }
+.so-desktop { display: none; }
+kbd {
+  font-family: inherit; font-size: var(--micro-tam); line-height: var(--micro-alt);
+  padding: 0 var(--e1); border-radius: 4px; border: 1px solid currentcolor; opacity: .8;
+}
+
+@media (min-width: 1024px) {
+  .so-desktop { display: block; }
+  .conteudo:has(> .painel-hoje) { max-width: none; margin: 0; padding-right: calc(320px + var(--e8)); }
+  .painel-hoje {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 320px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: var(--e3);
+    padding: var(--e12) var(--e6); background: var(--superficie); border-left: 1px solid var(--borda);
+  }
+  .painel-hoje__topo { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e2); }
+  .painel-hoje__cabecalho {
+    margin: 0; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso);
+  }
+  .painel-hoje__nota { color: var(--texto-secundario); font-size: var(--micro-tam); line-height: var(--micro-alt); }
+  .painel-hoje__lista { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--e2); }
+  .painel-hoje__item {
+    display: flex; gap: var(--e3); align-items: flex-start;
+    padding: var(--e3); border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--fundo);
+  }
+  .painel-hoje__posicao { color: var(--texto-secundario); font-variant-numeric: tabular-nums; }
+  .painel-hoje__titulo { color: var(--texto); text-decoration: none; overflow-wrap: anywhere; }
+  .painel-hoje__titulo:hover { text-decoration: underline; }
+  .painel-hoje__chips { display: flex; flex-wrap: wrap; gap: var(--e1); margin-top: var(--e1); }
+  .painel-hoje__vazio { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+  .captura__botao { right: calc(320px + var(--e8)); }
+}

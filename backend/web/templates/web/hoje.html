@@ -3,14 +3,20 @@
 {% block titulo %}Hoje{% endblock %}
 {% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/plano.css' %}">
 <link rel="stylesheet" href="{% static 'web/telas/tarefas.css' %}">
-<link rel="stylesheet" href="{% static 'web/telas/revisao.css' %}">{% endblock %}
+<link rel="stylesheet" href="{% static 'web/telas/revisao.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/hoje.css' %}">{% endblock %}
 {% block conteudo %}
+{% include "web/plano/_painel_prioridades.html" %}
 <header class="cabecalho">
   <div>
     <p class="data">{{ plano.dia|date:"l, j \d\e F" }}</p>
     <h1>Hoje</h1>
   </div>
   <div class="cabecalho__acoes">
+    {% if proximo_id %}<form id="iniciar-proximo" class="so-desktop" method="post" action="{% url 'web:iniciar_bloco' proximo_id %}">
+      {% csrf_token %}
+      <button class="botao botao--primario" type="submit" aria-keyshortcuts="F">Iniciar foco <kbd>F</kbd></button>
+    </form>{% endif %}
     <a class="botao-icone" href="{% url 'web:perfil' %}" aria-label="Configurações do perfil" title="Configurações">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </a>
@@ -25,3 +31,4 @@
   {% include "web/plano/_plano.html" %}
 </div>
 {% endblock %}
+{% block scripts %}<script src="{% static 'web/telas/hoje.js' %}" defer></script>{% endblock %}
