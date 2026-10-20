@@ -142,17 +142,29 @@
 .notas input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .notas label:has(input:checked) { background: var(--primaria); border-color: var(--primaria); color: var(--texto-na-primaria); }
 .notas label:has(input:focus-visible) { outline: 2px solid var(--primaria); outline-offset: 2px; }
-.form-tarefa .botao--primario { align-self: flex-end; }
+.form-tarefa > .botao--primario { width: 100%; margin-top: var(--e2); }
 
-.detalhe__acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--e3); margin-top: var(--e3); margin-bottom: var(--e12); }
-.detalhe__acoes .botao { min-width: 160px; }
+/* Ações: uma só em destaque. Concluir lidera a linha; Adiar e Cancelar ficam ao lado, com a mesma altura e largura.
+   Com a edição aberta, "Salvar" é a ação principal e Concluir vira secundária. */
+.detalhe__acoes {
+  display: flex; flex-wrap: wrap; gap: var(--e3);
+  margin-top: var(--e4); padding-top: var(--e4); border-top: 1px solid var(--borda); margin-bottom: var(--e12);
+}
+.detalhe__acoes > * { flex: 1 1 0; min-width: 0; }
+.detalhe__acoes .botao { width: 100%; }
+.editar[open] ~ .detalhe__acoes .detalhe__concluir .botao--primario {
+  background: var(--superficie); border-color: var(--borda); color: var(--texto);
+}
 
 /* Adiar e cancelar (#19): cada ação abre o próprio formulário curto. */
 .acao-extra summary { list-style: none; }
 .acao-extra summary::-webkit-details-marker { display: none; }
+.acao-extra > summary.botao--texto-perigo { border-color: var(--borda); }
 .acao-extra[open] { flex-basis: 100%; order: 1; }
-.acao-extra .botao { min-width: 0; }
-.detalhe__concluir { order: -1; flex-basis: 100%; display: flex; justify-content: flex-end; }
+.detalhe__concluir { order: -1; }
+@media (max-width: 599px) {
+  .detalhe__concluir { flex-basis: 100%; }
+}
 .acao-extra__form {
   display: flex; flex-direction: column; gap: var(--e2); margin-top: var(--e3); padding: var(--e4);
   background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
@@ -164,7 +176,7 @@
 }
 .acao-extra__form .erro { margin: 0; }
 .acao-extra__dica { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
-.acao-extra__form .botao { align-self: flex-end; }
+.acao-extra__form .botao { width: auto; align-self: flex-end; }
 
 @media (hover: hover) {
   .leve__circulo:hover { border-color: var(--primaria); }
