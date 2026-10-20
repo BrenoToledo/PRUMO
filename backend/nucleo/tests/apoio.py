@@ -1,6 +1,6 @@
 """Ajudantes para montar dados nos testes."""
 
-from nucleo.models import Area, Esforco, Tarefa
+from nucleo.models import Area, Esforco, Projeto, Tarefa
 
 RESPOSTAS_IMPORTANTE = {"impacto": 4, "dependentes": 3, "meta": 4, "irreversivel": 3}
 
@@ -24,3 +24,10 @@ def na_lista_rapida(usuario, texto="Pagar boleto da luz", minutos=5, area="Pesso
 
     item = services.capturar(usuario, texto)
     return services.para_lista_rapida(item, Area.objects.get(usuario=usuario, nome=area), minutos)
+
+
+def novo_projeto(usuario, nome="TCC", area="Educação", **extra) -> Projeto:
+    """Projeto ativo, sem prazo, na área `area`; `extra` sobrescreve qualquer campo."""
+    return Projeto.objects.create(
+        usuario=usuario, nome=nome, area=Area.objects.get(usuario=usuario, nome=area), **extra
+    )

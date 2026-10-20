@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
@@ -561,20 +562,61 @@ def lista_rapida(usuario) -> ListaRapida:
 
 
 # --------------------------------------------------------------------------- projetos
+CAMPOS_PROJETO = ("area", "nome", "porque", "fim", "prazo_rigido", "status")
+ORDEM_STATUS_PROJETO = {Projeto.Status.ATIVO: 0, Projeto.Status.PAUSADO: 1, Projeto.Status.CONCLUIDO: 2}
+
+
+def _gravar_projeto(projeto: Projeto, dados: dict) -> Projeto:
+    desconhecidos = set(dados) - set(CAMPOS_PROJETO)
+    if desconhecidos:
+        raise ValueError(f"campos que um projeto não tem: {', '.join(sorted(desconhecidos))}")
+    for campo, valor in dados.items():
+        setattr(projeto, campo, valor)
+    if projeto.area_id and projeto.area.usuario_id != projeto.usuario_id:
+        raise ValidationError({"area": "Escolha uma das suas áreas."})
+    projeto.full_clean(exclude=["usuario"])
+    projeto.save()
+    return projeto
+
+
 def criar_projeto(usuario, dados: dict) -> Projeto:
-    raise NotImplementedError
+    """Projeto novo (área, nome, por quê e prazo em `fim`); `ValidationError` se faltar algo ou a área não for dele."""
+    return _gravar_projeto(Projeto(usuario=usuario), dados)
 
 
 def atualizar_projeto(projeto: Projeto, dados: dict) -> Projeto:
-    raise NotImplementedError
+    return _gravar_projeto(projeto, dados)
 
 
 def progresso_do_projeto(projeto: Projeto) -> ProgressoProjeto:
-    raise NotImplementedError
+    """Progresso em blocos das tarefas não canceladas (M18, M19); a tarefa concluída conta todos os estimados."""
+    tarefas = [t for t in projeto.tarefas.all() if t.status != Tarefa.Status.CANCELADA]
+    estimados = sum(t.blocos_estimados for t in tarefas)
+    feitos = sum(
+        t.blocos_estimados if t.status == Tarefa.Status.CONCLUIDA else min(t.blocos_feitos, t.blocos_estimados)
+        for t in tarefas
+    )
+    restantes = estimados - feitos
+    folga = None
+    if projeto.fim and restantes:
+        folga = round(blocos_livres_ate(projeto.usuario, projeto.fim) / restantes, 1)
+    return {
+        "projeto": projeto,
+        "blocos_estimados": estimados,
+        "blocos_feitos": feitos,
+        "progresso": round(feitos / estimados, 2) if estimados else 0.0,
+        "tarefas_abertas": sum(t.status == Tarefa.Status.ABERTA for t in tarefas),
+        "folga": folga,
+    }
 
 
 def projetos_de(usuario) -> list[ProgressoProjeto]:
-    raise NotImplementedError
+    """Os projetos do usuário: ativos primeiro, depois pausados e concluídos; em cada grupo, o prazo mais próximo."""
+    projetos = Projeto.objects.filter(usuario=usuario).select_related("area").prefetch_related("tarefas")
+    ordenados = sorted(
+        projetos, key=lambda p: (ORDEM_STATUS_PROJETO.get(p.status, 3), p.fim is None, p.fim or date.max, p.nome)
+    )
+    return [progresso_do_projeto(p) for p in ordenados]
 
 
 # --------------------------------------------------------------------------- áreas da vida

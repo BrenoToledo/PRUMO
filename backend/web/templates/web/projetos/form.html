@@ -1,0 +1,56 @@
+{% extends "web/base.html" %}
+{% block titulo %}{% if projeto %}Editar projeto{% else %}Novo projeto{% endif %}{% endblock %}
+{% block estilos %}{% include "web/projetos/_cabeca.html" %}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% if projeto %}{% url 'web:projeto' projeto.pk %}{% else %}{% url 'web:projetos' %}{% endif %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+  {% if projeto %}Editar projeto{% else %}Novo projeto{% endif %}
+</a>
+<form class="projeto-form" method="post" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<p class="erro" role="alert">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+
+  <fieldset class="projeto-form__campo"{% if form.area.errors %} aria-describedby="erro-area"{% endif %}>
+    <legend class="projeto-form__rotulo">Área</legend>
+    <div class="projeto-form__areas">
+      {% for area in form.fields.area.queryset %}<label class="projeto-form__area" style="--cor-area: {{ area.cor }}">
+        <input type="radio" name="area" value="{{ area.pk }}" required{% if form.area.value|stringformat:"s" == area.pk|stringformat:"s" %} checked{% endif %}>
+        <span>{{ area.nome }}</span>
+      </label>{% endfor %}
+    </div>
+    {% if form.area.errors %}<p id="erro-area" class="erro" role="alert">{{ form.area.errors|join:" " }}</p>{% endif %}
+  </fieldset>
+
+  <div class="projeto-form__campo">
+    <label class="projeto-form__rotulo" for="id_nome">Nome</label>
+    <input id="id_nome" name="nome" type="text" maxlength="120" required placeholder="TCC · previsão de bolsa"
+           value="{{ form.nome.value|default_if_none:'' }}"{% if form.nome.errors %} aria-invalid="true" aria-describedby="erro-nome"{% endif %}>
+    {% if form.nome.errors %}<p id="erro-nome" class="erro" role="alert">{{ form.nome.errors|join:" " }}</p>{% endif %}
+  </div>
+
+  <div class="projeto-form__campo">
+    <label class="projeto-form__rotulo" for="id_porque">Por quê <span class="projeto-form__opcional">(opcional)</span></label>
+    <textarea id="id_porque" name="porque" rows="3" placeholder="O que muda quando ele estiver pronto">{{ form.porque.value|default_if_none:'' }}</textarea>
+  </div>
+
+  <div class="projeto-form__campo">
+    <label class="projeto-form__rotulo" for="id_fim">Prazo <span class="projeto-form__opcional">(opcional)</span></label>
+    <input id="id_fim" name="fim" type="date" value="{{ form.fim.value|date:'Y-m-d'|default:form.fim.value|default_if_none:'' }}"{% if form.fim.errors %} aria-invalid="true" aria-describedby="erro-fim"{% endif %}>
+    {% if form.fim.errors %}<p id="erro-fim" class="erro" role="alert">{{ form.fim.errors|join:" " }}</p>{% endif %}
+  </div>
+
+  <label class="projeto-form__check">
+    <input type="checkbox" name="prazo_rigido"{% if form.prazo_rigido.value %} checked{% endif %}>
+    Prazo rígido (não dá para passar da data)
+  </label>
+
+  {% if form.status %}<div class="projeto-form__campo">
+    <label class="projeto-form__rotulo" for="id_status">Status</label>
+    <select id="id_status" name="status">
+      {% for valor, rotulo in form.fields.status.choices %}<option value="{{ valor }}"{% if form.status.value == valor %} selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+    </select>
+  </div>{% endif %}
+
+  <button class="botao botao--primario" type="submit">{% if projeto %}Salvar{% else %}Criar projeto{% endif %}</button>
+</form>
+{% endblock %}

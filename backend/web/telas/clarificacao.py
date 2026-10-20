@@ -2,6 +2,8 @@
 
 Rotas reservadas pelo contrato (nomes estáveis, a branch só preenche):
 - GET/POST `entrada/<pk>/clarificar/` → `web:clarificar`, chama `services.clarificar`.
+
+P8 (issue #20) acrescenta o campo opcional `projeto`, com os projetos ativos do usuário.
 """
 
 from django import forms
@@ -14,7 +16,7 @@ from django.urls import path, reverse
 from django.views.decorators.http import require_http_methods
 
 from nucleo import services
-from nucleo.models import Esforco, ItemCaptura
+from nucleo.models import Esforco, ItemCaptura, Projeto
 
 AVISO_CRIADA = "Tarefa criada"
 TITULO_MAX = 200
@@ -36,6 +38,12 @@ class ClarificacaoForm(forms.Form):
         queryset=None,
         error_messages={"required": "Escolha uma área.", "invalid_choice": "Escolha uma das suas áreas."},
     )
+    projeto = forms.ModelChoiceField(
+        label="Projeto",
+        queryset=None,
+        required=False,
+        error_messages={"invalid_choice": "Escolha um dos seus projetos ativos."},
+    )
     prazo = forms.DateField(label="Prazo", required=False, widget=forms.DateInput(attrs={"type": "date"}))
     prazo_rigido = forms.BooleanField(label="Prazo rígido", required=False)
     blocos_estimados = forms.IntegerField(label="Blocos", min_value=1, max_value=50, required=False)
@@ -44,6 +52,7 @@ class ClarificacaoForm(forms.Form):
     def __init__(self, usuario, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["area"].queryset = usuario.areas.all()
+        self.fields["projeto"].queryset = usuario.projetos.filter(status=Projeto.Status.ATIVO).order_by("nome")
 
     def dados_da_tarefa(self) -> dict:
         d = self.cleaned_data
@@ -51,6 +60,7 @@ class ClarificacaoForm(forms.Form):
             "titulo": d["titulo"],
             "proxima_acao": d["proxima_acao"],
             "area": d["area"],
+            "projeto": d["projeto"],
             "prazo": d["prazo"],
             "prazo_rigido": d["prazo_rigido"],
             "blocos_estimados": d["blocos_estimados"] or 1,
