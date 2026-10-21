@@ -240,10 +240,14 @@ def tem_tarefas_para_planejar(usuario) -> bool:
 
 @transaction.atomic
 def gerar_plano_do_dia(usuario, dia: date | None = None) -> plan.Plano:
-    """Refaz os blocos ainda não iniciados do dia a partir das prioridades atuais."""
+    """Refaz os blocos ainda não iniciados do dia a partir das prioridades atuais.
+
+    Os blocos novos começam depois da hora atual e dos blocos já feitos no dia (`plan.inicio_do_plano`).
+    """
     dia = dia or hoje()
     _blocos_do_dia(usuario, dia).filter(status=Bloco.Status.PLANEJADO).delete()
-    ja_feitos = _blocos_do_dia(usuario, dia).exclude(status=Bloco.Status.PLANEJADO).count()
+    ja_feitos = _blocos_do_dia(usuario, dia).exclude(status__in=[Bloco.Status.PLANEJADO, Bloco.Status.ADIADO])
+    ocupado_ate = max((b.fim_real or b.fim_planejado for b in ja_feitos), default=None)
     abertas = list(_abertas_no_dia(usuario, dia).exclude(esforco=Esforco.BAIXO))
     for t in abertas:
         recalcular_prioridade(t)
@@ -253,13 +257,9 @@ def gerar_plano_do_dia(usuario, dia: date | None = None) -> plan.Plano:
     jornada = jornada_de(perfil_de(usuario))
     if dia.weekday() not in DIAS_UTEIS:
         return plan.Plano(capacidade=0, nao_couberam=[c.id for c in candidatas])
-    resultado = plan.montar_plano_do_dia(
-        dia,
-        jornada,
-        candidatas,
-        minutos_ocupados=ja_feitos * (jornada.duracao_bloco_min + plan.INTERVALO_ENTRE_BLOCOS_MIN),
-        tz=timezone.get_current_timezone(),
-    )
+    tz = timezone.get_current_timezone()
+    a_partir_de = plan.inicio_do_plano(dia, jornada, agora=timezone.now(), ocupado_ate=ocupado_ate, tz=tz)
+    resultado = plan.montar_plano_do_dia(dia, jornada, candidatas, tz=tz, a_partir_de=a_partir_de)
     por_id = {t.id: t for t in abertas}
     for slot in resultado.slots:
         Bloco.objects.create(

@@ -12,6 +12,7 @@ from datetime import date, datetime, time, timedelta
 
 MAX_BLOCOS_POR_TAREFA_NO_DIA = 2
 INTERVALO_ENTRE_BLOCOS_MIN = 15
+ARREDONDAMENTO_INICIO_MIN = 5  # o primeiro bloco começa num horário redondo
 
 
 @dataclass(frozen=True)
@@ -66,6 +67,26 @@ class Plano:
         return len(self.slots) / self.capacidade if self.capacidade else 0.0
 
 
+def inicio_do_plano(
+    dia: date, jornada: Jornada, *, agora: datetime | None = None, ocupado_ate: datetime | None = None, tz=None
+) -> datetime:
+    """Quando o primeiro bloco novo do dia pode começar.
+
+    O mais tarde entre o início da jornada, a hora atual (arredondada para os próximos 5 minutos) e o fim do
+    último bloco já começado, concluído ou interrompido. Num dia futuro, a hora atual não pesa.
+    """
+    candidatos = [datetime.combine(dia, jornada.inicio, tzinfo=tz)]
+    if agora is not None:
+        local = agora.astimezone(tz) if tz is not None else agora
+        resto = (local.minute % ARREDONDAMENTO_INICIO_MIN) * 60 + local.second + local.microsecond / 1e6
+        if resto:
+            local += timedelta(seconds=ARREDONDAMENTO_INICIO_MIN * 60 - resto)
+        candidatos.append(local)
+    if ocupado_ate is not None:
+        candidatos.append(ocupado_ate.astimezone(tz) if tz is not None else ocupado_ate)
+    return max(candidatos)
+
+
 def _ordem(c: Candidata, hoje: date) -> tuple:
     # prazo rígido vencendo primeiro, depois a prioridade
     vence = c.prazo is not None and c.prazo_rigido and c.prazo <= hoje + timedelta(days=1)
@@ -79,6 +100,7 @@ def montar_plano_do_dia(
     *,
     minutos_ocupados: int = 0,
     tz=None,
+    a_partir_de: datetime | None = None,
 ) -> Plano:
     """Escolhe os blocos do dia e os horários.
 
@@ -86,8 +108,14 @@ def montar_plano_do_dia(
       ficam como tarefas leves no fim do dia);
     * no máximo 2 blocos por tarefa no mesmo dia;
     * a ocupação não passa da capacidade (que já reserva a folga diária);
-    * as de esforço alto ficam no período de pico de energia.
+    * as de esforço alto ficam no período de pico de energia;
+    * com `a_partir_de` depois do início da jornada, os blocos começam nele e só o tempo que resta conta
+      para a capacidade (ver `inicio_do_plano`).
     """
+    inicio = datetime.combine(dia, jornada.inicio, tzinfo=tz)
+    if a_partir_de is not None and a_partir_de > inicio:
+        minutos_ocupados += math.ceil((a_partir_de - inicio).total_seconds() / 60)
+        inicio = a_partir_de
     cap = capacidade_blocos(jornada, minutos_ocupados)
     plano = Plano(capacidade=cap)
     escolhidas: list[Candidata] = []
@@ -107,7 +135,6 @@ def montar_plano_do_dia(
 
     passo = timedelta(minutes=jornada.duracao_bloco_min + INTERVALO_ENTRE_BLOCOS_MIN)
     duracao = timedelta(minutes=jornada.duracao_bloco_min)
-    inicio = datetime.combine(dia, jornada.inicio, tzinfo=tz)
     for i, c in enumerate(ordem):
         ini = inicio + passo * i
         plano.slots.append(Slot(tarefa_id=c.id, inicio=ini, fim=ini + duracao))
