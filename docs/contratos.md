@@ -25,6 +25,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `pacote-9-desktop` | #22, #23 | backend + interface | main (P1–P5, P7, P8) | `web/telas/preparar.py`, `web/templates/web/preparar/`, `web/static/web/telas/preparar.css`, `hoje.css`, `hoje.js`, `web/tests/test_preparar.py`, `web/tests/test_desktop.py`, `nucleo/tests/test_desktop.py`; em `plano` só o painel de prioridades, o botão "Iniciar foco · F" e o link do card "Agora" para M07; em `app.js` só o atalho Ctrl+K |
 | `pacote-7-fechar-o-dia` | #17, #19, #16 | backend + interface | main (P1–P5) | `web/telas/revisao.py`, `web/telas/pausa.py`, `web/templates/web/revisao/`, `web/templates/web/pausa/`, `web/static/web/telas/revisao.css`, `pausa.css`, `pausa.js`, `web/tests/test_revisao.py`, `web/tests/test_pausa.py`, `web/tests/test_adiar_cancelar.py`, `nucleo/tests/test_fechar_o_dia.py`, `nucleo/tests/test_adiar_cancelar.py`, `nucleo/tests/apoio.py` e as fixtures comuns em `backend/conftest.py`; em `tarefas` só adiar e cancelar, em `plano` só a intenção no topo de Hoje, em `foco` só o botão Pausar |
 | `claude/project-thread-2u8m3o` (P10 · IA) | #24, #25, #26 | backend + interface | main (P1–P5, P7, P8) | `backend/ia/` (com os testes em `ia/tests/`), `web/telas/ia.py`, `web/templates/web/ia/`, `web/templates/web/tarefas/quebrar.html` e `_quebra.html`, `web/static/web/telas/ia.css`, `web/tests/test_ia.py`, `web/tests/test_quebrar.py`, `web/tests/test_clarificacao_ia.py`, `nucleo/tests/test_ia.py`; em `clarificacao` só o botão da IA e as 4 respostas de importância, em `tarefas` só a rota de quebrar e o aviso de quebra, no perfil só o link para IA e privacidade |
+| `claude/project-thread-vfwmcf` (P12 · MCP, #29) | #29 | backend | main (P1–P10) + contrato dos tokens (#30) | `backend/assistente/` (com os testes em `assistente/tests/`), `nucleo/management/commands/servidor_mcp.py`, `docs/mcp.md`; em `requirements.txt` só a linha do `mcp` |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -99,6 +100,20 @@ Na API, `PATCH /tarefas/{id}/` com `status=concluida` passa a chamar `concluir_t
 `PropostaReplanejamento` ganha campos, sem tirar nenhum: `fica_hoje[*].titulo` e `movidos[*].de` (início do primeiro bloco que sai de hoje). Na API, `POST /hoje/meu-dia-quebrou/simular/` devolve a proposta sem gravar.
 
 No foco, sair do bloco aceita `depois=replanejar` além do `motivo`: registra a saída e leva a `web:meu_dia_quebrou` (M12 → M13).
+
+## Servidor MCP (P12, R4)
+
+O servidor MCP deixa usar o Prumo de dentro do Claude (ou de outro assistente). Ele roda no mesmo código do backend, pelo SDK oficial do MCP em Python, e chama os mesmos serviços da interface web: nada de regra nova. O usuário vem do token da API (`autenticar_token_api`, contrato do #30), e cada ferramenta só vê e mexe nos dados dele. Ferramentas e argumentos estão em `contratos.FERRAMENTAS_MCP`; as respostas reaproveitam os campos da API REST.
+
+| Ferramenta | Argumentos | Devolve | Erros |
+| --- | --- | --- | --- |
+| `capturar` | `texto` | O item criado com origem `mcp` (`CAMPOS_CAPTURA`) | texto vazio |
+| `caixa_de_entrada` | — | Os itens pendentes, mais novos primeiro, como em `caixa_de_entrada` (`CAMPOS_CAPTURA` cada) | — |
+| `ver_hoje` | `dia?` (`AAAA-MM-DD`, padrão hoje) | O mesmo que `GET /api/hoje/` (`CAMPOS_HOJE`, blocos com `CAMPOS_BLOCO`) | data inválida |
+| `gerar_plano` | `dia?` | `CAMPOS_GERAR_PLANO_MCP`: `capacidade`, `blocos` (quantos), `nao_couberam` (ids das tarefas) e `hoje` (o dia já replanejado, como em `ver_hoje`) | data inválida |
+| `concluir_bloco` | `bloco` (id), `resultado` (`concluiu`, `avancou` ou `nao_avancou`), `blocos_restantes?`, `nova_proxima_acao?` | O bloco fechado (`CAMPOS_BLOCO`), via `concluir_bloco` (grava o `EventoTarefa`) | bloco de outra pessoa ou inexistente, bloco que não está em foco, resultado inválido |
+
+Um erro vira resultado de ferramenta com `isError` e a mensagem em português; nada é gravado. Transporte: `stdio`, pelo comando `python manage.py servidor_mcp` com a chave em `PRUMO_TOKEN` (sem token válido o comando para antes de abrir o servidor). Guia de configuração em [mcp.md](mcp.md).
 
 ## Ordem de junção
 
