@@ -312,3 +312,18 @@ TELAS_WEB = (
     "ia",
     "tokens",
 )
+
+# --------------------------------------------------------------------------- servidor MCP (P12, #29)
+# Ferramenta → argumentos, na ordem. As respostas reaproveitam os campos da API REST: a captura usa
+# `CAMPOS_CAPTURA`, o dia usa `CAMPOS_HOJE` (com `CAMPOS_BLOCO` em cada bloco) e o bloco concluído, `CAMPOS_BLOCO`.
+# O usuário vem do token da API (`autenticar_token_api`); cada ferramenta só vê os dados dele.
+
+FERRAMENTAS_MCP: dict[str, tuple[str, ...]] = {
+    "capturar": ("texto",),
+    "caixa_de_entrada": (),
+    "ver_hoje": ("dia",),
+    "gerar_plano": ("dia",),
+    "concluir_bloco": ("bloco", "resultado", "blocos_restantes", "nova_proxima_acao"),
+}
+
+CAMPOS_GERAR_PLANO_MCP = ("capacidade", "blocos", "nao_couberam", "hoje")
