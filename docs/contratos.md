@@ -24,6 +24,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `pacote-8-organizacao` | #18, #20, #21 | backend + interface | main (P1–P5, P7) | `web/telas/lista_rapida.py`, `web/telas/projetos.py`, `web/telas/areas.py`, `web/templates/web/lista_rapida/`, `web/templates/web/projetos/`, `web/templates/web/areas/`, `web/static/web/telas/lista_rapida.css`, `projetos.css`, `areas.css`, `web/tests/test_lista_rapida.py`, `web/tests/test_projetos.py`, `web/tests/test_areas.py`, `nucleo/tests/test_organizacao.py`; em `clarificacao` só o campo projeto, na entrada só o atalho da lista rápida, no perfil só o link para as áreas |
 | `pacote-9-desktop` | #22, #23 | backend + interface | main (P1–P5, P7, P8) | `web/telas/preparar.py`, `web/templates/web/preparar/`, `web/static/web/telas/preparar.css`, `hoje.css`, `hoje.js`, `web/tests/test_preparar.py`, `web/tests/test_desktop.py`, `nucleo/tests/test_desktop.py`; em `plano` só o painel de prioridades, o botão "Iniciar foco · F" e o link do card "Agora" para M07; em `app.js` só o atalho Ctrl+K |
 | `pacote-7-fechar-o-dia` | #17, #19, #16 | backend + interface | main (P1–P5) | `web/telas/revisao.py`, `web/telas/pausa.py`, `web/templates/web/revisao/`, `web/templates/web/pausa/`, `web/static/web/telas/revisao.css`, `pausa.css`, `pausa.js`, `web/tests/test_revisao.py`, `web/tests/test_pausa.py`, `web/tests/test_adiar_cancelar.py`, `nucleo/tests/test_fechar_o_dia.py`, `nucleo/tests/test_adiar_cancelar.py`, `nucleo/tests/apoio.py` e as fixtures comuns em `backend/conftest.py`; em `tarefas` só adiar e cancelar, em `plano` só a intenção no topo de Hoje, em `foco` só o botão Pausar |
+| `claude/project-thread-t3hjty` (P12 · tokens, #30) | #30 | backend + interface | main (P1–P10) | `nucleo/autenticacao.py`, `web/telas/tokens.py`, `web/templates/web/tokens/`, `web/static/web/telas/tokens.css`, `web/tests/test_tokens.py`, `nucleo/tests/test_tokens_api.py`; no perfil só o link para os tokens, em `settings.py` só a classe de autenticação nova |
 | `claude/project-thread-2u8m3o` (P10 · IA) | #24, #25, #26 | backend + interface | main (P1–P5, P7, P8) | `backend/ia/` (com os testes em `ia/tests/`), `web/telas/ia.py`, `web/templates/web/ia/`, `web/templates/web/tarefas/quebrar.html` e `_quebra.html`, `web/static/web/telas/ia.css`, `web/tests/test_ia.py`, `web/tests/test_quebrar.py`, `web/tests/test_clarificacao_ia.py`, `nucleo/tests/test_ia.py`; em `clarificacao` só o botão da IA e as 4 respostas de importância, em `tarefas` só a rota de quebrar e o aviso de quebra, no perfil só o link para IA e privacidade |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
@@ -72,6 +73,8 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:sugerir_quebra` | `/tarefas/<pk>/quebrar/gerar/` | POST | tarefas | `sugerir_quebra(novo=True)` |
 | `web:aplicar_quebra` | `/tarefas/<pk>/quebrar/aplicar/` | POST | tarefas | `aplicar_quebra` |
 | `web:descartar_quebra` | `/tarefas/<pk>/quebrar/descartar/` | POST | tarefas | `recusar_sugestao` |
+| `web:tokens` | `/perfil/tokens/` | GET, POST (criar e mostrar a chave uma vez) | tokens | `tokens_api_de`, `criar_token_api` |
+| `web:revogar_token` | `/perfil/tokens/<pk>/revogar/` | POST | tokens | `revogar_token_api` |
 | `web:service_worker` | `/sw.js` | GET (público) | pwa | — |
 
 Convenções das telas (as mesmas do P1): views com `require_GET`/`require_POST` e `login_required`; objetos buscados com `usuario=request.user` (404 se não for do usuário); resposta HTMX é um parcial, sem HTMX é redirect com mensagem; erro de validação volta com status 422.
@@ -164,6 +167,19 @@ A IA só sugere: toda resposta vira uma `SugestaoIA` pendente e nada muda até o
 `SugestaoIA` ganha `item` (o `ItemCaptura`, opcional), `resposta` (JSON do que foi confirmado) e `respondida_em`. Um modelo novo, `ChamadaIA` (usuário, tipo, modelo, tokens, custo em dólar, ok, em), registra cada chamada e é a base dos limites. Uma tarefa com partes abertas não entra mais no plano do dia (as partes entram no lugar dela).
 
 Configuração por variável de ambiente (nada de chave no banco): `PRUMO_IA_MODELO` e `PRUMO_IA_CHAVE` para a IA do Prumo, `PRUMO_IA_MODELO_PROPRIO` e `PRUMO_IA_CHAVE_PROPRIA` para a chave própria, `PRUMO_IA_MODELO_LOCAL` e `PRUMO_IA_URL_LOCAL` para o modelo local, e os limites por usuário `PRUMO_IA_LIMITE_DIARIO` (chamadas, padrão 50) e `PRUMO_IA_LIMITE_MENSAL_USD` (padrão 2). Sem modelo, a IA fica desligada e as telas escondem os botões.
+
+## Tokens da API (P12, R4)
+
+Cada usuário gera tokens com nome (um por ferramenta: MCP, atalhos, scripts) e revoga quando quiser. A chave tem o formato `prumo_<43 caracteres>` e só aparece na resposta da criação: o banco guarda o SHA-256 dela (RNF06) e um prefixo para o usuário reconhecer o token na lista.
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `criar_token_api(usuario, nome)` | `(TokenAPI, chave)` | `nome` obrigatório (até 60 caracteres, `ValueError` se vazio). A chave em texto só existe nesse retorno |
+| `tokens_api_de(usuario)` | `list[TokenAPI]` | Os não revogados, mais novos primeiro |
+| `revogar_token_api(token)` | `TokenAPI` | Grava `revogado_em`; `ValueError` se já estava revogado |
+| `autenticar_token_api(chave)` | `TokenAPI \| None` | O token ativo com aquele hash, com `ultimo_uso_em` atualizado; `None` se não existir ou estiver revogado |
+
+Modelo novo `TokenAPI` (usuário, `nome`, `prefixo`, `hash`, `criado_em`, `ultimo_uso_em`, `revogado_em`). Na API, `Authorization: Bearer <chave>` autentica como o dono do token (classe `nucleo.autenticacao.TokenAPIAutenticacao`); chave inválida ou revogada dá `401`. O `POST /api/token/` e o `Authorization: Token …` continuam como estão. O servidor MCP (#29) usa `autenticar_token_api`.
 
 ## Mudar um contrato
 

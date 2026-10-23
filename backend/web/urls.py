@@ -17,6 +17,7 @@ from .telas import (
     pwa,
     revisao,
     tarefas,
+    tokens,
 )
 
 app_name = "web"
@@ -43,3 +44,4 @@ urlpatterns += lista_rapida.urlpatterns + projetos.urlpatterns + areas.urlpatter
 urlpatterns += imprevistos.urlpatterns
 urlpatterns += preparar.urlpatterns
 urlpatterns += ia.urlpatterns
+urlpatterns += tokens.urlpatterns

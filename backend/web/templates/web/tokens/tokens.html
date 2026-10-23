@@ -1,0 +1,49 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Tokens da API{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/tarefas.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/tokens.css' %}">{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'web:perfil' %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+  Tokens da API
+</a>
+<p class="tokens__dica">Um token deixa o assistente (MCP) ou outra ferramenta usar o Prumo em seu nome. Crie um para cada ferramenta e revogue quando não usar mais.</p>
+
+{% if chave %}<section class="cartao tokens__novo" role="status" aria-labelledby="titulo-chave">
+  <h2 id="titulo-chave" class="tokens__nome">Token “{{ novo.nome }}” criado</h2>
+  <p class="tokens__alerta">Copie agora: a chave não vai aparecer de novo. Se perder, revogue e crie outro.</p>
+  <label class="rotulo" for="chave-nova">Chave</label>
+  <input id="chave-nova" class="tokens__chave" type="text" value="{{ chave }}" readonly spellcheck="false" autocomplete="off">
+  <p class="tokens__uso">Use no cabeçalho <code>Authorization: Bearer {{ novo.prefixo }}…</code></p>
+</section>{% endif %}
+
+<section class="secao" aria-labelledby="titulo-ativos">
+  <h2 id="titulo-ativos">Ativos</h2>
+  {% if tokens %}<ul class="tokens__lista">
+    {% for token in tokens %}<li class="cartao tokens__item">
+      <div>
+        <span class="tokens__nome">{{ token.nome }}</span>
+        <span class="tokens__sub"><code>{{ token.prefixo }}…</code> · criado em {{ token.criado_em|date:"d/m/Y" }} · {% if token.ultimo_uso_em %}usado em {{ token.ultimo_uso_em|date:"d/m/Y H:i" }}{% else %}Nunca usado{% endif %}</span>
+      </div>
+      <form method="post" action="{% url 'web:revogar_token' token.pk %}">
+        {% csrf_token %}
+        <button class="botao botao--pequeno botao--texto-perigo" type="submit" aria-label="Revogar o token {{ token.nome }}">Revogar</button>
+      </form>
+    </li>{% endfor %}
+  </ul>{% else %}<p class="secao__vazio">Nenhum token ativo. Crie um abaixo para conectar o MCP ou um script.</p>{% endif %}
+</section>
+
+<section class="secao" aria-labelledby="titulo-novo">
+  <h2 id="titulo-novo">Novo token</h2>
+  <form class="tokens__form" method="post" action="{% url 'web:tokens' %}" novalidate>
+    {% csrf_token %}
+    <div class="campo">
+      <label for="nome-token">Nome</label>
+      <input id="nome-token" name="nome" type="text" maxlength="60" value="{{ nome }}" placeholder="Ex.: Claude Desktop no notebook" required{% if erro %} aria-invalid="true" aria-describedby="erro-nome"{% endif %}>
+    </div>
+    {% if erro %}<p id="erro-nome" class="erro" role="alert">{{ erro }}</p>{% endif %}
+    <button class="botao botao--primario" type="submit">Gerar token</button>
+  </form>
+</section>
+{% endblock %}

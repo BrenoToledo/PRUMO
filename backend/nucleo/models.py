@@ -351,3 +351,21 @@ class ChamadaIA(models.Model):
 
     def __str__(self):
         return f"{self.tipo} · {self.modelo} · {self.em:%d/%m %H:%M}"
+
+
+class TokenAPI(models.Model):
+    """Token de integração (MCP, scripts). Só o SHA-256 da chave fica no banco; ela aparece uma vez, ao criar."""
+
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="tokens_api")
+    nome = models.CharField(max_length=60)
+    prefixo = models.CharField(max_length=16, help_text="Começo da chave, para reconhecer o token na lista.")
+    hash = models.CharField(max_length=64, unique=True)
+    criado_em = models.DateTimeField(default=timezone.now)
+    ultimo_uso_em = models.DateTimeField(null=True, blank=True)
+    revogado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-criado_em", "-id"]
+
+    def __str__(self):
+        return f"{self.nome} ({self.prefixo}…)"
