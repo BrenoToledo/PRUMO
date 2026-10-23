@@ -340,3 +340,10 @@ class PerfilView(APIView):
         ser.is_valid(raise_exception=True)
         ser.save()
         return Response(ser.data)
+
+
+@api_view(["GET"])
+def exportar(request):
+    resposta = Response(services.exportar_dados(request.user))
+    resposta["Content-Disposition"] = f'attachment; filename="prumo-dados-{services.hoje():%Y-%m-%d}.json"'
+    return resposta

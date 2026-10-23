@@ -6,7 +6,7 @@ import hashlib
 import re
 import secrets
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -21,6 +21,7 @@ from ia.provedores import ErroIA, Provedor
 from . import planejamento as plan
 from . import prioridade as motor
 from .contratos import (
+    ExportacaoDados,
     ListaRapida,
     PlanoDoDia,
     ProgressoProjeto,
@@ -36,8 +37,10 @@ from .models import (
     EventoTarefa,
     ItemCaptura,
     Perfil,
+    Pessoa,
     Projeto,
     Revisao,
+    Rotina,
     SugestaoIA,
     Tarefa,
     TarefaPessoa,
@@ -751,6 +754,72 @@ def excluir_area(area: Area) -> None:
 def prioridades_da_semana(usuario, limite: int = 4) -> list[Tarefa]:
     """Painel direito de Hoje no desktop (D01): as tarefas abertas de maior prioridade, sem as adiadas."""
     return list(_abertas_no_dia(usuario, hoje()).select_related("area").order_by("-prioridade", "prazo", "id")[:limite])
+
+
+# --------------------------------------------------------------------------- seus dados (LGPD, #66)
+
+
+VERSAO_EXPORTACAO = 1
+CAMPOS_DO_USUARIO = ("username", "email", "first_name", "last_name", "date_joined")
+
+
+def _para_json(valor):
+    if isinstance(valor, date | time):  # datetime é date
+        return valor.isoformat()
+    if isinstance(valor, Decimal):
+        return str(valor)
+    return valor
+
+
+def _registro(obj, *, sem=("usuario",)) -> dict:
+    """Os campos do modelo, com a chave estrangeira pelo nome do campo (`area`, valor = id) e tipos de JSON."""
+    return {
+        campo.name: _para_json(getattr(obj, campo.attname))
+        for campo in obj._meta.concrete_fields
+        if campo.name not in sem
+    }
+
+
+def _consultas_dos_dados(usuario) -> dict[str, QuerySet]:
+    return {
+        "areas": Area.objects.filter(usuario=usuario),
+        "projetos": Projeto.objects.filter(usuario=usuario).order_by("id"),
+        "rotinas": Rotina.objects.filter(usuario=usuario).order_by("id"),
+        "pessoas": Pessoa.objects.filter(usuario=usuario),
+        "capturas": ItemCaptura.objects.filter(usuario=usuario).order_by("criado_em", "id"),
+        "tarefas": Tarefa.objects.filter(usuario=usuario).order_by("id"),
+        "blocos": Bloco.objects.filter(usuario=usuario),
+        "revisoes": Revisao.objects.filter(usuario=usuario).order_by("data", "id"),
+        "sugestoes_ia": SugestaoIA.objects.filter(usuario=usuario).order_by("criada_em", "id"),
+        "chamadas_ia": ChamadaIA.objects.filter(usuario=usuario).order_by("em", "id"),
+    }
+
+
+def _tarefa_exportada(tarefa: Tarefa) -> dict:
+    return _registro(tarefa) | {
+        "vinculos": [{"pessoa": v.pessoa_id, "relacao": v.relacao} for v in tarefa.vinculos.all()],
+        "eventos": [_registro(e, sem=("id", "tarefa")) for e in tarefa.eventos.all()],
+    }
+
+
+def exportar_dados(usuario) -> ExportacaoDados:
+    consultas = _consultas_dos_dados(usuario)
+    consultas["tarefas"] = consultas["tarefas"].prefetch_related("vinculos", "eventos")
+    listas = {
+        chave: [_tarefa_exportada(obj) if chave == "tarefas" else _registro(obj) for obj in consulta]
+        for chave, consulta in consultas.items()
+    }
+    return {
+        "versao": VERSAO_EXPORTACAO,
+        "gerado_em": timezone.now().isoformat(),
+        "usuario": {campo: _para_json(getattr(usuario, campo)) for campo in CAMPOS_DO_USUARIO},
+        "perfil": _registro(perfil_de(usuario), sem=("id", "usuario")),
+        **listas,
+    }
+
+
+def contagem_dos_dados(usuario) -> dict[str, int]:
+    return {chave: consulta.count() for chave, consulta in _consultas_dos_dados(usuario).items()}
 
 
 # --------------------------------------------------------------------------- IA que ajuda (P10)

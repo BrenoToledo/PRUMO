@@ -101,6 +101,29 @@ class ParteSugerida(TypedDict):
     esforco: str  # Esforco
 
 
+class ExportacaoDados(TypedDict):
+    """`services.exportar_dados`: tudo o que é do usuário, pronto para `json.dumps` (LGPD, RF37, M33).
+
+    Cada lista traz os campos do modelo, com as chaves estrangeiras como id (`area`, `projeto`…) e datas em ISO 8601.
+    Fica de fora qualquer segredo: hash de senha e de token.
+    """
+
+    versao: int  # formato do arquivo; hoje 1
+    gerado_em: str  # ISO 8601
+    usuario: dict  # {username, email, first_name, last_name, date_joined}
+    perfil: dict
+    areas: list[dict]
+    projetos: list[dict]
+    rotinas: list[dict]
+    pessoas: list[dict]
+    capturas: list[dict]
+    tarefas: list[dict]  # com `vinculos: [{pessoa, relacao}]` e `eventos: [{tipo, em, dados}]`
+    blocos: list[dict]
+    revisoes: list[dict]
+    sugestoes_ia: list[dict]
+    chamadas_ia: list[dict]
+
+
 # --------------------------------------------------------------------------- assinaturas dos serviços
 # Nome → assinatura exata (`str(inspect.signature(...))`). Os marcados "a implementar" existem como esboço que
 # levanta NotImplementedError; a branch `backend-r1` escreve o corpo sem mudar a assinatura.
@@ -162,6 +185,9 @@ SERVICOS: dict[str, str] = {
     "excluir_area": "(area: 'Area') -> 'None'",
     # Desktop (P9): painel de prioridades de Hoje
     "prioridades_da_semana": "(usuario, limite: 'int' = 4) -> 'list[Tarefa]'",
+    # Seus dados (#66, épico LGPD #38): exportar tudo em JSON
+    "exportar_dados": "(usuario) -> 'ExportacaoDados'",
+    "contagem_dos_dados": "(usuario) -> 'dict[str, int]'",
     # IA que ajuda (P10): harness, pré-preencher a clarificação e quebrar tarefa. A IA só sugere (SugestaoIA)
     "ia_disponivel": "(usuario) -> 'bool'",
     "uso_de_ia": "(usuario) -> 'UsoDeIA'",
@@ -243,6 +269,24 @@ CAMPOS_BLOCO = (
     "minutos_focados",
 )
 
+# `GET /api/exportar/` devolve `ExportacaoDados`; estas são as chaves do topo, na ordem do arquivo
+CAMPOS_EXPORTACAO = (
+    "versao",
+    "gerado_em",
+    "usuario",
+    "perfil",
+    "areas",
+    "projetos",
+    "rotinas",
+    "pessoas",
+    "capturas",
+    "tarefas",
+    "blocos",
+    "revisoes",
+    "sugestoes_ia",
+    "chamadas_ia",
+)
+
 CAMPOS_HOJE = ("dia", "capacidade", "planejados", "ocupacao", "folga_diaria", "blocos", "tarefas_leves")
 
 # --------------------------------------------------------------------------- interface web: um módulo por etapa
@@ -256,6 +300,7 @@ TELAS_WEB = (
     "foco",
     "tarefas",
     "perfil",
+    "dados",
     "pwa",
     "revisao",
     "pausa",

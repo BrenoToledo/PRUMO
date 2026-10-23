@@ -5,6 +5,7 @@ from . import views
 from .telas import (
     areas,
     clarificacao,
+    dados,
     foco,
     ia,
     imprevistos,
@@ -38,7 +39,7 @@ urlpatterns = [
 
 # Cada etapa acrescenta rotas só no próprio módulo (docs/contratos.md); esta lista não muda ao juntar as branches.
 urlpatterns += plano.urlpatterns + clarificacao.urlpatterns + foco.urlpatterns + tarefas.urlpatterns
-urlpatterns += perfil.urlpatterns + pwa.urlpatterns
+urlpatterns += perfil.urlpatterns + dados.urlpatterns + pwa.urlpatterns
 urlpatterns += revisao.urlpatterns + pausa.urlpatterns
 urlpatterns += lista_rapida.urlpatterns + projetos.urlpatterns + areas.urlpatterns
 urlpatterns += imprevistos.urlpatterns
