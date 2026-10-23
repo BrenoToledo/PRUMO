@@ -19,5 +19,6 @@ urlpatterns = [
     path("hoje/meu-dia-quebrou/simular/", views.simular_meu_dia_quebrou, name="simular-meu-dia-quebrou"),
     path("revisao/diaria/", views.RevisaoDiariaView.as_view(), name="revisao-diaria"),
     path("perfil/", views.PerfilView.as_view(), name="perfil"),
+    path("exportar/", views.exportar, name="exportar"),
     path("", include(router.urls)),
 ]

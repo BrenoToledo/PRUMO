@@ -1,0 +1,22 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Seus dados{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/tarefas.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/dados.css' %}">{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'web:perfil' %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+  Seus dados
+</a>
+<p class="dados__dica">Tudo o que você guardou no Prumo é seu. Baixe uma cópia completa num arquivo JSON, para guardar ou levar para outro lugar.</p>
+
+<section class="secao" aria-labelledby="titulo-conteudo">
+  <h2 id="titulo-conteudo">O que vai no arquivo</h2>
+  <ul class="cartao dados__lista">
+    {% for item in itens %}<li>{{ item }}</li>{% endfor %}
+  </ul>
+  <p class="dados__dica">Também vão o seu perfil, os vínculos com pessoas e o histórico de cada tarefa. Senha e tokens ficam de fora.</p>
+</section>
+
+<a class="botao botao--primario dados__baixar" href="{% url 'web:exportar_dados' %}" download>Baixar meus dados (JSON)</a>
+{% endblock %}

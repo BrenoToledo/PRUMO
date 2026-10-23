@@ -15,6 +15,7 @@
   {% include "web/_botao_sair.html" %}
 </header>
 {% include "web/perfil/_form_perfil.html" %}
+<p><a class="botao" href="{% url 'web:dados' %}">Seus dados: exportar tudo</a></p>
 <p><a class="botao" href="{% url 'web:areas' %}">Áreas da vida: nomes, cores e ordem</a></p>
 <p><a class="botao" href="{% url 'web:ia' %}">IA e privacidade</a></p>
 {% endblock %}
