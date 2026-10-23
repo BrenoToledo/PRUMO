@@ -21,6 +21,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `pacote-4-no-ar` | #9, #10 | infra | nada | `deploy/`, `web/telas/pwa.py`, `web/templates/web/_pwa_head.html`, manifesto e service worker em `web/static/web/pwa/` |
 | `claude/project-thread-yfqx9j` (P6 · Imprevistos) | #13, #14, #15 | backend + interface | main (P1–P5) | `web/telas/imprevistos.py`, `web/templates/web/imprevistos/`, `web/static/web/telas/imprevistos.css`, `web/tests/test_imprevistos.py`, `nucleo/tests/test_imprevistos.py`; em `foco` só o diálogo de saída e a distração (M09, M12) |
 | `pacote-5-acabamento` | #8, #11, #12 | interface | contratos (+ tarefas do backend-r1) | `web/telas/tarefas.py`, `web/telas/perfil.py`, `web/templates/web/tarefas/`, `web/templates/web/perfil/`, `web/tests/test_tarefas.py`, `web/tests/test_perfil.py` |
+| `claude/project-thread-po1le7` (seus dados, #66) | #66 | backend + interface | main (P1–P10) | `web/telas/dados.py`, `web/templates/web/dados/`, `web/static/web/telas/dados.css`, `web/tests/test_dados.py`, `nucleo/tests/test_exportar_dados.py`; no perfil só o link para os dados |
 | `pacote-8-organizacao` | #18, #20, #21 | backend + interface | main (P1–P5, P7) | `web/telas/lista_rapida.py`, `web/telas/projetos.py`, `web/telas/areas.py`, `web/templates/web/lista_rapida/`, `web/templates/web/projetos/`, `web/templates/web/areas/`, `web/static/web/telas/lista_rapida.css`, `projetos.css`, `areas.css`, `web/tests/test_lista_rapida.py`, `web/tests/test_projetos.py`, `web/tests/test_areas.py`, `nucleo/tests/test_organizacao.py`; em `clarificacao` só o campo projeto, na entrada só o atalho da lista rápida, no perfil só o link para as áreas |
 | `pacote-9-desktop` | #22, #23 | backend + interface | main (P1–P5, P7, P8) | `web/telas/preparar.py`, `web/templates/web/preparar/`, `web/static/web/telas/preparar.css`, `hoje.css`, `hoje.js`, `web/tests/test_preparar.py`, `web/tests/test_desktop.py`, `nucleo/tests/test_desktop.py`; em `plano` só o painel de prioridades, o botão "Iniciar foco · F" e o link do card "Agora" para M07; em `app.js` só o atalho Ctrl+K |
 | `pacote-7-fechar-o-dia` | #17, #19, #16 | backend + interface | main (P1–P5) | `web/telas/revisao.py`, `web/telas/pausa.py`, `web/templates/web/revisao/`, `web/templates/web/pausa/`, `web/static/web/telas/revisao.css`, `pausa.css`, `pausa.js`, `web/tests/test_revisao.py`, `web/tests/test_pausa.py`, `web/tests/test_adiar_cancelar.py`, `nucleo/tests/test_fechar_o_dia.py`, `nucleo/tests/test_adiar_cancelar.py`, `nucleo/tests/apoio.py` e as fixtures comuns em `backend/conftest.py`; em `tarefas` só adiar e cancelar, em `plano` só a intenção no topo de Hoje, em `foco` só o botão Pausar |
@@ -52,6 +53,8 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:revisao` | `/revisao/` | GET, POST | revisao | `resumo_revisao_diaria`, `salvar_revisao_diaria` |
 | `web:pausa` | `/foco/pausa/` (`?min=5\|10\|15`, padrão 10) | GET | pausa | `bloco_em_foco` |
 | `web:perfil` | `/perfil/` | GET, POST | perfil | `perfil_de` |
+| `web:dados` | `/perfil/dados/` | GET | dados | `contagem_dos_dados` |
+| `web:exportar_dados` | `/perfil/dados/exportar/` (baixa `prumo-dados-AAAA-MM-DD.json`) | GET | dados | `exportar_dados` |
 | `web:ver_lista_rapida` | `/lista-rapida/` | GET | lista_rapida | `lista_rapida` |
 | `web:projetos` | `/projetos/` | GET | projetos | `projetos_de` |
 | `web:novo_projeto` | `/projetos/novo/` | GET, POST | projetos | `criar_projeto` |
@@ -136,6 +139,17 @@ A pausa (M10) é só interface: o timer roda no navegador e não grava nada.
 | `excluir_area(area)` | `None` | `ValueError` se a área tiver tarefas (de qualquer status), projetos ou rotinas |
 
 O "Encaixar no fim do dia" da lista rápida não grava nada: as tarefas da lista já são tarefas leves e aparecem no fim de Hoje; o botão leva para lá. Na API, `DELETE /areas/{id}/` passa por `excluir_area` (`409` se a área estiver em uso) e `POST /areas/` põe a área nova no fim da ordem.
+
+## Seus dados (#66, épico LGPD #38)
+
+Primeira história do épico: exportar tudo em JSON (RF37, RNF07). A exclusão da conta fica para a próxima.
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `exportar_dados(usuario)` | `ExportacaoDados` | Só o que é do usuário, pronto para `json.dumps`: `versao` (1), `gerado_em`, `usuario` (`username`, `email`, `first_name`, `last_name`, `date_joined`), `perfil` e as listas `areas`, `projetos`, `rotinas`, `pessoas`, `capturas`, `tarefas` (cada uma com `vinculos: [{pessoa, relacao}]` e `eventos: [{tipo, em, dados}]`), `blocos`, `revisoes`, `sugestoes_ia` e `chamadas_ia`. Cada item traz os campos do modelo; chave estrangeira sai como id com o nome do campo (`area`, não `area_id`), datas e horas em ISO 8601, valores decimais como texto. Nada de segredo: sem senha nem hash de token |
+| `contagem_dos_dados(usuario)` | `dict[str, int]` | Quantos itens há em cada lista da exportação (as mesmas chaves, de `areas` a `chamadas_ia`) |
+
+Na API, `GET /api/exportar/` devolve `ExportacaoDados` (chaves do topo em `CAMPOS_EXPORTACAO`) com `Content-Disposition: attachment; filename="prumo-dados-AAAA-MM-DD.json"`. Na web, `web:exportar_dados` devolve o mesmo arquivo. Exportar não muda nenhuma tarefa, então não grava `EventoTarefa`.
 
 ## Desktop (P9, R2)
 

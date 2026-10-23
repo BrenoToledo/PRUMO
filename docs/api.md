@@ -48,4 +48,10 @@ Base: `/api/`. Autenticação por sessão ou token (`POST /api/token/` com `user
 
 `/areas/`, `/projetos/`, `/rotinas/`, `/pessoas/` (CRUD) e `GET/PATCH /perfil/` (jornada, pico de energia, folga diária, duração do bloco, pesos e provedor de IA). `DELETE /areas/{id}/` devolve `409` se a área tiver tarefas, projetos ou rotinas, e `POST /areas/` põe a área nova no fim da ordem (M30).
 
+## Seus dados (LGPD)
+
+| Método e rota | O que faz | Tela |
+| --- | --- | --- |
+| `GET /exportar/` | Tudo o que é do usuário em JSON (perfil, áreas, projetos, rotinas, pessoas, capturas, tarefas com vínculos e eventos, blocos, revisões, sugestões e chamadas de IA), como anexo `prumo-dados-AAAA-MM-DD.json`. Sem senha nem hash de token | M33 |
+
 Os campos de cada resposta estão fixados em `backend/nucleo/contratos.py` e testados em `nucleo/tests/test_contratos.py`; ver [contratos.md](contratos.md).
