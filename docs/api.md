@@ -32,6 +32,10 @@ Base: `/api/`. Autenticação por sessão ou token. Para ferramentas (MCP, scrip
 | `POST /hoje/gerar/?dia=` | Refaz os blocos ainda não iniciados a partir das prioridades. Hoje, o primeiro bloco começa depois da hora atual (arredondada para 5 min) e dos blocos já feitos, e só cabe o que resta da jornada. Nenhum bloco cai em cima de um evento do calendário | M01 |
 | `POST /hoje/meu-dia-quebrou/?dia=` `{blocos_uteis, motivo?}` | Mantém hoje o que cabe, move o resto e devolve as expectativas em risco | M13, M14 |
 | `POST /hoje/meu-dia-quebrou/simular/?dia=` `{blocos_uteis}` | A mesma proposta, sem gravar nada | M14 |
+| `GET /semana/` | Dias da semana (de hoje até sexta; no fim de semana, a próxima) com `dia`, `capacidade`, `planejados` e `blocos` (campos do bloco), mais a `proposta` pendente ou `null`: `{id, inicio, capacidade, dias: {dia: [{tarefa, blocos}]}, nao_couberam: [{tarefa, blocos}], ajustada}` | M28, D04 |
+| `POST /semana/propor/` | Nova proposta (algoritmo, sem IA externa): distribui os blocos das tarefas abertas pelos dias até a capacidade. Troca a pendente. `201` com a proposta | M28 |
+| `POST /semana/mover/` `{tarefa, de?, para?}` | Move a tarefa entre dias da proposta (`de`/`para` vazios = não couberam). `400` se ela não está em `de` ou o dia não é da semana; `404` sem proposta | M28, D04 |
+| `POST /semana/aprovar/` | Vira blocos com horário, dia a dia, trocando os planejados e não iniciados. Devolve `{blocos, nao_couberam}`; `404` sem proposta | M28 |
 | `GET /blocos/em-foco/` | O bloco em foco agora (campos do bloco) ou `204` sem corpo | M07, M08 |
 | `POST /blocos/{id}/iniciar/` `{minutos?, checklist?}` | Começa o foco. `minutos` (1 a 180) muda a duração do bloco; `checklist` guarda os itens marcados em M07 no evento `iniciada` | M07, M08 |
 | `POST /blocos/{id}/concluir/` `{resultado: concluiu\|avancou\|nao_avancou, blocos_restantes?, nova_proxima_acao?}` | Fecha o bloco e atualiza a tarefa | M11 |
