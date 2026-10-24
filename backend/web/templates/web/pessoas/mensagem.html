@@ -44,8 +44,8 @@
   <p class="vazio__titulo">Sem canal cadastrado.</p>
   <p>Cadastre o WhatsApp, o e-mail ou o Teams de {{ pessoa.nome }} para abrir a mensagem no app. Enquanto isso, copie o texto:</p>
 </div>
-<label class="visualmente-oculto" for="id_texto">Mensagem</label>
-<textarea id="id_texto" class="mensagem__texto" rows="7" readonly>{{ texto }}</textarea>
+<label class="visualmente-oculto" for="id_texto_copia">Mensagem</label>
+<textarea id="id_texto_copia" class="mensagem__texto" rows="7" readonly>{{ texto }}</textarea>
 <a class="botao" href="{% url 'web:editar_pessoa' pessoa.pk %}">Cadastrar canal</a>
 {% endif %}
 {% endblock %}

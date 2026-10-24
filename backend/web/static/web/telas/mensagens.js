@@ -11,9 +11,10 @@
     botao.addEventListener("click", function () {
       var campo = document.querySelector(botao.dataset.copiar);
       if (!campo || !navigator.clipboard) return;
-      navigator.clipboard.writeText(campo.value).then(function () {
-        botao.textContent = "Copiado";
-      });
+      navigator.clipboard.writeText(campo.value).then(
+        function () { botao.textContent = "Copiado"; },
+        function () { campo.select(); }
+      );
     });
   });
 })();

@@ -84,7 +84,7 @@
 .mensagem__texto {
   width: 100%; min-height: 160px; padding: var(--e3) var(--e4); resize: vertical;
   border: 1px solid var(--primaria); border-radius: var(--raio-card); background: var(--superficie); color: var(--texto);
-  font-family: inherit; font-size: var(--corpo-tam); line-height: var(--corpo-alt);
+  font: inherit; font-size: var(--corpo-tam); line-height: var(--corpo-alt);
 }
 .mensagem__texto:focus { outline: 2px solid var(--primaria); outline-offset: 1px; }
 .mensagem__aviso {
