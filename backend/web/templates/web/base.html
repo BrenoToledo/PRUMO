@@ -40,6 +40,12 @@
             Projetos
           </a>
         </li>
+        <li>
+          <a class="nav__item" href="{% url 'web:rotinas' %}"{% if aba == "rotinas" %} aria-current="page"{% endif %}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+            Rotinas
+          </a>
+        </li>
         <li class="nav__so-desktop">
           <a class="nav__item" href="{% url 'web:semana' %}"{% if aba == "semana" %} aria-current="page"{% endif %}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>

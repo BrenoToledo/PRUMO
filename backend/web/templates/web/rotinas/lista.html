@@ -4,12 +4,11 @@
 {% block conteudo %}
 <header class="cabecalho">
   <div>
-    <h1>Projetos e rotinas</h1>
+    <h1>Rotinas</h1>
     <p class="cabecalho__sub">O que se repete: cada dia da rotina vira uma tarefa em Hoje.</p>
   </div>
   {% include "web/_botao_sair.html" %}
 </header>
-{% include "web/projetos/_alternador.html" with ativo="rotinas" %}
 
 {% if rotinas %}
 <ul class="rotinas">

@@ -404,7 +404,7 @@ As telas estão no arquivo [`design/prumo-prototipo-mvp.figcraft`](../design/pru
 
 Componentes do arquivo: Chip/Área (8 variantes, uma por área), Chip/Prioridade (4 faixas), Botão (Tipo × Estado: Padrão, Hover, Pressionado), Card/Bloco e Linha/Tarefa (Padrão e Hover), Card/Sugestão IA e Nav/Inferior (uma variante por aba ativa). As cores são 48 variáveis com os modos Claro e Escuro, e os textos usam 9 estilos (Prumo/Display a Prumo/Timer).
 
-**Mobile** (navegação inferior): Hoje, Caixa de entrada, Projetos e rotinas, Pessoas, Revisão. O botão de captura fica sempre visível.
+**Mobile** (navegação inferior): Hoje, Caixa de entrada, Projetos, Rotinas, Pessoas, Revisão. O botão de captura fica sempre visível.
 
 **Desktop** (3 colunas): barra lateral de navegação · agenda do dia em blocos no centro · lista priorizada e painel da IA à direita. Atalhos: Ctrl+K captura, F inicia o foco no próximo bloco, R abre a revisão.
 
@@ -585,7 +585,7 @@ Antes das telas, as definições que mais geram dúvida. A diferença central: *
 | M01 Hoje | Meu dia quebrou | Atalho para replanejar quando um imprevisto toma o dia. |
 | M01 Hoje | Tarefas leves | Lista de esforço baixo para o fim do dia; o círculo marca como feita sem abrir a tarefa. |
 | M01 Hoje | Botão + | Toque: captura por texto. Segurar: captura por áudio. |
-| M01 Hoje | Navegação inferior | Hoje, Caixa de entrada, Projetos, Pessoas, Revisão. |
+| M01 Hoje | Navegação inferior | Hoje, Caixa de entrada, Projetos, Rotinas, Pessoas, Revisão. |
 | M02 Captura rápida | Campo de captura | Texto livre, sem nenhum campo obrigatório além dele. |
 | M02 Captura rápida | Ações | Gravar áudio ou salvar na entrada. A dica lembra que a decisão fica para a revisão. |
 | M03 Captura por áudio | Gravação e onda | Estado da gravação e tempo decorrido. |
@@ -746,7 +746,7 @@ Cada linha é algo que o usuário pode tocar, o que acontece e o requisito atend
 | M01 | Linha da tarefa leve | toque | M17 Lista rápida | RF09 |
 | M01 | Botão + | toque | M02 Captura rápida | RF01 |
 | M01 | Botão + | segurar | M03 Captura por áudio | RF02 |
-| Todas com navegação | Hoje · Entrada · Projetos · Pessoas · Revisão | toque | M01 · M15 · M18 · M22 · M25 | — |
+| Todas com navegação | Hoje · Entrada · Projetos · Rotinas · Pessoas · Revisão | toque | M01 · M15 · M18 · M20 · M22 · M25 | — |
 | M02 | X ou toque fora da folha | toque | Volta à tela anterior | — |
 | M02 | Gravar áudio | toque | M03 | RF02 |
 | M02 | Salvar na entrada | toque | Volta para M01 com aviso “Salvo na entrada” | RF01 |
