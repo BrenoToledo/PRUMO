@@ -51,6 +51,14 @@ PEDIDO_SEPARAR = (
     "detalhes ditos no áudio. Não invente nada que não foi dito; se for um assunto só, devolva um item."
 )
 
+PEDIDO_MENSAGEM = (
+    'Escreva a mensagem que o usuário vai mandar para a pessoa. Motivo "cobrar": perguntar, com educação, '
+    'pela entrega que ele espera dela. Motivo "renegociar": avisar que a entrega dele vai atrasar e propor a '
+    "nova data, se houver. Escreva como o usuário escreveria, imitando o tom e o tamanho dos exemplos, se houver; "
+    'no máximo 4 frases, sem assinatura e sem inventar fatos. Devolva o JSON {"texto": str}.'
+)
+MENSAGEM_MAX = 1000
+
 _CERCA = re.compile(r"```(?:json)?\s*(.*?)```", re.S)
 _SEM_ACENTO = str.maketrans("áàâãéêíóôõúç", "aaaaeeiooouc")
 
@@ -176,3 +184,16 @@ def interpretar_separar(resposta: str) -> list[str]:
     if not limpos:
         raise ErroIA("a IA não separou nenhum item")
     return limpos
+
+
+# --------------------------------------------------------------------------- mensagem de follow-up (#87)
+def mensagens_mensagem(dados: dict) -> list[dict]:
+    """`dados`: motivo, pessoa, papel, tarefa, prazo, nova_data, dias_esperando, hoje e exemplos (já enviados)."""
+    return _mensagens(PEDIDO_MENSAGEM, dados)
+
+
+def interpretar_mensagem(resposta: str) -> str:
+    texto = str(extrair_json(resposta).get("texto") or "").strip()[:MENSAGEM_MAX]
+    if not texto:
+        raise ErroIA("a IA não escreveu a mensagem")
+    return texto

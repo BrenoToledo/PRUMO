@@ -38,6 +38,10 @@
             <input type="hidden" name="proximo" value="{{ aqui }}">
             <button class="botao botao--pequeno" type="submit" aria-label="Cobrei {{ i.pessoa.nome }}: {{ i.tarefa.titulo }}">Cobrei</button>
           </form>
+          <form method="post" action="{% url 'web:redigir_mensagem' i.vinculo.pk %}">
+            {% csrf_token %}
+            <button class="botao botao--texto" type="submit" aria-label="Mensagem para {{ i.pessoa.nome }}: {{ i.tarefa.titulo }}">Mensagem</button>
+          </form>
         </span>
       </li>{% endfor %}
     </ul>

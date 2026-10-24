@@ -1,0 +1,18 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Mensagem no Teams{% endblock %}
+{% block estilos %}{% include "web/pessoas/_cabeca.html" %}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'web:pessoa' pessoa %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+  Mensagem no Teams
+</a>
+<p class="mensagem__aviso">Copie o texto e cole no chat. O Prumo não envia nada.</p>
+<label class="visualmente-oculto" for="id_texto">Mensagem</label>
+<textarea id="id_texto" class="mensagem__texto" rows="7" readonly>{{ texto }}</textarea>
+<div class="mensagem__acoes">
+  <button class="botao" type="button" data-copiar="#id_texto">Copiar</button>
+  <a class="botao botao--primario" href="{{ link }}" target="_blank" rel="noopener">Abrir o chat no Teams</a>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'web/telas/mensagens.js' %}" defer></script>{% endblock %}

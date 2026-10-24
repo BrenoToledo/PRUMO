@@ -8,9 +8,10 @@ from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from . import pessoas as pes
 from . import prioridade as motor
 from . import services
-from .models import Area, Bloco, ItemCaptura, Pessoa, Projeto, Rotina, Tarefa, TarefaPessoa
+from .models import Area, Bloco, ItemCaptura, Pessoa, Projeto, Rotina, SugestaoIA, Tarefa, TarefaPessoa
 from .serializers import (
     AdiarTarefaSerializer,
     AreaSerializer,
@@ -18,6 +19,7 @@ from .serializers import (
     CancelarTarefaSerializer,
     ClarificarSerializer,
     ConcluirBlocoSerializer,
+    EnviarMensagemSerializer,
     EventoCalendarioSerializer,
     EventoTarefaSerializer,
     IniciarBlocoSerializer,
@@ -152,6 +154,70 @@ def _aguardando(item) -> dict:
         "proxima_cobranca": item["proxima_cobranca"],
         "cobrar_hoje": item["cobrar_hoje"],
     }
+
+
+def _mensagem(sugestao: SugestaoIA) -> dict:
+    c = sugestao.conteudo
+    p = Pessoa.objects.get(pk=c["pessoa"])
+    canais = []
+    for canal in pes.CANAIS:
+        url = pes.link_mensagem(
+            canal, c["texto"], assunto=sugestao.tarefa.titulo, whatsapp=p.whatsapp, email=p.email, teams=p.teams
+        )
+        if url:
+            canais.append({"canal": canal, "url": url})
+    return {
+        "id": sugestao.pk,
+        "vinculo": c["vinculo"],
+        "pessoa": c["pessoa"],
+        "motivo": c["motivo"],
+        "texto": c["texto"],
+        "origem": c["origem"],
+        "canais": canais,
+        "status": sugestao.status,
+    }
+
+
+@api_view(["POST"])
+def redigir_mensagem(request, pk):
+    vinculo = get_object_or_404(
+        TarefaPessoa.objects.select_related("tarefa", "pessoa"), pk=pk, tarefa__usuario=request.user
+    )
+    try:
+        sugestao = services.redigir_mensagem(vinculo, novo=bool(request.data.get("novo")))
+    except ValueError as exc:
+        return _erro(exc)
+    return Response(_mensagem(sugestao), status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+def enviar_mensagem(request, pk):
+    sugestao = get_object_or_404(SugestaoIA, pk=pk, usuario=request.user, tipo=services.TIPO_MENSAGEM)
+    ser = EnviarMensagemSerializer(data=request.data)
+    ser.is_valid(raise_exception=True)
+    try:
+        link = services.enviar_mensagem(sugestao, **ser.validated_data)
+    except ValueError as exc:
+        return _erro(exc)
+    return Response({"link": link})
+
+
+@api_view(["GET"])
+def expectativas_em_risco(request):
+    return Response(
+        [
+            {
+                "vinculo": e["vinculo"].pk,
+                "tarefa": e["tarefa"].pk,
+                "titulo": e["tarefa"].titulo,
+                "pessoa": e["pessoa"].pk,
+                "pessoa_nome": e["pessoa"].nome,
+                "prazo": e["prazo"],
+                "folga": e["folga"],
+            }
+            for e in services.expectativas_em_risco(request.user)
+        ]
+    )
 
 
 @api_view(["GET"])

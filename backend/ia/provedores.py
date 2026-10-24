@@ -149,10 +149,22 @@ def _separar_padrao(mensagens: list[dict]) -> str:
     return json.dumps({"itens": frases or [texto]}, ensure_ascii=False)
 
 
+def _mensagem_padrao(mensagens: list[dict]) -> str:
+    pedido = _pedido(mensagens)
+    nome = (str(pedido.get("pessoa") or "").split() or ["tudo bem"])[0]
+    tarefa = str(pedido.get("tarefa") or "aquilo")
+    if pedido.get("motivo") == "renegociar":
+        texto = f"Oi, {nome}! {tarefa} vai precisar de mais um pouco de tempo. Te mando a nova data hoje. Pode ser?"
+    else:
+        texto = f"Oi, {nome}! Como está {tarefa}? Consegue me dar um retorno?"
+    return json.dumps({"texto": texto}, ensure_ascii=False)
+
+
 RESPOSTAS_PADRAO: dict[str, Callable[[list[dict]], str]] = {
     "clarificacao": _clarificacao_padrao,
     "quebra": _quebra_padrao,
     "separar": _separar_padrao,
+    "mensagem": _mensagem_padrao,
 }
 TRANSCRICAO_PADRAO = "Ligar para o banco amanhã cedo. Comprar o presente da Ana até sábado."
 

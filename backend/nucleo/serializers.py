@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from . import pessoas as pes
 from . import prioridade as motor
 from . import rotinas
 from .models import (
@@ -73,6 +74,12 @@ class PessoaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pessoa
         fields = ["id", "nome", "papel", "email", "whatsapp", "teams", "cadencia_dias"]
+
+
+class EnviarMensagemSerializer(serializers.Serializer):
+    canal = serializers.ChoiceField(choices=pes.CANAIS)
+    texto = serializers.CharField(max_length=1000, allow_blank=True, trim_whitespace=False)
+    lembrar = serializers.BooleanField(default=False)
 
 
 class ItemCapturaSerializer(serializers.ModelSerializer):

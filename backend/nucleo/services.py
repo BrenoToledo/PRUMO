@@ -34,6 +34,7 @@ from .contratos import (
     Aguardando,
     DetalhePessoa,
     Expectativa,
+    ExpectativaEmRisco,
     ExportacaoDados,
     ListaRapida,
     PainelPessoas,
@@ -1761,7 +1762,7 @@ def _item_aguardando(vinculo: TarefaPessoa, dia: date) -> Aguardando:
     tarefa, pessoa = vinculo.tarefa, vinculo.pessoa
     desde = timezone.localtime(tarefa.criada_em).date()
     ultima = timezone.localtime(vinculo.ultima_cobranca).date() if vinculo.ultima_cobranca else None
-    proxima = pes.proxima_cobranca(desde, ultima, pessoa.cadencia_dias)
+    proxima = vinculo.proxima_cobranca or pes.proxima_cobranca(desde, ultima, pessoa.cadencia_dias)
     return {
         "vinculo": vinculo,
         "tarefa": tarefa,
@@ -1861,7 +1862,132 @@ def registrar_cobranca(vinculo: TarefaPessoa) -> TarefaPessoa:
         raise ValueError("só se cobra o que você espera da pessoa")
     if vinculo.tarefa.status != Tarefa.Status.ABERTA:
         raise ValueError("a tarefa não está mais aberta")
-    vinculo.ultima_cobranca = timezone.now()
-    vinculo.save(update_fields=["ultima_cobranca"])
+    vinculo.ultima_cobranca, vinculo.proxima_cobranca = timezone.now(), None  # a cadência volta a valer
+    vinculo.save(update_fields=["ultima_cobranca", "proxima_cobranca"])
     evento(vinculo.tarefa, EventoTarefa.Tipo.COBRANCA, pessoa=vinculo.pessoa_id)
     return vinculo
+
+
+# --------------------------------------------------------------------------- mensagem de follow-up (P17)
+TIPO_MENSAGEM = "mensagem"
+LEMBRETE_DIAS = 2
+JANELA_NOVA_DATA_DIAS = 30
+EXEMPLOS_DE_ESTILO = 3
+
+
+def _nova_data(tarefa: Tarefa, dia: date) -> date | None:
+    """O primeiro dia em que os blocos livres cobrem o que falta com folga de 1,2x (para renegociar o prazo)."""
+    precisa = tarefa.blocos_restantes * pes.FOLGA_EM_RISCO
+    inicio = max(dia, tarefa.prazo + timedelta(days=1)) if tarefa.prazo else dia
+    for n in range(JANELA_NOVA_DATA_DIAS + 1):
+        candidato = inicio + timedelta(days=n)
+        if blocos_livres_ate(tarefa.usuario, candidato, excluir_tarefa=tarefa, desde=dia) >= precisa:
+            return candidato
+    return None
+
+
+def _exemplos_de_estilo(usuario) -> list[str]:
+    enviadas = SugestaoIA.objects.filter(
+        usuario=usuario, tipo=TIPO_MENSAGEM, status__in=[SugestaoIA.Status.ACEITA, SugestaoIA.Status.EDITADA]
+    ).order_by("-respondida_em")[:EXEMPLOS_DE_ESTILO]
+    return [s.resposta.get("texto", "") for s in enviadas if s.resposta.get("texto")]
+
+
+def _texto_da_mensagem(vinculo: TarefaPessoa, motivo: str, nova: date | None, dia: date) -> tuple[str, str]:
+    tarefa, pessoa = vinculo.tarefa, vinculo.pessoa
+    usuario = tarefa.usuario
+    if ia_disponivel(usuario):
+        dados = {
+            "motivo": motivo,
+            "pessoa": pessoa.nome,
+            "papel": pessoa.papel,
+            "tarefa": tarefa.titulo,
+            "prazo": tarefa.prazo.isoformat() if tarefa.prazo else None,
+            "nova_data": nova.isoformat() if nova else None,
+            "dias_esperando": (dia - timezone.localtime(tarefa.criada_em).date()).days,
+            "hoje": dia.isoformat(),
+            "exemplos": _exemplos_de_estilo(usuario),
+        }
+        try:
+            resposta = _chamar_ia(usuario, TIPO_MENSAGEM, ia_tarefas.mensagens_mensagem(dados))
+            return ia_tarefas.interpretar_mensagem(resposta), "ia"
+        except ErroIA:
+            logger.info("IA indisponível para a mensagem; usando o modelo pronto")
+    texto = pes.modelo_mensagem(motivo, pessoa=pessoa.nome, tarefa=tarefa.titulo, hoje=dia, nova_data=nova)
+    return texto, "modelo"
+
+
+def redigir_mensagem(vinculo: TarefaPessoa, *, novo: bool = False) -> SugestaoIA:
+    """Rascunho de cobrança ("eu dependo dela") ou de renegociação ("depende de mim") para M24. Nada é enviado."""
+    tarefa = vinculo.tarefa
+    if tarefa.status != Tarefa.Status.ABERTA:
+        raise ValueError("a tarefa não está mais aberta")
+    anterior = _sugestao_pendente(tarefa=tarefa, tipo=TIPO_MENSAGEM, conteudo__vinculo=vinculo.pk)
+    if anterior and not novo:
+        return anterior
+    dia = hoje()
+    renegociar = vinculo.relacao == TarefaPessoa.Relacao.DEPENDE_DE_MIM
+    motivo = pes.RENEGOCIAR if renegociar else pes.COBRAR
+    nova = _nova_data(tarefa, dia) if renegociar else None
+    texto, origem = _texto_da_mensagem(vinculo, motivo, nova, dia)
+    if anterior:
+        recusar_sugestao(anterior)
+    evidencia = "Escrita no seu estilo." if origem == "ia" else "Modelo pronto do Prumo."
+    return SugestaoIA.objects.create(
+        usuario=tarefa.usuario,
+        tarefa=tarefa,
+        tipo=TIPO_MENSAGEM,
+        conteudo={
+            "vinculo": vinculo.pk,
+            "pessoa": vinculo.pessoa_id,
+            "motivo": motivo,
+            "texto": texto,
+            "origem": origem,
+            "nova_data": nova.isoformat() if nova else None,
+        },
+        evidencia=f"{evidencia} Nada é enviado sem você tocar em enviar.",
+    )
+
+
+@transaction.atomic
+def enviar_mensagem(sugestao: SugestaoIA, *, canal: str, texto: str, lembrar: bool = False) -> str:
+    """Registra o que o usuário vai mandar e devolve o link que abre o app com o texto. O Prumo não envia nada."""
+    if sugestao.tipo != TIPO_MENSAGEM:
+        raise ValueError("esta sugestão não é uma mensagem")
+    if sugestao.status != SugestaoIA.Status.PENDENTE:
+        raise ValueError("esta mensagem já foi respondida")
+    texto = (texto or "").strip()
+    if not texto:
+        raise ValueError("escreva a mensagem")
+    vinculo = TarefaPessoa.objects.select_related("tarefa", "pessoa").get(pk=sugestao.conteudo["vinculo"])
+    p = vinculo.pessoa
+    link = pes.link_mensagem(
+        canal, texto, assunto=vinculo.tarefa.titulo, whatsapp=p.whatsapp, email=p.email, teams=p.teams
+    )
+    if not link:
+        raise ValueError("a pessoa não tem esse canal cadastrado")
+    status = SugestaoIA.Status.ACEITA if texto == sugestao.conteudo.get("texto") else SugestaoIA.Status.EDITADA
+    _responder(sugestao, status, {"canal": canal, "texto": texto, "lembrar": lembrar})
+    aguardo = vinculo
+    if vinculo.relacao == TarefaPessoa.Relacao.DEPENDE_DE_MIM:
+        aguardo = vincular_pessoa(vinculo.tarefa, p, TarefaPessoa.Relacao.EU_DEPENDO) if lembrar else None
+    if aguardo is not None and vinculo.tarefa.status == Tarefa.Status.ABERTA:
+        registrar_cobranca(aguardo)
+        if lembrar:
+            aguardo.proxima_cobranca = hoje() + timedelta(days=LEMBRETE_DIAS)
+            aguardo.save(update_fields=["proxima_cobranca"])
+    return link
+
+
+def expectativas_em_risco(usuario) -> list[ExpectativaEmRisco]:
+    """O que esperam de mim e está em risco: prazo vencido ou folga abaixo de 1,2x (card do Hoje, D01)."""
+    dia = hoje()
+    vinculos = _vinculos_abertos(usuario, TarefaPessoa.Relacao.DEPENDE_DE_MIM).filter(tarefa__prazo__isnull=False)
+    itens = []
+    for v in vinculos.order_by("tarefa__prazo", "pk"):
+        e = _expectativa(v.tarefa, dia)
+        if e["em_risco"]:
+            itens.append(
+                {"vinculo": v, "tarefa": v.tarefa, "pessoa": v.pessoa, "prazo": e["prazo"], "folga": e["folga"]}
+            )
+    return itens
