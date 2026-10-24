@@ -10,6 +10,8 @@ P10 (issue #25) acrescenta as 4 respostas de importância (opcionais, 0 a 4) e a
   `services.sugerir_clarificacao` e devolve o formulário preenchido, com a sugestão num campo escondido.
 - POST `entrada/<pk>/clarificar/ia/recusar/` → `web:recusar_clarificacao`, chama `services.recusar_sugestao`.
 Ao confirmar, `services.registrar_resposta` marca a sugestão como aceita ou editada e a liga à tarefa.
+
+Pessoas: um campo opcional `pessoa_<id>` por pessoa do usuário, com a relação (ou vazio para não ligar).
 """
 
 from django import forms
@@ -23,13 +25,19 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from nucleo import prioridade as motor
 from nucleo import services
-from nucleo.models import Esforco, ItemCaptura, PedidoIA, Projeto, SugestaoIA
+from nucleo.models import Esforco, ItemCaptura, PedidoIA, Pessoa, Projeto, SugestaoIA, TarefaPessoa
 
 AVISO_CRIADA = "Tarefa criada"
 TITULO_MAX = 200
 NOTAS = [(n, str(n)) for n in range(motor.NOTA_MAXIMA_RESPOSTA + 1)]
 PARCIAL = "web/clarificacao/_form.html"
 ROTA_CLARIFICAR = "web:clarificar"
+RELACOES = [
+    ("", "—"),
+    (TarefaPessoa.Relacao.DEPENDE_DE_MIM, "espera isto de mim"),
+    (TarefaPessoa.Relacao.EU_DEPENDO, "eu espero isto dela"),
+    (TarefaPessoa.Relacao.ENVOLVIDA, "só envolvida"),
+]
 
 
 class ClarificacaoForm(forms.Form):
@@ -67,6 +75,22 @@ class ClarificacaoForm(forms.Form):
             self.fields[chave] = forms.TypedChoiceField(
                 label=pergunta, choices=NOTAS, coerce=int, required=False, empty_value=0
             )
+        self.pessoas = list(Pessoa.objects.filter(usuario=usuario).order_by("nome"))
+        for pessoa in self.pessoas:
+            self.fields[f"pessoa_{pessoa.pk}"] = forms.ChoiceField(
+                label=pessoa.nome,
+                choices=RELACOES,
+                required=False,
+                error_messages={"invalid_choice": "Escolha uma das relações da lista."},
+            )
+
+    def campos_pessoas(self):
+        return [self[f"pessoa_{pessoa.pk}"] for pessoa in self.pessoas]
+
+    def pessoas_escolhidas(self) -> list[tuple]:
+        """(pessoa, relação) de cada pessoa com relação escolhida; as em branco ficam de fora."""
+        escolhas = ((pessoa, self.cleaned_data[f"pessoa_{pessoa.pk}"]) for pessoa in self.pessoas)
+        return [(pessoa, relacao) for pessoa, relacao in escolhas if relacao]
 
     def perguntas(self):
         return [self[chave] for chave in motor.PERGUNTAS_IMPORTANCIA]
@@ -160,7 +184,7 @@ def clarificar(request, pk):
     tarefa = None
     if form.is_valid():
         try:
-            tarefa = services.clarificar(item, form.dados_da_tarefa())
+            tarefa = services.clarificar(item, form.dados_da_tarefa(), form.pessoas_escolhidas())
         except ValidationError as erro:
             for campo, erros in erro.message_dict.items():
                 form.add_error(campo if campo in form.fields else None, erros)

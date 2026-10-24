@@ -69,3 +69,7 @@
 .clarificacao__notas { display: flex; gap: var(--e3); margin-top: var(--e1); }
 .clarificacao__notas label { display: flex; align-items: center; gap: 4px; min-height: 32px; }
 .clarificacao__notas input { accent-color: var(--primaria); }
+
+.clarificacao__pessoas { border: 0; padding: 0; margin: 0; }
+.clarificacao__pessoa { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); padding: var(--e1) 0; }
+.clarificacao__pessoa select { flex: 0 0 auto; max-width: 60%; }
