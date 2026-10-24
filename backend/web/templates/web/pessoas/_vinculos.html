@@ -1,6 +1,3 @@
-<div class="fatos__linha vinculos">
-  <dt>Pessoas</dt>
-  <dd>
     {% if vinculos %}<ul class="vinculos__lista">
       {% for v in vinculos %}<li>
         <a href="{% url 'web:pessoa' v.pessoa.pk %}">{{ v.pessoa.nome }}</a> · {{ v.get_relacao_display|lower }}
@@ -25,5 +22,3 @@
         <button class="botao botao--pequeno" type="submit">Ligar</button>
       </form>
     </details>{% else %}<a class="vinculos__cadastrar" href="{% url 'web:nova_pessoa' %}">cadastrar pessoa</a>{% endif %}{% endwith %}
-  </dd>
-</div>

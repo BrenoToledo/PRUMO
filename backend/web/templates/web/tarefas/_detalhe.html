@@ -24,7 +24,10 @@
       <dt>Projeto</dt>
       <dd>{{ tarefa.projeto.nome|default:"nenhum" }}</dd>
     </div>
-    {% include "web/pessoas/_vinculos.html" %}
+    <div class="fatos__linha vinculos">
+      <dt>Pessoas</dt>
+      <dd>{% include "web/pessoas/_vinculos.html" %}</dd>
+    </div>
     <div class="fatos__linha">
       <dt>Histórico</dt>
       <dd>{% if tarefa.adiamentos %}adiada {{ tarefa.adiamentos }} vez{{ tarefa.adiamentos|pluralize:"es" }} · {% endif %}{% if tarefa.status == "aberta" and tarefa.adiada_ate and tarefa.adiada_ate > hoje %}fora do plano até {{ tarefa.adiada_ate|date:"j b" }} · {% endif %}criada {{ tarefa.criada_em|date:"j b" }}</dd>
