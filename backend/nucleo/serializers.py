@@ -261,3 +261,11 @@ class RevisaoSerializer(serializers.ModelSerializer):
         model = Revisao
         fields = ["id", "tipo", "data", "atencao", "intencao_amanha", "notas", "metricas"]
         read_only_fields = ["id", "tipo", "data", "metricas"]
+
+
+class MoverNaSemanaSerializer(serializers.Serializer):
+    """`POST /api/semana/mover/`: `de` e `para` vazios são "não couberam" (#80)."""
+
+    tarefa = serializers.IntegerField()
+    de = serializers.DateField(required=False, allow_null=True, default=None)
+    para = serializers.DateField(required=False, allow_null=True, default=None)

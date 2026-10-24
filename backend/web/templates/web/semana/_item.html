@@ -1,0 +1,18 @@
+<li class="tarefa-semana" style="--cor-area: {{ item.tarefa.area.cor }}" draggable="true" data-tarefa="{{ item.tarefa.pk }}" data-de="{{ de }}">
+  <span class="tarefa-semana__titulo">{{ item.tarefa.titulo }}</span>
+  <span class="tarefa-semana__blocos">{{ item.blocos }} bloco{{ item.blocos|pluralize }}</span>
+  <details class="tarefa-semana__mover">
+    <summary>Mover</summary>
+    <form method="post" action="{% url 'web:mover_na_semana' %}" hx-post="{% url 'web:mover_na_semana' %}" hx-target="#semana" hx-swap="outerHTML">
+      {% csrf_token %}
+      <input type="hidden" name="tarefa" value="{{ item.tarefa.pk }}">
+      <input type="hidden" name="de" value="{{ de }}">
+      <label class="visualmente-oculto" for="para-{{ item.tarefa.pk }}-{{ de|default:'fora' }}">Mover “{{ item.tarefa.titulo }}” para</label>
+      <select id="para-{{ item.tarefa.pk }}-{{ de|default:'fora' }}" name="para">
+        {% for d in proposta.dias %}{% if d.iso != de %}<option value="{{ d.iso }}">{{ d.nome }} {{ d.dia|date:"j" }}</option>{% endif %}{% endfor %}
+        {% if de %}<option value="">Não couberam</option>{% endif %}
+      </select>
+      <button class="botao botao--pequeno" type="submit">Mover</button>
+    </form>
+  </details>
+</li>

@@ -192,6 +192,44 @@ def montar_plano_do_dia(
     return plano
 
 
+@dataclass(frozen=True)
+class Alocacao:
+    tarefa_id: int
+    blocos: int
+
+
+@dataclass
+class Semana:
+    dias: dict[date, list[Alocacao]]  # em ordem de data
+    nao_couberam: list[Alocacao] = field(default_factory=list)  # com os blocos que faltaram
+
+
+def montar_semana(capacidades: dict[date, int], candidatas: list[Candidata], *, hoje: date) -> Semana:
+    """Distribui os blocos restantes das tarefas pelos dias da semana (proposta, #79).
+
+    Mesma ordem do plano do dia (prazo rígido vencendo, depois prioridade). Cada tarefa ocupa os primeiros dias
+    com capacidade livre, até 2 blocos por dia; o que sobrar vai para `nao_couberam`. Esforço baixo fica de fora
+    (são as tarefas leves). Os horários saem depois, dia a dia, de `montar_plano_do_dia`.
+    """
+    livres = dict(sorted(capacidades.items()))
+    semana = Semana(dias={d: [] for d in livres})
+    for c in sorted(candidatas, key=lambda c: _ordem(c, hoje)):
+        if c.esforco == "baixo" or c.blocos_restantes <= 0:
+            continue
+        resta = c.blocos_restantes
+        for dia, livre in livres.items():
+            usa = min(resta, MAX_BLOCOS_POR_TAREFA_NO_DIA, livre)
+            if usa > 0:
+                semana.dias[dia].append(Alocacao(c.id, usa))
+                livres[dia] -= usa
+                resta -= usa
+            if not resta:
+                break
+        if resta:
+            semana.nao_couberam.append(Alocacao(c.id, resta))
+    return semana
+
+
 @dataclass
 class Pendente:
     tarefa_id: int

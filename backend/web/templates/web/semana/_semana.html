@@ -1,0 +1,66 @@
+<div id="semana" class="semana{% if proposta %} semana--proposta{% endif %}" data-mover="{% url 'web:mover_na_semana' %}">
+  <header class="semana__topo">
+    <a class="voltar" href="{% url 'web:hoje' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      {{ titulo }}
+    </a>
+    {% if proposta %}<p class="semana__sub">Proposta do Prumo pelas prioridades, pela sua agenda e pelo seu pico de energia. Nada vira bloco até você aprovar.</p>
+    {% else %}<p class="semana__sub">Blocos de foco planejados em cada dia.</p>{% endif %}
+  </header>
+  {% if erro %}<p class="erro" role="alert">{{ erro }}</p>{% endif %}
+
+  {% if proposta %}
+  <div class="semana__corpo">
+    <ol class="semana__dias" aria-label="Dias da semana">
+      {% for d in proposta.dias %}<li class="dia" data-dia="{{ d.iso }}">
+        <div class="dia__topo">
+          <span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>
+          <span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.blocos }} de {{ d.capacidade }} blocos">{{ d.pct }}%</span>
+        </div>
+        <ul class="dia__tarefas">
+          {% for i in d.itens %}{% include "web/semana/_item.html" with item=i de=d.iso %}{% empty %}<li class="dia__vazio">Livre</li>{% endfor %}
+        </ul>
+      </li>{% endfor %}
+    </ol>
+    <aside class="nao-couberam" data-dia="" aria-labelledby="titulo-nao-couberam">
+      <h2 id="titulo-nao-couberam" class="nao-couberam__titulo">Não couberam ({{ proposta.nao_couberam|length }})</h2>
+      <ul class="dia__tarefas">
+        {% for i in proposta.nao_couberam %}{% include "web/semana/_item.html" with item=i de="" %}{% empty %}<li class="dia__vazio">Tudo coube na semana.</li>{% endfor %}
+      </ul>
+    </aside>
+  </div>
+  <p class="semana__dica">Use “Mover” em cada tarefa ou, no computador, arraste para outro dia. Um dia pode passar de 100%, mas o que não couber nos horários livres fica de fora ao aprovar.</p>
+  <div class="semana__acoes">
+    <form method="post" action="{% url 'web:propor_semana' %}" hx-post="{% url 'web:propor_semana' %}" hx-target="#semana" hx-swap="outerHTML">
+      {% csrf_token %}
+      <button class="botao" type="submit">Gerar de novo</button>
+    </form>
+    <form method="post" action="{% url 'web:aprovar_semana' %}">
+      {% csrf_token %}
+      <button class="botao botao--primario" type="submit">Aprovar plano</button>
+    </form>
+  </div>
+
+  {% else %}
+  <ol class="semana__dias semana__dias--planejada" aria-label="Dias da semana">
+    {% for d in planejada %}<li class="dia">
+      <div class="dia__topo">
+        <span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>
+        <span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.planejados }} de {{ d.capacidade }} blocos">{{ d.pct }}%</span>
+      </div>
+      <ul class="dia__tarefas">
+        {% for b in d.blocos %}<li class="tarefa-semana" style="--cor-area: {{ b.tarefa.area.cor }}">
+          <span class="tarefa-semana__hora">{{ b.inicio_planejado|time:"H:i" }}</span>
+          <span class="tarefa-semana__titulo">{{ b.tarefa.titulo }}</span>
+        </li>{% empty %}<li class="dia__vazio">Sem blocos</li>{% endfor %}
+      </ul>
+    </li>{% endfor %}
+  </ol>
+  <div class="semana__acoes">
+    <form method="post" action="{% url 'web:propor_semana' %}" hx-post="{% url 'web:propor_semana' %}" hx-target="#semana" hx-swap="outerHTML">
+      {% csrf_token %}
+      <button class="botao botao--primario" type="submit">Propor a semana</button>
+    </form>
+  </div>
+  {% endif %}
+</div>

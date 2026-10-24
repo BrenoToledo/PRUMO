@@ -1,0 +1,59 @@
+/* Planejamento da semana (M28 no celular, D04 no desktop): dias com as tarefas e "Não couberam". */
+.semana { padding-bottom: var(--e12); }
+.semana__topo { margin-bottom: var(--e4); }
+.semana__sub, .semana__dica { margin: var(--e2) 0 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.semana__dica { margin: var(--e3) 0; }
+.semana__corpo { display: flex; flex-direction: column; gap: var(--e3); }
+.semana__dias { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e3); }
+
+.dia, .nao-couberam {
+  padding: var(--e3) var(--e4); background: var(--superficie);
+  border: 1px solid var(--borda); border-radius: var(--raio-card);
+}
+.dia.solta-aqui, .nao-couberam.solta-aqui { border-color: var(--primaria); background: var(--primaria-suave); }
+.dia__topo { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e3); margin-bottom: var(--e2); }
+.dia__nome { font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+.dia__data { color: var(--texto-secundario); font-weight: var(--corpo-peso); }
+.dia__pct { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.dia__pct--cheio { color: var(--aviso); }
+.dia__pct--acima { color: var(--prioridade-critica); font-weight: var(--legenda-peso); }
+.dia__tarefas { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--e2); }
+.dia__vazio { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+
+.tarefa-semana {
+  display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px var(--e2); max-width: 100%;
+  padding: var(--e1) var(--e3); border-radius: var(--raio-campo);
+  background: color-mix(in srgb, var(--cor-area) 14%, var(--superficie));
+  border-left: 3px solid var(--cor-area);
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.tarefa-semana[draggable="true"] { cursor: grab; }
+.tarefa-semana.arrastando { opacity: .4; }
+.tarefa-semana__titulo { min-width: 0; overflow-wrap: anywhere; }
+.tarefa-semana__hora, .tarefa-semana__blocos { color: var(--texto-secundario); }
+.tarefa-semana__mover summary { cursor: pointer; color: var(--primaria); list-style: none; }
+.tarefa-semana__mover summary::-webkit-details-marker { display: none; }
+.tarefa-semana__mover form { display: flex; flex-wrap: wrap; gap: var(--e2); margin-top: var(--e1); }
+.tarefa-semana__mover select {
+  min-height: 32px; padding: 0 var(--e2); font: inherit; color: var(--texto);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+}
+
+.nao-couberam { background: color-mix(in srgb, var(--aviso) 10%, var(--superficie)); border-color: color-mix(in srgb, var(--aviso) 40%, var(--borda)); }
+.nao-couberam__titulo { margin: 0 0 var(--e2); font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+
+.semana__acoes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); margin-top: var(--e4); }
+.semana__acoes .botao { width: 100%; }
+.semana__dias--planejada + .semana__acoes { grid-template-columns: 1fr; }
+
+/* Desktop (D04): dias em colunas e "Não couberam" na lateral */
+@media (min-width: 1024px) {
+  .conteudo:has(> .semana) { max-width: 1200px; }
+  .semana__corpo { display: grid; grid-template-columns: 1fr 260px; align-items: start; }
+  .semana__dias { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--e2); }
+  .semana__dias .dia { min-height: 320px; padding: var(--e3); }
+  .semana__dias .dia__tarefas { flex-direction: column; flex-wrap: nowrap; }
+  .semana__dias .tarefa-semana { display: flex; }
+  .semana--proposta .tarefa-semana__mover { display: none; } /* no desktop, arrasta */
+  .semana__acoes { max-width: 480px; margin-left: auto; }
+}

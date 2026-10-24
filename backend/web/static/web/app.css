@@ -60,6 +60,7 @@ a { color: var(--primaria); }
 .nav__item[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
 .nav__sair { display: none; }
 .nav__capturar { display: none; }
+.nav li.nav__so-desktop { display: none; } /* no celular, a semana fica em Hoje (capacidade) */
 
 /* Botões e campos */
 .botao {
@@ -191,6 +192,7 @@ a { color: var(--primaria); }
     border-top: 0; border-right: 1px solid var(--borda); padding: var(--e6) var(--e3);
   }
   .nav ul { flex-direction: column; flex: 0; gap: var(--e1); }
+  .nav li.nav__so-desktop { display: list-item; }
   .nav__item {
     flex-direction: row; justify-content: flex-start; gap: var(--e3);
     min-height: 40px; padding: 0 var(--e3); border-radius: var(--raio-campo); font-size: var(--corpo-tam); line-height: var(--corpo-alt); font-weight: var(--corpo-peso);
