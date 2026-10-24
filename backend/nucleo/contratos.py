@@ -29,6 +29,7 @@ class PlanoDoDia(TypedDict):
     folga_diaria: float  # fração do dia reservada para imprevistos (0,3 = 30%)
     blocos: list[Bloco]  # em ordem de início planejado
     tarefas_leves: list[Tarefa]  # até 10, esforço baixo e abertas
+    eventos: list  # EventoCalendario do dia, em ordem de início (os de dia inteiro primeiro); [] sem calendário
 
 
 class ItemPlanejadoVsReal(TypedDict):
@@ -214,6 +215,13 @@ SERVICOS: dict[str, str] = {
     "audio_disponivel": "(usuario) -> 'bool'",
     "capturar_audio": "(usuario, conteudo: 'bytes', tipo_mime: 'str') -> 'PedidoIA'",
     "salvar_itens_do_audio": "(sugestao: 'SugestaoIA', itens: 'list[str]') -> 'list[ItemCaptura]'",
+    # Calendário (P13, #71–#73): link iCal (Google, Outlook) só de leitura; os eventos descontam da capacidade
+    "calendarios_de": "(usuario) -> 'list[Calendario]'",
+    "conectar_calendario": "(usuario, nome: 'str', url: 'str') -> 'Calendario'",
+    "sincronizar_calendario": "(calendario: 'Calendario') -> 'Calendario'",
+    "sincronizar_se_preciso": "(usuario) -> 'None'",
+    "remover_calendario": "(calendario: 'Calendario') -> 'None'",
+    "eventos_do_dia": "(usuario, dia: 'date | None' = None) -> 'list[EventoCalendario]'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -299,7 +307,8 @@ CAMPOS_EXPORTACAO = (
     "chamadas_ia",
 )
 
-CAMPOS_HOJE = ("dia", "capacidade", "planejados", "ocupacao", "folga_diaria", "blocos", "tarefas_leves")
+CAMPOS_HOJE = ("dia", "capacidade", "planejados", "ocupacao", "folga_diaria", "blocos", "tarefas_leves", "eventos")
+CAMPOS_EVENTO = ("titulo", "inicio", "fim", "dia_inteiro", "local", "calendario")  # `calendario` é o nome
 
 # --------------------------------------------------------------------------- interface web: um módulo por etapa
 # Cada módulo em `web/telas/` pertence a uma etapa e já está ligado em `web/urls.py`. Uma etapa só edita o próprio
@@ -324,6 +333,7 @@ TELAS_WEB = (
     "ia",
     "tokens",
     "audio",
+    "calendarios",
 )
 
 # --------------------------------------------------------------------------- servidor MCP (P12, #29)

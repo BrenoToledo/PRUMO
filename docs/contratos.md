@@ -31,6 +31,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `claude/project-thread-2u8m3o` (P10 · IA) | #24, #25, #26 | backend + interface | main (P1–P5, P7, P8) | `backend/ia/` (com os testes em `ia/tests/`), `web/telas/ia.py`, `web/templates/web/ia/`, `web/templates/web/tarefas/quebrar.html` e `_quebra.html`, `web/static/web/telas/ia.css`, `web/tests/test_ia.py`, `web/tests/test_quebrar.py`, `web/tests/test_clarificacao_ia.py`, `nucleo/tests/test_ia.py`; em `clarificacao` só o botão da IA e as 4 respostas de importância, em `tarefas` só a rota de quebrar e o aviso de quebra, no perfil só o link para IA e privacidade |
 | `claude/project-thread-vfwmcf` (P12 · MCP, #29) | #29 | backend | main (P1–P10) + contrato dos tokens (#30) | `backend/assistente/` (com os testes em `assistente/tests/`), `nucleo/management/commands/servidor_mcp.py`, `docs/mcp.md`; em `requirements.txt` só a linha do `mcp` |
 | `claude/project-thread-mpmxzo` (P11) | #28, #27 | backend + interface + infra | main (P1–P10, P12) | `nucleo/fila.py`, `config/celery.py`, `web/telas/audio.py`, `web/templates/web/audio/`, `web/templates/web/fila/`, `web/static/web/telas/audio.css`, `audio.js`, `fila.css`, `web/tests/test_audio.py`, `web/tests/test_fila.py`, `nucleo/tests/test_fila.py`, `nucleo/tests/test_audio.py`; em `deploy/` os serviços `redis` e `worker`; em `clarificacao` e `tarefas` só o "processando"; na captura só o botão Gravar áudio |
+| `claude/project-thread-mpmxzo` (P13 · Calendário) | #71, #72, #73 | backend + interface | main (P1–P12) | `nucleo/calendario.py`, `web/telas/calendarios.py`, `web/templates/web/calendarios/`, `web/static/web/telas/calendarios.css`, `web/templates/web/plano/_card_evento.html`, `nucleo/tests/test_calendario.py`, `nucleo/tests/test_calendarios.py`, `web/tests/test_calendarios.py`; em `planejamento.py` só os compromissos (`ocupados`); em `plano` só a linha do tempo com eventos; no perfil só o link para Calendários |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -88,6 +89,9 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:salvar_audio` | `/capturar/audio/<pk>/salvar/` (`item` repetido; `um=1` salva a transcrição inteira) | POST | audio | `salvar_itens_do_audio` |
 | `web:descartar_audio` | `/capturar/audio/<pk>/descartar/` | POST | audio | `recusar_sugestao` |
 | `web:pedido` | `/pedidos/<pk>/` (HTMX: devolve o "processando" de novo ou, pronto, `HX-Redirect` para a tela de origem; o de áudio devolve o resultado no lugar) | GET | audio | `processar_pedido` (só lê o status) |
+| `web:calendarios` | `/perfil/calendarios/` | GET, POST (conectar) | calendarios | `calendarios_de`, `conectar_calendario` |
+| `web:atualizar_calendario` | `/perfil/calendarios/<pk>/atualizar/` | POST | calendarios | `sincronizar_calendario` |
+| `web:remover_calendario` | `/perfil/calendarios/<pk>/remover/` | POST | calendarios | `remover_calendario` |
 | `web:service_worker` | `/sw.js` | GET (público) | pwa | — |
 
 Convenções das telas (as mesmas do P1): views com `require_GET`/`require_POST` e `login_required`; objetos buscados com `usuario=request.user` (404 se não for do usuário); resposta HTMX é um parcial, sem HTMX é redirect com mensagem; erro de validação volta com status 422.
@@ -246,6 +250,21 @@ Chamar a IA e transcrever áudio pode levar segundos; com fila, isso roda num wo
 | `salvar_itens_do_audio(sugestao, itens)` | `list[ItemCaptura]` | Cria um item da caixa de entrada por texto não vazio (origem `audio`, `transcricao` = a transcrição inteira). Registra a resposta (aceita se igual aos itens sugeridos, senão editada). `ValueError` sem nenhum texto |
 
 Modelos novos: `AudioCaptura` (temporário) e `PedidoIA` (tipo, status, item, tarefa, áudio, sugestão, erro). O worker chama `nucleo.fila.processar(pedido_id)`. Variáveis novas: `CELERY_BROKER_URL` (no docker-compose, `redis://redis:6379/0`) e o modelo de transcrição de cada provedor, `PRUMO_IA_TRANSCRICAO`, `PRUMO_IA_TRANSCRICAO_PROPRIA` e `PRUMO_IA_TRANSCRICAO_LOCAL` (ex.: `whisper-1`, `groq/whisper-large-v3`; com `PRUMO_IA_MODELO=falso`, a transcrição também é falsa).
+
+## Calendário (P13, Fase 1)
+
+O usuário cola o link iCal secreto do Google Agenda ou do Outlook (só leitura; OAuth fica para depois). Os eventos de hoje até 14 dias à frente ficam em `EventoCalendario`, refeitos a cada leitura, e entram no plano do dia.
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `calendarios_de(usuario)` | `list[Calendario]` | Com `n_eventos` anotado |
+| `conectar_calendario(usuario, nome, url)` | `Calendario` | `nome` obrigatório (até 60). O link precisa ser `https://` ou `webcal://`, sem usuário, porta ou endereço interno, e o arquivo precisa ser um VCALENDAR; senão `ValueError` e nada é guardado |
+| `sincronizar_calendario(calendario)` | `Calendario` | Relê e troca os eventos. Falha grava `erro` e mantém os eventos anteriores |
+| `sincronizar_se_preciso(usuario)` | `None` | Relê os lidos há mais de 30 min (no worker, `nucleo.fila.sincronizar_calendario`, se houver fila). A tela Hoje chama ao abrir |
+| `remover_calendario(calendario)` | `None` | Apaga o calendário e os eventos |
+| `eventos_do_dia(usuario, dia=None)` | `list[EventoCalendario]` | Os que tocam o dia; os de dia inteiro primeiro, depois por início |
+
+Regras do plano: eventos com horário descontam da capacidade (sobreposições contam uma vez, só o que cai na jornada) e nenhum bloco é posto em cima deles (`planejamento.montar_plano_do_dia(..., ocupados=[(início, fim)])`); eventos de dia inteiro não descontam. `blocos_livres_ate` (folga até o prazo) também desconta. `PlanoDoDia` ganhou `eventos`; `CAMPOS_HOJE` ganhou `eventos` (campos em `CAMPOS_EVENTO`), também no `ver_hoje` do MCP. O link é segredo: a tela mostra só `url_mascarada` e a exportação de dados não o inclui.
 
 ## Mudar um contrato
 

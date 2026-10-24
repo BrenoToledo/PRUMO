@@ -28,8 +28,8 @@ Base: `/api/`. Autenticação por sessão ou token. Para ferramentas (MCP, scrip
 
 | Método e rota | O que faz | Tela |
 | --- | --- | --- |
-| `GET /hoje/?dia=AAAA-MM-DD` | Capacidade, ocupação, blocos e tarefas leves | M01, D01 |
-| `POST /hoje/gerar/?dia=` | Refaz os blocos ainda não iniciados a partir das prioridades. Hoje, o primeiro bloco começa depois da hora atual (arredondada para 5 min) e dos blocos já feitos, e só cabe o que resta da jornada | M01 |
+| `GET /hoje/?dia=AAAA-MM-DD` | Capacidade, ocupação, blocos, tarefas leves e `eventos` do calendário (`titulo`, `inicio`, `fim`, `dia_inteiro`, `local`, `calendario`; os de dia inteiro primeiro). A capacidade já desconta os eventos com horário | M01, D01 |
+| `POST /hoje/gerar/?dia=` | Refaz os blocos ainda não iniciados a partir das prioridades. Hoje, o primeiro bloco começa depois da hora atual (arredondada para 5 min) e dos blocos já feitos, e só cabe o que resta da jornada. Nenhum bloco cai em cima de um evento do calendário | M01 |
 | `POST /hoje/meu-dia-quebrou/?dia=` `{blocos_uteis, motivo?}` | Mantém hoje o que cabe, move o resto e devolve as expectativas em risco | M13, M14 |
 | `POST /hoje/meu-dia-quebrou/simular/?dia=` `{blocos_uteis}` | A mesma proposta, sem gravar nada | M14 |
 | `GET /blocos/em-foco/` | O bloco em foco agora (campos do bloco) ou `204` sem corpo | M07, M08 |
