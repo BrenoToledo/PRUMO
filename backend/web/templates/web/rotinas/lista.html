@@ -1,0 +1,40 @@
+{% extends "web/base.html" %}
+{% block titulo %}Rotinas{% endblock %}
+{% block estilos %}{% include "web/rotinas/_cabeca.html" %}{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Projetos e rotinas</h1>
+    <p class="cabecalho__sub">O que se repete: cada dia da rotina vira uma tarefa em Hoje.</p>
+  </div>
+  {% include "web/_botao_sair.html" %}
+</header>
+{% include "web/projetos/_alternador.html" with ativo="rotinas" %}
+
+{% if rotinas %}
+<ul class="rotinas">
+  {% for item in rotinas %}{% with r=item.rotina %}<li>
+    <a class="rotina-card{% if not r.ativa %} rotina-card--pausada{% endif %}" href="{% url 'web:editar_rotina' r.pk %}">
+      <svg class="rotina-card__icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+      <span class="rotina-card__texto">
+        <span class="rotina-card__nome">{{ r.nome }}</span>
+        <span class="rotina-card__meta">{{ item.descricao }} · {{ r.duracao_min }} min</span>
+      </span>
+      <span class="rotina-card__chips">
+        <span class="chip chip--area" style="--cor-area: {{ r.area.cor }}">{{ r.area.nome }}</span>
+        {% if r.ativa %}<span class="chip">esforço {{ r.get_esforco_display|lower }}</span>{% else %}<span class="chip">pausada</span>{% endif %}
+      </span>
+    </a>
+  </li>{% endwith %}{% endfor %}
+</ul>
+{% else %}
+<div class="vazio">
+  <p class="vazio__titulo">Nenhuma rotina ainda.</p>
+  <p>Rotinas são o que se repete, como academia ou limpar a areia do gato. Você cadastra uma vez e o Prumo põe em Hoje nos dias certos.</p>
+</div>
+{% endif %}
+<a class="projetos__novo" href="{% url 'web:nova_rotina' %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  Nova rotina
+</a>
+{% endblock %}

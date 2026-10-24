@@ -95,8 +95,14 @@ class Rotina(models.Model):
     recorrencia = models.CharField(max_length=200, help_text="RRULE do iCalendar, ex.: FREQ=WEEKLY;BYDAY=MO,WE,FR")
     horario_preferido = models.TimeField(null=True, blank=True)
     esforco = models.CharField(max_length=5, choices=Esforco.choices, default=Esforco.BAIXO)
-    duracao_min = models.PositiveSmallIntegerField(default=30)
+    duracao_min = models.PositiveSmallIntegerField(
+        default=30, validators=[MinValueValidator(5), MaxValueValidator(480)]
+    )
     ativa = models.BooleanField(default=True)
+    inicio = models.DateField(default=timezone.localdate, help_text="A repetição conta a partir deste dia.")
+
+    class Meta:
+        ordering = [models.F("horario_preferido").asc(nulls_last=True), "nome", "id"]
 
     def __str__(self):
         return self.nome

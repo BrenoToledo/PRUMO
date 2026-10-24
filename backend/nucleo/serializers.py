@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from . import prioridade as motor
+from . import rotinas
 from .models import (
     Area,
     Bloco,
@@ -58,7 +59,14 @@ class RotinaSerializer(DoUsuarioMixin, serializers.ModelSerializer):
 
     class Meta:
         model = Rotina
-        fields = ["id", "area", "nome", "recorrencia", "horario_preferido", "esforco", "duracao_min", "ativa"]
+        fields = ["id", "area", "nome", "recorrencia", "horario_preferido", "esforco", "duracao_min", "ativa", "inicio"]
+        read_only_fields = ["inicio"]
+
+    def validate_recorrencia(self, valor):
+        try:
+            return rotinas.validar_rrule(valor)
+        except ValueError as erro:
+            raise serializers.ValidationError(str(erro)) from erro
 
 
 class PessoaSerializer(serializers.ModelSerializer):

@@ -1,0 +1,40 @@
+/* Rotinas (M20, M21): lista com a recorrência e formulário. Reaproveita os estilos de projetos.css. */
+.rotinas { list-style: none; margin: 0 0 var(--e4); padding: 0; display: flex; flex-direction: column; gap: var(--e3); }
+.rotina-card {
+  display: flex; align-items: center; gap: var(--e3); padding: var(--e3) var(--e4);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  color: var(--texto); text-decoration: none;
+}
+.rotina-card--pausada { opacity: .7; }
+.rotina-card__icone { flex: none; width: 20px; height: 20px; color: var(--primaria); }
+.rotina-card__texto { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.rotina-card__nome { overflow-wrap: anywhere; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+.rotina-card__meta { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.rotina-card__chips { display: flex; flex-direction: column; align-items: flex-end; gap: var(--e1); flex: none; }
+
+.opcoes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); }
+.opcao { position: relative; }
+.opcao input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.opcao span {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 var(--e3);
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); cursor: pointer;
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.opcao--dia span { min-width: 44px; padding: 0 var(--e2); }
+.opcao input:checked + span { border-color: var(--primaria); background: var(--primaria); color: var(--texto-na-primaria); }
+.opcao input:focus-visible + span { outline: 2px solid var(--primaria); outline-offset: 2px; }
+.rotina-form__duracao { display: inline-flex; align-items: center; gap: var(--e1); font-size: var(--legenda-tam); }
+.rotina-form .rotina-form__duracao input { width: 88px; min-height: 36px; }
+.rotina-form__dica { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.rotina-form__excluir { margin: 0 0 var(--e12); }
+.rotina-form__excluir summary { display: inline-flex; list-style: none; cursor: pointer; }
+.rotina-form__excluir summary::-webkit-details-marker { display: none; }
+.rotina-form__excluir form { display: flex; flex-direction: column; align-items: flex-start; gap: var(--e2); margin-top: var(--e3); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.rotina-form__excluir p { margin: 0; }
+
+/* Sem JavaScript: mostra só os campos do tipo de recorrência escolhido (onde o navegador tiver :has). */
+.rotina-form:has([name="tipo"][value="diaria"]:checked) :is(.rotina-form__dias, .rotina-form__intervalo, .rotina-form__rrule),
+.rotina-form:has([name="tipo"][value="semanal"]:checked) :is(.rotina-form__intervalo, .rotina-form__rrule),
+.rotina-form:has([name="tipo"][value="dias"]:checked) :is(.rotina-form__intervalo, .rotina-form__rrule),
+.rotina-form:has([name="tipo"][value="cada_n"]:checked) :is(.rotina-form__dias, .rotina-form__rrule),
+.rotina-form:has([name="tipo"][value="personalizada"]:checked) :is(.rotina-form__dias, .rotina-form__intervalo) { display: none; }

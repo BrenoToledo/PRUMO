@@ -1,0 +1,22 @@
+{% if rotinas %}<section class="leves rotinas-hoje" aria-labelledby="titulo-rotinas">
+  <div class="leves__topo">
+    <h2 id="titulo-rotinas">Rotinas de hoje</h2>
+    <a class="leves__dica" href="{% url 'web:rotinas' %}">ver rotinas</a>
+  </div>
+  <div class="leves__lista">
+    {% for tarefa in rotinas %}{% if tarefa.status == "aberta" %}<div id="tarefa-leve-{{ tarefa.pk }}" class="leve">
+      <form method="post" action="{% url 'web:concluir_tarefa' tarefa.pk %}"
+            hx-post="{% url 'web:concluir_tarefa' tarefa.pk %}" hx-target="#tarefa-leve-{{ tarefa.pk }}" hx-swap="outerHTML">
+        {% csrf_token %}
+        <button class="leve__circulo" type="submit" aria-label="Concluir: {{ tarefa.titulo }}" title="Concluir"></button>
+      </form>
+      <a class="leve__titulo" href="{% url 'web:tarefa' tarefa.pk %}">{{ tarefa.titulo }}</a>
+      <span class="leve__tempo">{% if tarefa.rotina.horario_preferido %}{{ tarefa.rotina.horario_preferido|time:"H:i" }} · {% endif %}{{ tarefa.minutos_estimados }} min</span>
+    </div>{% else %}<div class="leve leve--feita">
+      <span class="leve__circulo leve__circulo--feito" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>
+      </span>
+      <span class="leve__titulo">{{ tarefa.titulo }}<span class="visualmente-oculto"> feita</span></span>
+    </div>{% endif %}{% endfor %}
+  </div>
+</section>{% endif %}

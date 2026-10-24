@@ -1,0 +1,105 @@
+{% extends "web/base.html" %}
+{% block titulo %}{% if rotina %}Editar rotina{% else %}Nova rotina{% endif %}{% endblock %}
+{% block estilos %}{% include "web/rotinas/_cabeca.html" %}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'web:rotinas' %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+  {% if rotina %}Editar rotina{% else %}Nova rotina{% endif %}
+</a>
+<form class="projeto-form rotina-form" method="post" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<p class="erro" role="alert">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+
+  <div class="projeto-form__campo">
+    <label class="projeto-form__rotulo" for="id_nome">Nome</label>
+    <input id="id_nome" name="nome" type="text" maxlength="120" required placeholder="Limpar a areia do gato"
+           value="{{ form.nome.value|default_if_none:'' }}"{% if form.nome.errors %} aria-invalid="true" aria-describedby="erro-nome"{% endif %}>
+    {% if form.nome.errors %}<p id="erro-nome" class="erro" role="alert">{{ form.nome.errors|join:" " }}</p>{% endif %}
+  </div>
+
+  <fieldset class="projeto-form__campo"{% if form.area.errors %} aria-describedby="erro-area"{% endif %}>
+    <legend class="projeto-form__rotulo">Área</legend>
+    <div class="projeto-form__areas">
+      {% for area in form.fields.area.queryset %}<label class="projeto-form__area" style="--cor-area: {{ area.cor }}">
+        <input type="radio" name="area" value="{{ area.pk }}" required{% if form.area.value|stringformat:"s" == area.pk|stringformat:"s" %} checked{% endif %}>
+        <span>{{ area.nome }}</span>
+      </label>{% endfor %}
+    </div>
+    {% if form.area.errors %}<p id="erro-area" class="erro" role="alert">{{ form.area.errors|join:" " }}</p>{% endif %}
+  </fieldset>
+
+  <fieldset class="projeto-form__campo">
+    <legend class="projeto-form__rotulo">Recorrência</legend>
+    <div class="opcoes">
+      {% for valor, rotulo in tipos %}<label class="opcao">
+        <input type="radio" name="tipo" value="{{ valor }}"{% if form.tipo.value == valor %} checked{% endif %}>
+        <span>{{ rotulo }}</span>
+      </label>{% endfor %}
+    </div>
+  </fieldset>
+
+  <fieldset class="projeto-form__campo rotina-form__dias"{% if form.dias.errors %} aria-describedby="erro-dias"{% endif %}>
+    <legend class="projeto-form__rotulo">Dias da semana</legend>
+    <div class="opcoes">
+      {% for valor, rotulo in dias %}<label class="opcao opcao--dia">
+        <input type="checkbox" name="dias" value="{{ valor }}"{% if valor in form.dias.value %} checked{% endif %}>
+        <span>{{ rotulo }}</span>
+      </label>{% endfor %}
+    </div>
+    {% if form.dias.errors %}<p id="erro-dias" class="erro" role="alert">{{ form.dias.errors|join:" " }}</p>{% endif %}
+  </fieldset>
+
+  <div class="projeto-form__campo rotina-form__intervalo">
+    <label class="projeto-form__rotulo" for="id_intervalo">A cada quantos dias</label>
+    <input id="id_intervalo" name="intervalo" type="number" min="2" max="365" inputmode="numeric" placeholder="3"
+           value="{{ form.intervalo.value|default_if_none:'' }}"{% if form.intervalo.errors %} aria-invalid="true" aria-describedby="erro-intervalo"{% endif %}>
+    {% if form.intervalo.errors %}<p id="erro-intervalo" class="erro" role="alert">{{ form.intervalo.errors|join:" " }}</p>{% endif %}
+  </div>
+
+  <div class="projeto-form__campo rotina-form__rrule">
+    <label class="projeto-form__rotulo" for="id_rrule">Regra (RRULE do iCalendar)</label>
+    <input id="id_rrule" name="rrule" type="text" maxlength="200" spellcheck="false" autocapitalize="characters" placeholder="FREQ=MONTHLY;BYMONTHDAY=10"
+           value="{{ form.rrule.value|default_if_none:'' }}"{% if form.rrule.errors %} aria-invalid="true" aria-describedby="erro-rrule"{% else %} aria-describedby="dica-rrule"{% endif %}>
+    {% if form.rrule.errors %}<p id="erro-rrule" class="erro" role="alert">{{ form.rrule.errors|join:" " }}</p>{% else %}<p id="dica-rrule" class="rotina-form__dica">Para o que os outros tipos não cobrem, como “todo dia 10”.</p>{% endif %}
+  </div>
+
+  <div class="projeto-form__campo">
+    <label class="projeto-form__rotulo" for="id_horario_preferido">Horário preferido <span class="projeto-form__opcional">(opcional)</span></label>
+    <input id="id_horario_preferido" name="horario_preferido" type="time" aria-describedby="dica-horario"
+           value="{{ form.horario_preferido.value|time:'H:i'|default:form.horario_preferido.value|default_if_none:'' }}"{% if form.horario_preferido.errors %} aria-invalid="true"{% endif %}>
+    <p id="dica-horario" class="rotina-form__dica">Com horário, a rotina ocupa a agenda e o plano não põe blocos de foco por cima.</p>
+    {% if form.horario_preferido.errors %}<p class="erro" role="alert">{{ form.horario_preferido.errors|join:" " }}</p>{% endif %}
+  </div>
+
+  <fieldset class="projeto-form__campo">
+    <legend class="projeto-form__rotulo">Esforço e duração</legend>
+    <div class="opcoes">
+      {% for valor, rotulo in form.fields.esforco.choices %}<label class="opcao">
+        <input type="radio" name="esforco" value="{{ valor }}"{% if form.esforco.value == valor %} checked{% endif %}>
+        <span>{{ rotulo }}</span>
+      </label>{% endfor %}
+      <label class="rotina-form__duracao">
+        <input name="duracao_min" type="number" min="5" max="480" step="5" inputmode="numeric" required aria-label="Duração em minutos"
+               value="{{ form.duracao_min.value|default_if_none:'' }}"{% if form.duracao_min.errors %} aria-invalid="true" aria-describedby="erro-duracao"{% endif %}>
+        <span>min</span>
+      </label>
+    </div>
+    {% if form.duracao_min.errors %}<p id="erro-duracao" class="erro" role="alert">{{ form.duracao_min.errors|join:" " }}</p>{% endif %}
+  </fieldset>
+
+  {% if form.ativa %}<label class="projeto-form__check">
+    <input type="checkbox" name="ativa"{% if form.ativa.value %} checked{% endif %}>
+    Ativa (desmarque para pausar sem perder a rotina)
+  </label>{% endif %}
+
+  <button class="botao botao--primario" type="submit">{% if rotina %}Salvar{% else %}Salvar rotina{% endif %}</button>
+</form>
+{% if rotina %}<details class="rotina-form__excluir">
+  <summary class="botao botao--pequeno">Excluir rotina</summary>
+  <form method="post" action="{% url 'web:excluir_rotina' rotina.pk %}">
+    {% csrf_token %}
+    <p><strong>Excluir “{{ rotina.nome }}”?</strong> A de hoje sai de Hoje; as vezes que você já fez continuam no histórico. Para só parar por um tempo, desmarque “Ativa”.</p>
+    <button class="botao botao--pequeno" type="submit">Excluir</button>
+  </form>
+</details>{% endif %}
+{% endblock %}
