@@ -21,6 +21,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `pacote-4-no-ar` | #9, #10 | infra | nada | `deploy/`, `web/telas/pwa.py`, `web/templates/web/_pwa_head.html`, manifesto e service worker em `web/static/web/pwa/` |
 | `claude/project-thread-yfqx9j` (P6 · Imprevistos) | #13, #14, #15 | backend + interface | main (P1–P5) | `web/telas/imprevistos.py`, `web/templates/web/imprevistos/`, `web/static/web/telas/imprevistos.css`, `web/tests/test_imprevistos.py`, `nucleo/tests/test_imprevistos.py`; em `foco` só o diálogo de saída e a distração (M09, M12) |
 | `pacote-5-acabamento` | #8, #11, #12 | interface | contratos (+ tarefas do backend-r1) | `web/telas/tarefas.py`, `web/telas/perfil.py`, `web/templates/web/tarefas/`, `web/templates/web/perfil/`, `web/tests/test_tarefas.py`, `web/tests/test_perfil.py` |
+| `claude/project-thread-zq9z35` (excluir conta, #68) | #68 | backend + interface | main (P1–P12, #66) | `web/templates/web/dados/excluir.html`, `nucleo/tests/test_excluir_conta.py`, `web/tests/test_excluir_conta.py`; em `dados` só a rota de excluir e o link na página Seus dados, em `services.py` só `excluir_conta`, na API só `DELETE /api/conta/` |
 | `claude/project-thread-po1le7` (seus dados, #66) | #66 | backend + interface | main (P1–P10) | `web/telas/dados.py`, `web/templates/web/dados/`, `web/static/web/telas/dados.css`, `web/tests/test_dados.py`, `nucleo/tests/test_exportar_dados.py`; no perfil só o link para os dados |
 | `pacote-8-organizacao` | #18, #20, #21 | backend + interface | main (P1–P5, P7) | `web/telas/lista_rapida.py`, `web/telas/projetos.py`, `web/telas/areas.py`, `web/templates/web/lista_rapida/`, `web/templates/web/projetos/`, `web/templates/web/areas/`, `web/static/web/telas/lista_rapida.css`, `projetos.css`, `areas.css`, `web/tests/test_lista_rapida.py`, `web/tests/test_projetos.py`, `web/tests/test_areas.py`, `nucleo/tests/test_organizacao.py`; em `clarificacao` só o campo projeto, na entrada só o atalho da lista rápida, no perfil só o link para as áreas |
 | `pacote-9-desktop` | #22, #23 | backend + interface | main (P1–P5, P7, P8) | `web/telas/preparar.py`, `web/templates/web/preparar/`, `web/static/web/telas/preparar.css`, `hoje.css`, `hoje.js`, `web/tests/test_preparar.py`, `web/tests/test_desktop.py`, `nucleo/tests/test_desktop.py`; em `plano` só o painel de prioridades, o botão "Iniciar foco · F" e o link do card "Agora" para M07; em `app.js` só o atalho Ctrl+K |
@@ -58,6 +59,7 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:perfil` | `/perfil/` | GET, POST | perfil | `perfil_de` |
 | `web:dados` | `/perfil/dados/` | GET | dados | `contagem_dos_dados` |
 | `web:exportar_dados` | `/perfil/dados/exportar/` (baixa `prumo-dados-AAAA-MM-DD.json`) | GET | dados | `exportar_dados` |
+| `web:excluir_conta` | `/perfil/dados/excluir/` | GET, POST (`senha`) | dados | `contagem_dos_dados`, `excluir_conta` |
 | `web:ver_lista_rapida` | `/lista-rapida/` | GET | lista_rapida | `lista_rapida` |
 | `web:projetos` | `/projetos/` | GET | projetos | `projetos_de` |
 | `web:novo_projeto` | `/projetos/novo/` | GET, POST | projetos | `criar_projeto` |
@@ -161,14 +163,17 @@ O "Encaixar no fim do dia" da lista rápida não grava nada: as tarefas da lista
 
 ## Seus dados (#66, épico LGPD #38)
 
-Primeira história do épico: exportar tudo em JSON (RF37, RNF07). A exclusão da conta fica para a próxima.
+Duas histórias do épico (RF37, RNF07): exportar tudo em JSON (#66) e excluir a conta com todos os dados (#68).
 
 | Serviço | Devolve | Regras |
 | --- | --- | --- |
 | `exportar_dados(usuario)` | `ExportacaoDados` | Só o que é do usuário, pronto para `json.dumps`: `versao` (1), `gerado_em`, `usuario` (`username`, `email`, `first_name`, `last_name`, `date_joined`), `perfil` e as listas `areas`, `projetos`, `rotinas`, `pessoas`, `capturas`, `tarefas` (cada uma com `vinculos: [{pessoa, relacao}]` e `eventos: [{tipo, em, dados}]`), `blocos`, `revisoes`, `sugestoes_ia` e `chamadas_ia`. Cada item traz os campos do modelo; chave estrangeira sai como id com o nome do campo (`area`, não `area_id`), datas e horas em ISO 8601, valores decimais como texto. Nada de segredo: sem senha nem hash de token |
 | `contagem_dos_dados(usuario)` | `dict[str, int]` | Quantos itens há em cada lista da exportação (as mesmas chaves, de `areas` a `chamadas_ia`) |
+| `excluir_conta(usuario, senha)` | `None` | `ValueError` se `senha` não for a senha atual (nada é apagado). Senão, numa transação, apaga o usuário e tudo o que é dele: perfil, áreas, projetos, rotinas, pessoas, capturas, tarefas (com vínculos e eventos), blocos, revisões, sugestões e chamadas de IA e tokens da API. Dados de outros usuários não mudam |
 
 Na API, `GET /api/exportar/` devolve `ExportacaoDados` (chaves do topo em `CAMPOS_EXPORTACAO`) com `Content-Disposition: attachment; filename="prumo-dados-AAAA-MM-DD.json"`. Na web, `web:exportar_dados` devolve o mesmo arquivo. Exportar não muda nenhuma tarefa, então não grava `EventoTarefa`.
+
+Na API, `DELETE /api/conta/` com `{"senha": "…"}` passa por `excluir_conta`: `204` sem corpo; sem senha ou com senha errada, `400` com `{"senha": ["…"]}`. Na web, `web:excluir_conta` (GET) mostra o que será apagado (`contagem_dos_dados`) e pede a senha; o POST exclui, encerra a sessão e leva ao login com o aviso "Sua conta e seus dados foram excluídos."; senha errada devolve `400` com a mesma página e o erro. Excluir não grava `EventoTarefa`: as tarefas deixam de existir junto com o histórico.
 
 ## Desktop (P9, R2)
 

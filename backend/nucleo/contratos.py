@@ -188,6 +188,8 @@ SERVICOS: dict[str, str] = {
     # Seus dados (#66, épico LGPD #38): exportar tudo em JSON
     "exportar_dados": "(usuario) -> 'ExportacaoDados'",
     "contagem_dos_dados": "(usuario) -> 'dict[str, int]'",
+    # Excluir conta (#68, épico LGPD #38): apaga o usuário e tudo o que é dele, com a senha atual
+    "excluir_conta": "(usuario, senha: 'str') -> 'None'",
     # IA que ajuda (P10): harness, pré-preencher a clarificação e quebrar tarefa. A IA só sugere (SugestaoIA)
     "ia_disponivel": "(usuario) -> 'bool'",
     "uso_de_ia": "(usuario) -> 'UsoDeIA'",

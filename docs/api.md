@@ -53,5 +53,6 @@ Base: `/api/`. Autenticação por sessão ou token. Para ferramentas (MCP, scrip
 | Método e rota | O que faz | Tela |
 | --- | --- | --- |
 | `GET /exportar/` | Tudo o que é do usuário em JSON (perfil, áreas, projetos, rotinas, pessoas, capturas, tarefas com vínculos e eventos, blocos, revisões, sugestões e chamadas de IA), como anexo `prumo-dados-AAAA-MM-DD.json`. Sem senha nem hash de token | M33 |
+| `DELETE /conta/` | Exclui a conta e todos os dados do usuário. Corpo `{"senha": "…"}` com a senha atual: `204`; sem senha ou senha errada, `400` e nada é apagado | M33 |
 
 Os campos de cada resposta estão fixados em `backend/nucleo/contratos.py` e testados em `nucleo/tests/test_contratos.py`; ver [contratos.md](contratos.md).
