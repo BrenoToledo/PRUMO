@@ -120,7 +120,7 @@ def _salvar(form, gravar):
 
 
 def _form(request, form, rotina=None, status=200):
-    contexto = {"aba": "projetos", "form": form, "rotina": rotina, "tipos": TIPOS, "dias": DIAS}
+    contexto = {"aba": "rotinas", "form": form, "rotina": rotina, "tipos": TIPOS, "dias": DIAS}
     return render(request, PAGINA_FORM, contexto, status=status)
 
 
@@ -131,7 +131,7 @@ def rotinas(request):
         {"rotina": r, "descricao": rot.descrever(r.recorrencia, r.horario_preferido)}
         for r in services.rotinas_de(request.user)
     ]
-    return render(request, "web/rotinas/lista.html", {"aba": "projetos", "rotinas": lista})
+    return render(request, "web/rotinas/lista.html", {"aba": "rotinas", "rotinas": lista})
 
 
 @require_http_methods(["GET", "POST"])

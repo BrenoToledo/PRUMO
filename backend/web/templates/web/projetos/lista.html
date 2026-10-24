@@ -4,12 +4,11 @@
 {% block conteudo %}
 <header class="cabecalho">
   <div>
-    <h1>Projetos e rotinas</h1>
+    <h1>Projetos</h1>
     <p class="cabecalho__sub">Tarefas agrupadas por objetivo, com o progresso em blocos.</p>
   </div>
   {% include "web/_botao_sair.html" %}
 </header>
-{% include "web/projetos/_alternador.html" with ativo="projetos" %}
 
 {% if projetos %}
 <ul class="projetos">

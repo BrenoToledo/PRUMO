@@ -67,15 +67,3 @@
 .projeto-form__area input:checked + span { border-color: var(--cor-area); background: color-mix(in srgb, var(--cor-area) 15%, transparent); }
 .projeto-form__area input:focus-visible + span { outline: 2px solid var(--primaria); outline-offset: 2px; }
 .projeto-form__check { display: flex; align-items: center; gap: var(--e2); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
-
-/* Alternador Projetos | Rotinas (M18, M20) */
-.alternador {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin: 0 0 var(--e4); padding: 2px;
-  background: var(--borda); border-radius: var(--raio-campo);
-}
-.alternador__opcao {
-  display: flex; align-items: center; justify-content: center; min-height: 40px; border-radius: calc(var(--raio-campo) - 2px);
-  color: var(--texto-secundario); text-decoration: none; font-size: var(--legenda-tam); line-height: var(--legenda-alt);
-}
-.alternador__opcao[aria-current="page"] { background: var(--superficie); color: var(--texto); font-weight: var(--legenda-peso); }
-.alternador__opcao:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }

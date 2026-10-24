@@ -43,9 +43,30 @@ def form(area, **extra):
 
 
 # ---------------------------------------------------------------- lista (M20)
-def test_alternador_entre_projetos_e_rotinas(logado, saude):
-    assert reverse("web:rotinas") in logado.get(reverse("web:projetos")).content.decode()
-    assert reverse("web:projetos") in logado.get(reverse("web:rotinas")).content.decode()
+def test_rotinas_e_uma_aba_propria_no_menu(logado, saude):
+    rotinas = reverse("web:rotinas")
+    na_lista = logado.get(rotinas).content.decode()
+    em_projetos = logado.get(reverse("web:projetos")).content.decode()
+
+    assert f'href="{rotinas}" aria-current="page"' in na_lista
+    assert f'href="{rotinas}"' in em_projetos
+    assert f'href="{rotinas}" aria-current="page"' not in em_projetos
+
+
+def test_projetos_e_rotinas_tem_titulos_proprios(logado, saude):
+    em_projetos = logado.get(reverse("web:projetos")).content.decode()
+    na_lista = logado.get(reverse("web:rotinas")).content.decode()
+
+    assert "<h1>Projetos</h1>" in em_projetos
+    assert "<h1>Rotinas</h1>" in na_lista
+    assert "Projetos e rotinas" not in em_projetos + na_lista
+    assert "alternador" not in em_projetos + na_lista
+
+
+def test_formulario_de_rotina_marca_a_aba_rotinas(logado, saude):
+    html = logado.get(reverse("web:nova_rotina")).content.decode()
+
+    assert f'href="{reverse("web:rotinas")}" aria-current="page"' in html
 
 
 def test_lista_vazia_explica(logado, saude):
