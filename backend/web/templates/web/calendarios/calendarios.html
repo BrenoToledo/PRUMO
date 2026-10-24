@@ -1,0 +1,45 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Calendários{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/tarefas.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/calendarios.css' %}">{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'web:perfil' %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+  Calendários
+</a>
+<p class="calendarios__dica">Seus compromissos entram em Hoje e saem da capacidade do dia, para nenhum bloco de foco cair em cima de uma reunião. O Prumo só lê: nada é criado ou mudado na sua agenda.</p>
+
+{% if calendarios %}<ul class="calendarios__lista">
+  {% for c in calendarios %}<li class="cartao calendarios__item">
+    <div>
+      <p class="calendarios__nome">{{ c.nome }}</p>
+      <p class="calendarios__sub"><code>{{ c.url_mascarada }}</code> · {{ c.n_eventos }} evento{{ c.n_eventos|pluralize }}{% if c.sincronizado_em %} · lido às {{ c.sincronizado_em|date:"H:i" }} de {{ c.sincronizado_em|date:"d/m" }}{% endif %}</p>
+      {% if c.erro %}<p class="erro" role="alert">{{ c.erro }}</p>{% endif %}
+    </div>
+    <div class="calendarios__acoes">
+      <form method="post" action="{% url 'web:atualizar_calendario' c.pk %}">{% csrf_token %}<button class="botao botao--pequeno" type="submit">Atualizar agora</button></form>
+      <form method="post" action="{% url 'web:remover_calendario' c.pk %}">{% csrf_token %}<button class="botao botao--texto botao--pequeno" type="submit">Remover</button></form>
+    </div>
+  </li>{% endfor %}
+</ul>{% endif %}
+
+<form class="cartao calendarios__novo" method="post" action="{% url 'web:calendarios' %}" novalidate>
+  {% csrf_token %}
+  <h2 class="calendarios__titulo">Conectar calendário</h2>
+  <label class="rotulo" for="id_nome">Nome</label>
+  <input id="id_nome" type="text" name="nome" value="{{ nome }}" maxlength="60" placeholder="Ex.: Agenda pessoal" required>
+  <label class="rotulo" for="id_url">Link iCal secreto</label>
+  <input id="id_url" type="url" name="url" maxlength="1000" placeholder="https://…/basic.ics" autocomplete="off" spellcheck="false" required
+         {% if erro %}aria-invalid="true" aria-describedby="erro-calendario"{% endif %}>
+  {% if erro %}<p id="erro-calendario" class="erro" role="alert">{{ erro }}</p>{% endif %}
+  <button class="botao botao--primario" type="submit">Conectar</button>
+</form>
+
+<details class="calendarios__ajuda">
+  <summary>Onde acho o link?</summary>
+  <p><strong>Google Agenda:</strong> no computador, abra Configurações, escolha a agenda em "Configurações das minhas agendas" e copie o "Endereço secreto no formato iCal".</p>
+  <p><strong>Outlook:</strong> em Configurações › Calendário › Calendários compartilhados, publique a agenda com "Pode ver todos os detalhes" e copie o link ICS.</p>
+  <p>O link é secreto: quem tiver ele vê sua agenda. Se vazar, gere outro no Google ou no Outlook e troque aqui.</p>
+</details>
+{% endblock %}

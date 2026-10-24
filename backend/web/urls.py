@@ -5,6 +5,7 @@ from . import views
 from .telas import (
     areas,
     audio,
+    calendarios,
     clarificacao,
     dados,
     foco,
@@ -48,3 +49,4 @@ urlpatterns += preparar.urlpatterns
 urlpatterns += ia.urlpatterns
 urlpatterns += tokens.urlpatterns
 urlpatterns += audio.urlpatterns
+urlpatterns += calendarios.urlpatterns

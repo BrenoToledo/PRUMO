@@ -8,7 +8,13 @@ from datetime import date
 
 from nucleo import services
 from nucleo.models import Bloco, ItemCaptura
-from nucleo.serializers import BlocoSerializer, ConcluirBlocoSerializer, ItemCapturaSerializer, TarefaSerializer
+from nucleo.serializers import (
+    BlocoSerializer,
+    ConcluirBlocoSerializer,
+    EventoCalendarioSerializer,
+    ItemCapturaSerializer,
+    TarefaSerializer,
+)
 
 
 def _dia(texto: str | None) -> date:
@@ -39,6 +45,7 @@ def ver_hoje(usuario, dia: str | None = None) -> dict:
         "folga_diaria": p["folga_diaria"],
         "blocos": [dict(b) for b in BlocoSerializer(p["blocos"], many=True).data],
         "tarefas_leves": [dict(t) for t in TarefaSerializer(p["tarefas_leves"], many=True).data],
+        "eventos": [dict(e) for e in EventoCalendarioSerializer(p["eventos"], many=True).data],
     }
 
 

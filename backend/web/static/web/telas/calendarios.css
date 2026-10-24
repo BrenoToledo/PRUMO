@@ -1,0 +1,20 @@
+/* Calendários conectados (M33, integrações): lista, conectar pelo link iCal e ajuda. */
+.calendarios__dica { margin: var(--e2) 0 var(--e4); color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.calendarios__lista { display: flex; flex-direction: column; gap: var(--e2); margin: 0 0 var(--e4); padding: 0; list-style: none; }
+.calendarios__item { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--e2); }
+.calendarios__nome { margin: 0; font-weight: 600; }
+.calendarios__sub { margin: var(--e1) 0 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.calendarios__sub code { font-size: inherit; overflow-wrap: anywhere; }
+.calendarios__acoes { display: flex; gap: var(--e2); }
+.calendarios__acoes form { margin: 0; }
+.calendarios__novo { display: flex; flex-direction: column; gap: var(--e2); margin-bottom: var(--e4); }
+.calendarios__titulo { margin: 0 0 var(--e1); font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+.calendarios__novo input {
+  padding: var(--e2) var(--e3); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+  background: var(--superficie); color: var(--texto); font: inherit;
+}
+.calendarios__novo input[aria-invalid="true"] { border-color: var(--prioridade-critica); }
+.calendarios__novo .botao { align-self: flex-start; }
+.calendarios__ajuda { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.calendarios__ajuda summary { cursor: pointer; color: var(--primaria); font-weight: 600; }
+.calendarios__novo .rotulo { font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: 600; }

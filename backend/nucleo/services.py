@@ -6,6 +6,10 @@ import hashlib
 import logging
 import re
 import secrets
+import socket
+import urllib.error
+import urllib.parse
+import urllib.request
 from collections import defaultdict
 from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
@@ -14,13 +18,14 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Count, QuerySet, Sum
+from django.db.models import Count, Q, QuerySet, Sum
 from django.utils import timezone
 
 from ia import tarefas as ia_tarefas
 from ia.config import Config as ConfigIA
 from ia.provedores import ErroIA, Provedor, Resposta
 
+from . import calendario as cal
 from . import planejamento as plan
 from . import prioridade as motor
 from .contratos import (
@@ -36,8 +41,10 @@ from .models import (
     Area,
     AudioCaptura,
     Bloco,
+    Calendario,
     ChamadaIA,
     Esforco,
+    EventoCalendario,
     EventoTarefa,
     ItemCaptura,
     PedidoIA,
@@ -116,9 +123,32 @@ def evento(tarefa: Tarefa, tipo: str, **dados) -> EventoTarefa:
 
 # --------------------------------------------------------------------------- capacidade e prioridade
 def capacidade_do_dia(usuario, dia: date) -> int:
+    return _capacidade(usuario, dia, _compromissos(usuario, dia, dia).get(dia, []))
+
+
+def _capacidade(usuario, dia: date, compromissos: list[plan.Intervalo]) -> int:
     if dia.weekday() not in DIAS_UTEIS:
         return 0
-    return plan.capacidade_blocos(jornada_de(perfil_de(usuario)))
+    jornada = jornada_de(perfil_de(usuario))
+    tz = timezone.get_current_timezone()
+    return plan.capacidade_blocos(jornada, plan.minutos_ocupados(dia, jornada, compromissos, tz=tz))
+
+
+def _compromissos(usuario, desde: date, ate: date) -> dict[date, list[plan.Intervalo]]:
+    """Eventos com horário do calendário (os de dia inteiro não ocupam a agenda), por dia, numa consulta só."""
+    ini, _ = _limites_do_dia(desde)
+    _, fim = _limites_do_dia(ate)
+    eventos = EventoCalendario.objects.filter(
+        calendario__usuario=usuario, dia_inteiro=False, inicio__lt=fim, fim__gt=ini
+    ).values_list("inicio", "fim")
+    por_dia: dict[date, list[plan.Intervalo]] = defaultdict(list)
+    for inicio, termino in eventos:
+        inicio, termino = timezone.localtime(inicio), timezone.localtime(termino)
+        dia = inicio.date()
+        while dia <= termino.date():  # evento que atravessa a meia-noite ocupa os dois dias
+            por_dia[dia].append((inicio, termino))
+            dia += timedelta(days=1)
+    return por_dia
 
 
 def blocos_livres_ate(usuario, ate: date, *, excluir_tarefa: Tarefa | None = None, desde: date | None = None) -> int:
@@ -136,9 +166,10 @@ def blocos_livres_ate(usuario, ate: date, *, excluir_tarefa: Tarefa | None = Non
     por_dia: dict[date, int] = defaultdict(int)
     for b in ocupados.only("inicio_planejado"):
         por_dia[timezone.localtime(b.inicio_planejado).date()] += 1
+    compromissos = _compromissos(usuario, desde, ate)
     total, dia = 0, desde
     while dia <= ate:
-        total += max(0, capacidade_do_dia(usuario, dia) - por_dia[dia])
+        total += max(0, _capacidade(usuario, dia, compromissos.get(dia, [])) - por_dia[dia])
         dia += timedelta(days=1)
     return total
 
@@ -272,7 +303,8 @@ def gerar_plano_do_dia(usuario, dia: date | None = None) -> plan.Plano:
         return plan.Plano(capacidade=0, nao_couberam=[c.id for c in candidatas])
     tz = timezone.get_current_timezone()
     a_partir_de = plan.inicio_do_plano(dia, jornada, agora=timezone.now(), ocupado_ate=ocupado_ate, tz=tz)
-    resultado = plan.montar_plano_do_dia(dia, jornada, candidatas, tz=tz, a_partir_de=a_partir_de)
+    ocupados = _compromissos(usuario, dia, dia).get(dia, [])
+    resultado = plan.montar_plano_do_dia(dia, jornada, candidatas, tz=tz, a_partir_de=a_partir_de, ocupados=ocupados)
     por_id = {t.id: t for t in abertas}
     for slot in resultado.slots:
         Bloco.objects.create(
@@ -295,6 +327,7 @@ def plano_do_dia(usuario, dia: date | None = None) -> PlanoDoDia:
         "folga_diaria": perfil_de(usuario).folga_diaria,
         "blocos": blocos,
         "tarefas_leves": list(tarefas_leves(usuario)[:10]),
+        "eventos": eventos_do_dia(usuario, dia),
     }
 
 
@@ -1247,3 +1280,129 @@ def salvar_itens_do_audio(sugestao: SugestaoIA, itens: list[str]) -> list[ItemCa
     criados = [capturar(sugestao.usuario, texto, ItemCaptura.Origem.AUDIO, transcricao) for texto in limpos]
     registrar_resposta(sugestao, {"transcricao": transcricao, "itens": limpos})
     return criados
+
+
+# --------------------------------------------------------------------------- calendário (P13)
+JANELA_CALENDARIO_DIAS = 14
+SINCRONIZAR_A_CADA = timedelta(minutes=30)
+ICS_MAX_BYTES = 5 * 1024 * 1024
+ICS_TIMEOUT_S = 10
+NOME_CALENDARIO_MAX = 60
+
+
+def _checar_host(url: str) -> str:
+    """O link normalizado, se o servidor dele resolve só para endereços públicos (sem acesso à rede interna)."""
+    url = cal.normalizar_url(url)
+    host = urllib.parse.urlsplit(url).hostname or ""
+    try:
+        enderecos = {info[4][0] for info in socket.getaddrinfo(host, 443, proto=socket.IPPROTO_TCP)}
+    except OSError as erro:
+        raise ValueError("Não encontrei o servidor desse link. Confira o endereço.") from erro
+    if not enderecos or any(cal.ip_interno(ip) for ip in enderecos):
+        raise ValueError("Esse endereço não é permitido.")
+    return url
+
+
+class _RedirecionamentoSeguro(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return super().redirect_request(req, fp, code, msg, headers, _checar_host(newurl))
+
+
+def _baixar_ics(url: str) -> bytes:
+    """Baixa o calendário com tempo e tamanho limitados; os testes trocam esta função."""
+    pedido = urllib.request.Request(_checar_host(url), headers={"User-Agent": "Prumo/1.0 (calendario)"})
+    abridor = urllib.request.build_opener(_RedirecionamentoSeguro)
+    try:
+        with abridor.open(pedido, timeout=ICS_TIMEOUT_S) as resposta:
+            conteudo = resposta.read(ICS_MAX_BYTES + 1)
+    except urllib.error.HTTPError as erro:
+        raise ValueError(f"O calendário respondeu com erro {erro.code}. Confira se o link ainda vale.") from erro
+    except (urllib.error.URLError, TimeoutError, OSError) as erro:
+        raise ValueError("O calendário não respondeu. Confira o link e tente de novo.") from erro
+    if len(conteudo) > ICS_MAX_BYTES:
+        raise ValueError("O calendário passou de 5 MB.")
+    return conteudo
+
+
+def _eventos_lidos(url: str) -> list[cal.EventoLido]:
+    desde = hoje()
+    return cal.ler_eventos(
+        _baixar_ics(url),
+        desde,
+        desde + timedelta(days=JANELA_CALENDARIO_DIAS),
+        tz=timezone.get_current_timezone(),
+    )
+
+
+def _guardar_eventos(calendario: Calendario, eventos: list[cal.EventoLido]) -> None:
+    with transaction.atomic():
+        calendario.eventos.all().delete()
+        EventoCalendario.objects.bulk_create(
+            EventoCalendario(
+                calendario=calendario,
+                uid=e.uid,
+                titulo=e.titulo,
+                inicio=e.inicio,
+                fim=e.fim,
+                dia_inteiro=e.dia_inteiro,
+                local=e.local,
+            )
+            for e in eventos
+        )
+        calendario.sincronizado_em, calendario.erro = timezone.now(), ""
+        calendario.save(update_fields=["sincronizado_em", "erro"])
+
+
+def calendarios_de(usuario) -> list[Calendario]:
+    return list(Calendario.objects.filter(usuario=usuario).annotate(n_eventos=Count("eventos")))
+
+
+def conectar_calendario(usuario, nome: str, url: str) -> Calendario:
+    """Valida o link baixando o calendário; só guarda se der para ler."""
+    nome = " ".join((nome or "").split())
+    if not nome:
+        raise ValueError("Dê um nome ao calendário, por exemplo Trabalho.")
+    if len(nome) > NOME_CALENDARIO_MAX:
+        raise ValueError(f"O nome pode ter até {NOME_CALENDARIO_MAX} caracteres.")
+    url = cal.normalizar_url(url)
+    eventos = _eventos_lidos(url)
+    calendario = Calendario.objects.create(usuario=usuario, nome=nome, url=url)
+    _guardar_eventos(calendario, eventos)
+    return calendario
+
+
+def sincronizar_calendario(calendario: Calendario) -> Calendario:
+    """Relê o calendário; se falhar, guarda o erro e mantém os eventos que já havia."""
+    try:
+        eventos = _eventos_lidos(calendario.url)
+    except ValueError as erro:
+        calendario.sincronizado_em, calendario.erro = timezone.now(), str(erro)[:300]
+        calendario.save(update_fields=["sincronizado_em", "erro"])
+        return calendario
+    _guardar_eventos(calendario, eventos)
+    return calendario
+
+
+def sincronizar_se_preciso(usuario) -> None:
+    """Relê os calendários lidos há mais de 30 minutos (no worker, se houver fila)."""
+    limite = timezone.now() - SINCRONIZAR_A_CADA
+    velhos = Calendario.objects.filter(usuario=usuario).exclude(sincronizado_em__gt=limite)
+    if fila_assincrona():
+        from . import fila
+
+        for pk in velhos.values_list("pk", flat=True):
+            fila.sincronizar_calendario.delay(pk)
+        return
+    for calendario in velhos:
+        sincronizar_calendario(calendario)
+
+
+def remover_calendario(calendario: Calendario) -> None:
+    calendario.delete()
+
+
+def eventos_do_dia(usuario, dia: date | None = None) -> list[EventoCalendario]:
+    ini, fim = _limites_do_dia(dia or hoje())
+    # inclui o evento sem duração que começa à meia-noite (fim == início)
+    no_dia = Q(inicio__lt=fim) & (Q(fim__gt=ini) | Q(inicio__gte=ini))
+    return list(EventoCalendario.objects.filter(no_dia, calendario__usuario=usuario).select_related("calendario"))

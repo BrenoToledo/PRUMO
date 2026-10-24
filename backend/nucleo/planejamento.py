@@ -93,6 +93,46 @@ def _ordem(c: Candidata, hoje: date) -> tuple:
     return (0 if vence else 1, -c.prioridade, c.prazo or date.max, c.id)
 
 
+Intervalo = tuple[datetime, datetime]
+
+
+def _limites_da_jornada(dia: date, jornada: Jornada, tz=None) -> Intervalo:
+    inicio = datetime.combine(dia, jornada.inicio, tzinfo=tz)
+    return inicio, inicio + timedelta(minutes=jornada.minutos())
+
+
+def _juntar(ocupados: list[Intervalo], ini: datetime, fim: datetime) -> list[Intervalo]:
+    """Compromissos cortados em [ini, fim] e com as sobreposições unidas, em ordem."""
+    cortados = sorted((max(a, ini), min(b, fim)) for a, b in ocupados if a < fim and b > ini)
+    juntos: list[Intervalo] = []
+    for a, b in cortados:
+        if juntos and a <= juntos[-1][1]:
+            juntos[-1] = (juntos[-1][0], max(juntos[-1][1], b))
+        else:
+            juntos.append((a, b))
+    return juntos
+
+
+def minutos_ocupados(
+    dia: date, jornada: Jornada, ocupados: list[Intervalo], *, tz=None, a_partir_de: datetime | None = None
+) -> int:
+    """Minutos da jornada (a partir de `a_partir_de`, se vier) tomados por compromissos, sem contar duas vezes."""
+    ini, fim = _limites_da_jornada(dia, jornada, tz)
+    if a_partir_de is not None and a_partir_de > ini:
+        ini = a_partir_de
+    return sum(math.ceil((b - a).total_seconds() / 60) for a, b in _juntar(ocupados, ini, fim))
+
+
+def _horarios(inicio: datetime, fim: datetime, ocupados: list[Intervalo], duracao: timedelta, passo: timedelta):
+    """Inícios possíveis de blocos inteiros nos espaços livres, em ordem."""
+    cursor = inicio
+    for a, b in [*_juntar(ocupados, inicio, fim), (fim, fim)]:
+        while cursor + duracao <= a:
+            yield cursor
+            cursor += passo
+        cursor = max(cursor, b)
+
+
 def montar_plano_do_dia(
     dia: date,
     jornada: Jornada,
@@ -101,6 +141,7 @@ def montar_plano_do_dia(
     minutos_ocupados: int = 0,
     tz=None,
     a_partir_de: datetime | None = None,
+    ocupados: list[Intervalo] | None = None,
 ) -> Plano:
     """Escolhe os blocos do dia e os horários.
 
@@ -110,12 +151,15 @@ def montar_plano_do_dia(
     * a ocupação não passa da capacidade (que já reserva a folga diária);
     * as de esforço alto ficam no período de pico de energia;
     * com `a_partir_de` depois do início da jornada, os blocos começam nele e só o tempo que resta conta
-      para a capacidade (ver `inicio_do_plano`).
+      para a capacidade (ver `inicio_do_plano`);
+    * `ocupados` são compromissos (calendário): descontam da capacidade e nenhum bloco cai em cima deles.
     """
-    inicio = datetime.combine(dia, jornada.inicio, tzinfo=tz)
+    ocupados = ocupados or []
+    inicio, fim_jornada = _limites_da_jornada(dia, jornada, tz)
     if a_partir_de is not None and a_partir_de > inicio:
         minutos_ocupados += math.ceil((a_partir_de - inicio).total_seconds() / 60)
         inicio = a_partir_de
+    minutos_ocupados += sum(math.ceil((b - a).total_seconds() / 60) for a, b in _juntar(ocupados, inicio, fim_jornada))
     cap = capacidade_blocos(jornada, minutos_ocupados)
     plano = Plano(capacidade=cap)
     escolhidas: list[Candidata] = []
@@ -135,8 +179,15 @@ def montar_plano_do_dia(
 
     passo = timedelta(minutes=jornada.duracao_bloco_min + INTERVALO_ENTRE_BLOCOS_MIN)
     duracao = timedelta(minutes=jornada.duracao_bloco_min)
-    for i, c in enumerate(ordem):
-        ini = inicio + passo * i
+    # sem compromissos, o espaço livre vai até onde a capacidade mandar (o comportamento de sempre)
+    fim = max(fim_jornada, inicio + passo * len(ordem)) if not ocupados else fim_jornada
+    horarios = _horarios(inicio, fim, ocupados, duracao, passo)
+    for c in ordem:
+        ini = next(horarios, None)
+        if ini is None:  # a agenda picada não deixou espaço inteiro para este bloco
+            if c.id not in plano.nao_couberam:
+                plano.nao_couberam.append(c.id)
+            continue
         plano.slots.append(Slot(tarefa_id=c.id, inicio=ini, fim=ini + duracao))
     return plano
 
