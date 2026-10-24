@@ -12,7 +12,7 @@
       <button class="botao botao--texto" type="submit" formnovalidate
               formaction="{% url 'web:recusar_clarificacao' item.pk %}" hx-post="{% url 'web:recusar_clarificacao' item.pk %}">Recusar</button>
     </p>
-  </div>{% elif ia %}<p class="sugestao-ia__pedir">
+  </div>{% elif pedido %}{% include "web/fila/_processando.html" %}{% elif ia %}<p class="sugestao-ia__pedir">
     <button class="botao" type="submit" formnovalidate
             formaction="{% url 'web:sugerir_clarificacao' item.pk %}" hx-post="{% url 'web:sugerir_clarificacao' item.pk %}"
             hx-disabled-elt="this">Preencher com IA</button>

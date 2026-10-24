@@ -1,0 +1,37 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Captura por áudio{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/fila.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/audio.css' %}">{% endblock %}
+{% block conteudo %}
+<header class="audio__topo">
+  <h1 class="audio__titulo">Nova captura</h1>
+  <a class="botao botao--texto" href="{% url 'web:entrada' %}">Cancelar</a>
+</header>
+
+{% if pedido %}
+  <div id="audio-resultado">{% include "web/audio/_resultado.html" %}</div>
+{% elif disponivel %}
+<section class="audio__gravador" data-gravador data-enviar="{% url 'web:enviar_audio' %}">
+  <button class="audio__mic" type="button" data-mic aria-pressed="false" aria-describedby="audio-dica">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg>
+    <span class="visualmente-oculto" data-mic-rotulo>Gravar</span>
+  </button>
+  <p class="audio__estado" data-estado aria-live="polite">Toque para gravar</p>
+  <p id="audio-dica" class="audio__dica" data-dica>Ou segure e solte para terminar. Até 2 minutos.</p>
+  <div class="audio__onda" data-onda aria-hidden="true">{% for _ in "0123456789abcdef" %}<span></span>{% endfor %}</div>
+  <form class="audio__arquivo" method="post" action="{% url 'web:enviar_audio' %}" enctype="multipart/form-data" data-arquivo>
+    {% csrf_token %}
+    <label class="rotulo" for="audio-arquivo">Sem microfone aqui? Envie um áudio gravado</label>
+    <input id="audio-arquivo" type="file" name="audio" accept="audio/*" capture required>
+    <button class="botao" type="submit">Enviar áudio</button>
+  </form>
+</section>
+<div id="audio-resultado" aria-live="polite"></div>
+{% else %}
+<p class="cartao">A captura por áudio usa a IA com um modelo de transcrição (Whisper). Ligue em <a href="{% url 'web:ia' %}">IA e privacidade</a> e defina <code>PRUMO_IA_TRANSCRICAO</code> no servidor.</p>
+{% endif %}
+
+<p class="audio__nota">O áudio é apagado após a transcrição.</p>
+{% endblock %}
+{% block scripts %}{% if disponivel and not pedido %}<script src="{% static 'web/telas/audio.js' %}" defer></script>{% endif %}{% endblock %}

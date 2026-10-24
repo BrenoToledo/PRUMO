@@ -25,11 +25,35 @@ services:
     environment:
       DJANGO_DEBUG: "false"
       DATABASE_URL: postgres://${POSTGRES_USER:-prumo}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-prumo}
+      CELERY_BROKER_URL: redis://redis:6379/0
     ports:
       - "${PRUMO_PORTA:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
+
+  # Fila (#28): o Redis é o broker e o worker roda os pedidos à IA e a transcrição de áudio fora da requisição.
+  redis:
+    image: redis:7
+    restart: unless-stopped
+
+  worker:
+    build: ../backend
+    image: prumo-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DJANGO_DEBUG: "false"
+      DATABASE_URL: postgres://${POSTGRES_USER:-prumo}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-prumo}
+      CELERY_BROKER_URL: redis://redis:6379/0
+    command: celery -A config worker -l info --concurrency 2
+    depends_on:
+      backend:
+        condition: service_started
+      redis:
+        condition: service_started
 
   backup:
     image: postgres:16

@@ -1,0 +1,6 @@
+<div class="processando" role="status" aria-live="polite"
+     hx-get="{% url 'web:pedido' pedido.pk %}" hx-trigger="every 2s" hx-swap="outerHTML">
+  <span class="processando__giro" aria-hidden="true"></span>
+  <span>{{ texto|default:"A IA está pensando…" }}</span>
+  <noscript><a href="{% url 'web:pedido' pedido.pk %}">Atualizar</a></noscript>
+</div>

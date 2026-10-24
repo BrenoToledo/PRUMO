@@ -7,3 +7,4 @@ gunicorn>=23
 whitenoise>=6.7
 litellm==1.79.3
 mcp==2.3.0
+celery[redis]==5.4.0

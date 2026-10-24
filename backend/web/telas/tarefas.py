@@ -33,10 +33,9 @@ from django.urls import path, reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST
 
-from ia.provedores import ErroIA
 from nucleo import prioridade as motor
 from nucleo import services
-from nucleo.models import Esforco, SugestaoIA, Tarefa
+from nucleo.models import Esforco, PedidoIA, SugestaoIA, Tarefa
 
 ERRO_DATA_ADIAR = "Escolha uma data depois de hoje."
 ROTA_TAREFA = "web:tarefa"
@@ -268,6 +267,7 @@ def _contexto_quebra(request, tarefa, sugestao, partes=None, erro=""):
         "erro": erro,
         "ia": services.ia_disponivel(request.user),
         "motivo": services.motivo_para_quebrar(tarefa),
+        "pedido": services.pedido_em_andamento(request.user, tarefa=tarefa),
     }
 
 
@@ -282,10 +282,9 @@ def quebrar_tarefa(request, pk):
 @login_required
 def sugerir_quebra(request, pk):
     tarefa = _tarefa_do_usuario(request, pk, Tarefa.Status.ABERTA)
-    try:
-        services.sugerir_quebra(tarefa, novo=True)
-    except ErroIA as erro:
-        messages.error(request, f"A IA não ajudou agora: {erro}")
+    pedido = services.pedir_quebra(tarefa, novo=True)
+    if pedido.status == PedidoIA.Status.ERRO:
+        messages.error(request, f"A IA não ajudou agora: {pedido.erro}")
     return redirect(ROTA_QUEBRAR, pk=tarefa.pk)
 
 

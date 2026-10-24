@@ -1,0 +1,32 @@
+/* Captura por áudio (M03): microfone grande, estado, transcrição e itens sugeridos. */
+.audio__topo { display: flex; align-items: center; justify-content: space-between; margin: var(--e4) 0 var(--e6); }
+.audio__titulo { margin: 0; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
+.audio__gravador { display: flex; flex-direction: column; align-items: center; gap: var(--e2); margin-bottom: var(--e6); text-align: center; }
+.audio__mic {
+  display: grid; place-items: center; width: 116px; height: 116px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 18px solid var(--primaria-suave); background: var(--primaria); color: var(--texto-na-primaria);
+  touch-action: none; user-select: none; -webkit-user-select: none; transition: transform var(--transicao);
+}
+.audio__mic svg { width: 32px; height: 32px; }
+.audio__mic:focus-visible { outline: 3px solid var(--primaria); outline-offset: 4px; }
+.audio__mic[aria-pressed="true"] { transform: scale(1.06); }
+.audio__estado { margin: var(--e2) 0 0; font-size: var(--titulo-tam); line-height: var(--titulo-alt); font-weight: var(--titulo-peso); font-variant-numeric: tabular-nums; }
+.audio__dica, .audio__nota { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.audio__nota { margin-top: var(--e4); text-align: center; }
+.audio__onda { display: flex; align-items: center; gap: 4px; height: 28px; visibility: hidden; }
+.audio__onda span { width: 3px; height: 30%; border-radius: 2px; background: var(--primaria); opacity: .7; transition: height 80ms linear; }
+.audio__gravador[data-gravando] .audio__onda { visibility: visible; }
+.audio__arquivo { display: flex; flex-direction: column; align-items: center; gap: var(--e2); margin-top: var(--e4); }
+.audio__gravador[data-com-microfone] .audio__arquivo { display: none; }
+.audio__resultado { display: flex; flex-direction: column; gap: var(--e3); }
+.audio__transcricao { margin: 0; padding: var(--e3) var(--e4); background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); }
+.audio__rotulo { margin: 0; color: var(--texto-secundario); font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso); text-transform: uppercase; letter-spacing: .04em; }
+.audio__fala { margin: var(--e1) 0 0; }
+.audio__itens { display: flex; flex-direction: column; gap: var(--e3); }
+.audio__quantos { margin: var(--e1) 0 var(--e2); font-weight: 600; }
+.audio__lista { display: flex; flex-direction: column; gap: var(--e2); margin: 0 0 var(--e2); padding-left: var(--e6); }
+.audio__item { width: 100%; padding: var(--e2); border: 1px solid var(--borda); border-radius: var(--raio-campo); background: var(--superficie); color: var(--texto); font: inherit; }
+.audio__acoes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); }
+.audio__sugestao { padding: var(--e3); border-radius: var(--raio-card); background: var(--primaria-suave); }
+.audio__sugestao .sugestao-ia__rotulo { display: flex; align-items: center; gap: var(--e1); margin: 0; color: var(--primaria); font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: 600; }
+.audio__sugestao .sugestao-ia__rotulo svg { width: 16px; height: 16px; }
