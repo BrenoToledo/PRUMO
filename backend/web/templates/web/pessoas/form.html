@@ -1,0 +1,34 @@
+{% extends "web/base.html" %}
+{% block titulo %}{% if pessoa %}Editar pessoa{% else %}Nova pessoa{% endif %}{% endblock %}
+{% block estilos %}{% include "web/pessoas/_cabeca.html" %}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% if pessoa %}{% url 'web:pessoa' pessoa.pk %}{% else %}{% url 'web:pessoas' %}{% endif %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+  {% if pessoa %}Editar pessoa{% else %}Nova pessoa{% endif %}
+</a>
+<form class="projeto-form" method="post" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<p class="erro" role="alert">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+  {% include "web/pessoas/_campo.html" with campo=form.nome tipo="text" dica="" exemplo="Gestor" %}
+  {% include "web/pessoas/_campo.html" with campo=form.papel tipo="text" opcional=True exemplo="chefe, colega, cliente, familiar…" %}
+  {% include "web/pessoas/_campo.html" with campo=form.email tipo="email" opcional=True exemplo="gestor@empresa.com" %}
+  {% include "web/pessoas/_campo.html" with campo=form.whatsapp tipo="tel" opcional=True exemplo="11 98765-4321" %}
+  {% include "web/pessoas/_campo.html" with campo=form.teams tipo="text" opcional=True exemplo="e-mail usado no Teams" %}
+  <div class="projeto-form__campo">
+    <label class="projeto-form__rotulo" for="id_cadencia_dias">Cobrar a cada (dias)</label>
+    <input id="id_cadencia_dias" name="cadencia_dias" type="number" min="1" max="60" inputmode="numeric" required aria-describedby="dica-cadencia{% if form.cadencia_dias.errors %} erro-cadencia_dias{% endif %}"
+           value="{{ form.cadencia_dias.value|default_if_none:'' }}"{% if form.cadencia_dias.errors %} aria-invalid="true"{% endif %}>
+    <p id="dica-cadencia" class="pessoa__dica">Quando você espera algo desta pessoa, o Prumo lembra de cobrar nesse intervalo.</p>
+    {% if form.cadencia_dias.errors %}<p id="erro-cadencia_dias" class="erro" role="alert">{{ form.cadencia_dias.errors|join:" " }}</p>{% endif %}
+  </div>
+  <button class="botao botao--primario" type="submit">{% if pessoa %}Salvar{% else %}Salvar pessoa{% endif %}</button>
+</form>
+{% if pessoa %}<details class="rotina-form__excluir pessoa__excluir">
+  <summary class="botao botao--pequeno">Excluir pessoa</summary>
+  <form method="post" action="{% url 'web:excluir_pessoa' pessoa.pk %}">
+    {% csrf_token %}
+    <p><strong>Excluir “{{ pessoa.nome }}”?</strong> As tarefas continuam; só deixam de estar ligadas a esta pessoa.</p>
+    <button class="botao botao--pequeno" type="submit">Excluir</button>
+  </form>
+</details>{% endif %}
+{% endblock %}

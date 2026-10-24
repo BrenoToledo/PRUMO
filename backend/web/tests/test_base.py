@@ -64,7 +64,7 @@ def test_layout_tem_navegacao_tokens_e_htmx(logado):
     assert 'href="' + reverse("web:entrada") + '"' in html
     for aba in ("Projetos", "Pessoas", "Revisão"):
         assert aba in html
-    assert 'aria-disabled="true"' in html
+    assert 'href="' + reverse("web:pessoas") + '"' in html
     assert 'action="' + reverse("web:sair") + '"' in html
 
 

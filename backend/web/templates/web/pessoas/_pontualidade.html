@@ -1,0 +1,8 @@
+<div class="pontualidade">
+  <h3 class="pontualidade__titulo">{{ titulo }}</h3>
+  {% if pont.total %}<dl class="pontualidade__numeros">
+    <div><dt>no prazo</dt><dd>{{ pont.pct }}%</dd></div>
+    <div><dt>atraso médio</dt><dd>{{ pont.atraso_medio|floatformat:"-1" }} dia{{ pont.atraso_medio|pluralize }}</dd></div>
+    <div><dt>entregas no prazo</dt><dd>{{ pont.no_prazo }}/{{ pont.total }}</dd></div>
+  </dl>{% else %}<p class="pessoa__vazio">Ainda sem entregas com prazo concluídas.</p>{% endif %}
+</div>

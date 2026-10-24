@@ -1,0 +1,29 @@
+<div class="fatos__linha vinculos">
+  <dt>Pessoas</dt>
+  <dd>
+    {% if vinculos %}<ul class="vinculos__lista">
+      {% for v in vinculos %}<li>
+        <a href="{% url 'web:pessoa' v.pessoa.pk %}">{{ v.pessoa.nome }}</a> · {{ v.get_relacao_display|lower }}
+        <form class="vinculos__remover" method="post" action="{% url 'web:desvincular_pessoa' v.pk %}">
+          {% csrf_token %}
+          <button class="botao botao--texto" type="submit" aria-label="Tirar {{ v.pessoa.nome }} desta tarefa">tirar</button>
+        </form>
+      </li>{% endfor %}
+    </ul>{% else %}ninguém{% endif %}
+    {% with pessoas=request.user.pessoas.all %}{% if pessoas %}<details class="vinculos__novo">
+      <summary class="botao botao--texto">ligar pessoa</summary>
+      <form method="post" action="{% url 'web:vincular_pessoa' tarefa.pk %}">
+        {% csrf_token %}
+        <label class="visualmente-oculto" for="vinculo-pessoa">Pessoa</label>
+        <select id="vinculo-pessoa" name="pessoa">{% for p in pessoas %}<option value="{{ p.pk }}">{{ p.nome }}</option>{% endfor %}</select>
+        <label class="visualmente-oculto" for="vinculo-relacao">Relação</label>
+        <select id="vinculo-relacao" name="relacao">
+          <option value="depende_de_mim">espera isto de mim</option>
+          <option value="eu_dependo">eu espero isto dela</option>
+          <option value="envolvida">só envolvida</option>
+        </select>
+        <button class="botao botao--pequeno" type="submit">Ligar</button>
+      </form>
+    </details>{% else %}<a class="vinculos__cadastrar" href="{% url 'web:nova_pessoa' %}">cadastrar pessoa</a>{% endif %}{% endwith %}
+  </dd>
+</div>

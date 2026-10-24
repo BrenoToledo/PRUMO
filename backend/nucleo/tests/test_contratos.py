@@ -100,3 +100,24 @@ def test_rotas_de_cada_etapa_estao_ligadas(modulo):
     tela = __import__(f"web.telas.{modulo}", fromlist=["urlpatterns"])
     for rota in tela.urlpatterns:
         assert rota in urls.urlpatterns
+
+
+# ------------------------------------------------------------------ pessoas e follow-up (P16)
+@freeze_time(f"{SEG} 08:00")
+def test_painel_e_detalhe_de_pessoas_no_formato_do_contrato(usuario, tarefa):
+    pessoa = services.criar_pessoa(usuario, {"nome": "Gestor"})
+    services.vincular_pessoa(tarefa, pessoa, "eu_dependo")
+
+    assert set(services.painel_pessoas(usuario)) == _chaves(contratos.PainelPessoas)
+    assert set(services.aguardando(usuario)[0]) == _chaves(contratos.Aguardando)
+    assert set(services.detalhe_pessoa(pessoa)) == _chaves(contratos.DetalhePessoa)
+
+
+@freeze_time(f"{SEG} 08:00")
+def test_campos_de_pessoas_na_api(api, usuario, tarefa):
+    pessoa = services.criar_pessoa(usuario, {"nome": "Gestor"})
+    services.vincular_pessoa(tarefa, pessoa, "eu_dependo")
+
+    assert set(api.get(f"/api/pessoas/{pessoa.pk}/").json()) == set(contratos.CAMPOS_PESSOA)
+    assert set(api.get("/api/aguardando/").json()[0]) == set(contratos.CAMPOS_AGUARDANDO)
+    assert set(api.get(f"/api/pessoas/{pessoa.pk}/resumo/").json()) == set(contratos.CAMPOS_RESUMO_PESSOA)

@@ -225,7 +225,7 @@ class TarefaPessoa(models.Model):
     tarefa = models.ForeignKey(Tarefa, on_delete=models.CASCADE, related_name="vinculos")
     pessoa = models.ForeignKey(Pessoa, on_delete=models.CASCADE, related_name="vinculos")
     relacao = models.CharField(max_length=15, choices=Relacao.choices)
-    ultima_cobranca = models.DateTimeField(null=True, blank=True, help_text="Só para \"eu dependo dela\".")
+    ultima_cobranca = models.DateTimeField(null=True, blank=True, help_text='Só para "eu dependo dela".')
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["tarefa", "pessoa", "relacao"], name="vinculo_unico")]

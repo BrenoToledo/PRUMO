@@ -14,6 +14,7 @@ from .telas import (
     lista_rapida,
     pausa,
     perfil,
+    pessoas,
     plano,
     preparar,
     projetos,
@@ -54,3 +55,4 @@ urlpatterns += audio.urlpatterns
 urlpatterns += calendarios.urlpatterns
 urlpatterns += rotinas.urlpatterns
 urlpatterns += semana.urlpatterns
+urlpatterns += pessoas.urlpatterns

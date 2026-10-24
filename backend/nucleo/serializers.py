@@ -72,7 +72,7 @@ class RotinaSerializer(DoUsuarioMixin, serializers.ModelSerializer):
 class PessoaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pessoa
-        fields = ["id", "nome", "papel", "email", "whatsapp", "teams"]
+        fields = ["id", "nome", "papel", "email", "whatsapp", "teams", "cadencia_dias"]
 
 
 class ItemCapturaSerializer(serializers.ModelSerializer):

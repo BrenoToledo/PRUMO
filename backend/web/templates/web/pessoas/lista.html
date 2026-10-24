@@ -1,0 +1,23 @@
+{% extends "web/base.html" %}
+{% block titulo %}Pessoas{% endblock %}
+{% block estilos %}{% include "web/pessoas/_cabeca.html" %}{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Pessoas</h1>
+    <p class="cabecalho__sub">Quem espera algo de você e de quem você espera.</p>
+  </div>
+  {% include "web/_botao_sair.html" %}
+</header>
+{% if tem_pessoas %}<form class="pessoas__busca" method="get" action="{% url 'web:pessoas' %}" role="search"
+      hx-get="{% url 'web:pessoas' %}" hx-trigger="input changed delay:250ms from:#busca-pessoa, submit" hx-target="#pessoas" hx-swap="outerHTML" hx-push-url="true">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+  <label class="visualmente-oculto" for="busca-pessoa">Buscar pessoa</label>
+  <input id="busca-pessoa" name="q" type="search" placeholder="Buscar pessoa" value="{{ busca }}" autocomplete="off">
+</form>{% endif %}
+{% include "web/pessoas/_pessoas.html" %}
+<a class="projetos__novo" href="{% url 'web:nova_pessoa' %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  Nova pessoa
+</a>
+{% endblock %}

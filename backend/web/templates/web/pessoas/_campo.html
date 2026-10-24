@@ -1,0 +1,6 @@
+<div class="projeto-form__campo">
+  <label class="projeto-form__rotulo" for="{{ campo.id_for_label }}">{{ campo.label }}{% if opcional %} <span class="projeto-form__opcional">(opcional)</span>{% endif %}</label>
+  <input id="{{ campo.id_for_label }}" name="{{ campo.html_name }}" type="{{ tipo }}" maxlength="{{ campo.field.max_length|default:120 }}"{% if not opcional %} required{% endif %}{% if exemplo %} placeholder="{{ exemplo }}"{% endif %}
+         value="{{ campo.value|default_if_none:'' }}"{% if campo.errors %} aria-invalid="true" aria-describedby="erro-{{ campo.html_name }}"{% endif %}>
+  {% if campo.errors %}<p id="erro-{{ campo.html_name }}" class="erro" role="alert">{{ campo.errors|join:" " }}</p>{% endif %}
+</div>
