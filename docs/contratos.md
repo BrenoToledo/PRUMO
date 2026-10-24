@@ -37,6 +37,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `claude/project-thread-mpmxzo` (P16 · Pessoas) | #84, #85, #86 | backend + interface | main (P1–P15) | `nucleo/pessoas.py`, `web/telas/pessoas.py`, `web/templates/web/pessoas/`, `web/static/web/telas/pessoas.css`, `nucleo/tests/test_pessoas.py`, `nucleo/tests/test_pessoas_regra.py`, `web/tests/test_pessoas.py`; em `tarefas` só a lista de pessoas do detalhe (parcial `web/pessoas/_vinculos.html`); em `base.html` só o item Pessoas da navegação; migração `0009` |
 | `claude/project-thread-mpmxzo` (P17 · Mensagens) | #87 | backend + interface | main (P1–P16) | `web/templates/web/pessoas/mensagem.html`, `teams.html`, `web/static/web/telas/mensagens.js`; em `web/telas/pessoas.py` as rotas da mensagem, `nucleo/tests/test_mensagens.py`, `web/tests/test_mensagens.py`; em `ia/tarefas.py` e `ia/provedores.py` só o pedido `mensagem`; em `plano` (e `hoje.css`) só o card "Expectativa em risco" do painel do desktop; migração `0010` |
 | `claude/project-thread-0nn6nm` (calendário: navegar, visões e arrastar) | #99, #100, #101 | backend + interface | main (P1–P17) | `web/telas/semana.py`, `web/templates/web/semana/`, `web/static/web/telas/semana.css`, `semana.js`, `nucleo/tests/test_calendario_visoes.py`, `web/tests/test_calendario_visoes.py`; em `planejamento.py` só `VISOES`, `dias_da_visao`, `vizinhos` e `motivo_para_nao_encaixar`; em `services.py` só `agenda_do_periodo` (que `semana_planejada` passa a usar), `mover_bloco`, `trocar_blocos` e `trocar_na_proposta` |
+| `claude/project-thread-mpmxzo` (P18 · Revisão semanal) | #91, #92, #93 | backend + interface | main (P1–P17 e calendário) | `nucleo/revisao_semanal.py`, `web/telas/revisao_semanal.py`, `web/templates/web/revisao_semanal/`, `web/static/web/telas/revisao_semanal.css`, `nucleo/tests/test_revisao_semanal*.py`, `web/tests/test_revisao_semanal.py`; em `revisao` só o link "Revisão semanal" da M25; sem migração (usa `Revisao` tipo `semanal`) |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -110,6 +111,9 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:trocar_na_semana` | `/semana/trocar/` (`a`, `de_a`, `b`, `de_b`; vazio = não couberam) | POST (HTMX: parcial `#semana`) | semana | `trocar_na_proposta` |
 | `web:mover_bloco_na_semana` | `/semana/blocos/<pk>/mover/` (`dia=AAAA-MM-DD`, `hora=HH:MM`) | POST (HTMX: parcial `#semana`) | semana | `mover_bloco` |
 | `web:trocar_blocos_na_semana` | `/semana/blocos/trocar/` (`a`, `b`: ids dos blocos) | POST (HTMX: parcial `#semana`) | semana | `trocar_blocos` |
+| `web:revisao_semanal` | `/revisao/semanal/` (`?passo=N` abre e salva o passo) | GET | revisao_semanal | `revisao_semanal`, `passo_da_revisao`, `ir_para_passo` |
+| `web:responder_revisao` | `/revisao/semanal/responder/` (`chave`, `opcao`, `texto`) | POST (HTMX: parcial `#revisao-semanal`; efeito `clarificar`/`mensagem` vira `HX-Redirect`) | revisao_semanal | `responder_revisao` |
+| `web:concluir_revisao_semanal` | `/revisao/semanal/concluir/` | POST (redireciona para `web:semana`) | revisao_semanal | `concluir_revisao_semanal` |
 | `web:service_worker` | `/sw.js` | GET (público) | pwa | — |
 
 Convenções das telas (as mesmas do P1): views com `require_GET`/`require_POST` e `login_required`; objetos buscados com `usuario=request.user` (404 se não for do usuário); resposta HTMX é um parcial, sem HTMX é redirect com mensagem; erro de validação volta com status 422.
@@ -343,6 +347,40 @@ M24 redige a mensagem para cobrar (vínculo "eu dependo dela") ou renegociar o p
 | `expectativas_em_risco(usuario)` | `list[ExpectativaEmRisco]` | Vínculos "depende de mim" de tarefas abertas em risco (prazo vencido ou folga abaixo de 1,2x), pelo prazo |
 
 `registrar_cobranca` limpa o lembrete (`proxima_cobranca`), e a cadência volta a valer. Migração `0010`. Telas: "Mensagem" nos itens aguardando e "Renegociar" nas entregas em risco (M22, M23) levam a M24 (`POST /mensagens/vinculo/<id>/` → `/mensagens/<sugestao>/`); o painel de Hoje no desktop mostra o card "Expectativa em risco" com "Redigir mensagem".
+
+## Revisão semanal guiada (P18, Fase 1)
+
+M26 conduz a revisão como uma conversa em 5 passos: caixa de entrada, projetos, aguardando, rotinas e plano da semana. Cada semana tem uma `Revisao` do tipo `semanal` com `data` = a segunda-feira. O progresso fica em `metricas`: `{passo, respostas: {chave: RespostaRevisao}, concluida_em}`. As perguntas saem de regras puras em `nucleo/revisao_semanal.py`, sem chamada ao provedor de IA.
+
+As regras de cada passo:
+- **Caixa de entrada:** uma pergunta quando há item pendente.
+- **Projetos:** entra o projeto ativo sem tarefa aberta (aceita texto: "o que destrava?"), com folga abaixo de 1x até o fim, ou sem evento nas tarefas há 14 dias.
+- **Aguardando:** os itens com `cobrar_hoje`.
+- **Rotinas:** as ativas feitas em menos da metade das ocorrências com prazo nos últimos 28 dias, com pelo menos 2 previstas.
+
+Uma pergunta respondida sai da lista. Só o chip escolhido muda alguma coisa.
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `revisao_semanal(usuario, dia=None)` | `Revisao` | A da semana de `dia`. Cria se não houver, no passo 1 |
+| `passo_da_revisao(revisao, passo=None)` | `PassoRevisao` | `None` = o passo salvo. As perguntas são recalculadas a cada chamada, sem as já respondidas. `ValueError` fora de 1 a 5 |
+| `ir_para_passo(revisao, passo)` | `Revisao` | Salva o passo (de 1 a 5). `ValueError` fora disso |
+| `responder_revisao(revisao, chave, opcao, texto="")` | `RespostaRevisao` | Veja os efeitos de cada chip abaixo |
+| `concluir_revisao_semanal(revisao)` | `Revisao` | Grava `concluida_em` e o passo 5. Depois disso, `responder_revisao` dá `ValueError` |
+
+Erros de `responder_revisao`: dá `ValueError` se a chave não estiver entre as perguntas abertas, se a opção não for da pergunta ou se a revisão já estiver concluída. Nesses casos nada muda.
+
+Efeitos de cada chip em `responder_revisao`:
+- Projeto:
+  - `pausar` e `concluir` mudam o `status` do projeto.
+  - Um texto vira item na caixa de entrada: "<projeto>: <texto>".
+- Vínculo:
+  - `cobrar` chama `redigir_mensagem` (efeito `mensagem`, com `alvo` = a sugestão).
+  - `recebi` chama `desvincular_pessoa`.
+- Rotina: `pausar` faz `ativa = False`.
+- Caixa de entrada: `clarificar` dá efeito `clarificar`, com `alvo` = o primeiro item pendente.
+
+As opções que sobram (`seguir`, `depois`, `esperar`, `manter`) só registram a resposta.
 
 ## Mudar um contrato
 
