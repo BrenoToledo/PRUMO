@@ -1,0 +1,79 @@
+/* Pessoas (M22, M23): quem espera de você, o aguardando com cobrança e o detalhe com pontualidade. */
+.pessoas__busca {
+  display: flex; align-items: center; gap: var(--e2); margin: 0 0 var(--e4); padding: 0 var(--e3);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+}
+.pessoas__busca svg { flex: none; width: 18px; height: 18px; color: var(--texto-secundario); }
+.pessoas__busca input { flex: 1; min-width: 0; min-height: 44px; border: 0; background: none; color: var(--texto); font: inherit; }
+.pessoas__busca input:focus { outline: none; }
+.pessoas__busca:focus-within { outline: 2px solid var(--primaria); outline-offset: -1px; }
+.pessoas__secao, .pessoa__secao {
+  margin: var(--e4) 0 var(--e2); color: var(--texto-secundario);
+  font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso); letter-spacing: .04em; text-transform: uppercase;
+}
+.pessoa__secao { color: var(--texto); font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); letter-spacing: 0; text-transform: none; margin-top: var(--e6); }
+.pessoas__lista { list-style: none; margin: 0 0 var(--e4); padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.pessoas__nada, .pessoa__vazio { margin: 0 0 var(--e4); color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.pessoas__cobrar { color: var(--aviso); font-weight: var(--micro-peso); }
+
+.pessoa-card {
+  display: flex; align-items: center; gap: var(--e3); padding: var(--e3) var(--e4);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  color: var(--texto); text-decoration: none;
+}
+.pessoa-card__avatar {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px;
+  border-radius: var(--raio-chip); background: var(--primaria-suave); color: var(--primaria);
+  font-size: var(--legenda-tam); font-weight: var(--subtitulo-peso);
+}
+.pessoa-card__avatar--grande { width: 56px; height: 56px; font-size: var(--titulo-tam); }
+.pessoa-card__texto { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.pessoa-card__nome { overflow-wrap: anywhere; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); color: var(--texto); text-decoration: none; }
+.pessoa-card__meta { overflow-wrap: anywhere; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); text-decoration: none; }
+.pessoa-card__acoes { display: flex; flex-direction: column; align-items: flex-end; gap: var(--e2); flex: none; }
+
+.selo {
+  display: inline-flex; align-items: center; flex: none; padding: 2px var(--e2); border-radius: var(--raio-chip);
+  background: var(--borda); color: var(--texto);
+  font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso);
+}
+.selo--risco { background: color-mix(in srgb, var(--aviso) 15%, transparent); color: #9A4A03; }
+.selo--espera { background: color-mix(in srgb, var(--prioridade-alta) 12%, transparent); color: #9A3412; }
+.selo--ok { background: color-mix(in srgb, var(--sucesso) 15%, transparent); color: #166534; }
+
+.pessoa__topo .botao, .pessoa__canais .botao { text-decoration: none; }
+.pessoa__topo { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); }
+.pessoa__cabecalho { display: flex; align-items: center; gap: var(--e4); margin: var(--e3) 0 var(--e4); }
+.pessoa__canais { list-style: none; display: flex; flex-wrap: wrap; gap: var(--e2); margin: 0 0 var(--e4); padding: 0; }
+.pessoa__pontualidade { display: grid; gap: var(--e3); }
+.pontualidade__titulo { margin: 0 0 var(--e2); color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: var(--legenda-peso); }
+.pontualidade__numeros { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--e2); margin: 0; }
+.pontualidade__numeros div {
+  display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; padding: var(--e3) var(--e2);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); text-align: center;
+}
+.pontualidade__numeros dt { color: var(--texto-secundario); font-size: var(--micro-tam); line-height: var(--micro-alt); }
+.pontualidade__numeros dd { margin: 0; color: var(--primaria); font-size: var(--titulo-tam); line-height: var(--titulo-alt); font-weight: var(--titulo-peso); }
+
+.pessoa-item {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e3); padding: var(--e3) var(--e4);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  color: var(--texto); text-decoration: none;
+}
+.pessoa-item__titulo { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--texto); text-decoration: none; }
+.pessoa__fatos { margin: var(--e6) 0 var(--e12); }
+.pessoa__dica { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.pessoa__excluir { margin-bottom: var(--e12); }
+
+/* Lista de pessoas no detalhe da tarefa (M04). */
+.vinculos__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: flex-end; gap: var(--e1); }
+.vinculos__lista a, .vinculos__cadastrar { color: var(--primaria); }
+.vinculos__remover { display: inline; }
+.vinculos__novo summary { display: inline-flex; list-style: none; cursor: pointer; color: var(--primaria); }
+.vinculos__novo summary::-webkit-details-marker { display: none; }
+.vinculos__novo form { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--e2); margin-top: var(--e2); }
+.vinculos__novo select { min-height: 36px; padding: 0 var(--e2); border: 1px solid var(--borda); border-radius: var(--raio-campo); background: var(--superficie); color: var(--texto); font: inherit; font-size: var(--legenda-tam); }
+
+@media (min-width: 900px) {
+  .pessoa__pontualidade { grid-template-columns: 1fr 1fr; }
+}

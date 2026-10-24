@@ -50,7 +50,16 @@ Base: `/api/`. Autenticação por sessão ou token. Para ferramentas (MCP, scrip
 
 ## Cadastros
 
-`/areas/`, `/projetos/`, `/rotinas/`, `/pessoas/` (CRUD; em `/rotinas/` a `recorrencia` é uma RRULE validada, com `400` se não servir, `inicio` é só leitura e `DELETE` cancela a ocorrência aberta) e `GET/PATCH /perfil/` (jornada, pico de energia, folga diária, duração do bloco, pesos e provedor de IA). `DELETE /areas/{id}/` devolve `409` se a área tiver tarefas, projetos ou rotinas, e `POST /areas/` põe a área nova no fim da ordem (M30).
+`/areas/`, `/projetos/`, `/rotinas/`, `/pessoas/` (CRUD, ver acima; em `/rotinas/` a `recorrencia` é uma RRULE validada, com `400` se não servir, `inicio` é só leitura e `DELETE` cancela a ocorrência aberta) e `GET/PATCH /perfil/` (jornada, pico de energia, folga diária, duração do bloco, pesos e provedor de IA). `DELETE /areas/{id}/` devolve `409` se a área tiver tarefas, projetos ou rotinas, e `POST /areas/` põe a área nova no fim da ordem (M30).
+
+## Pessoas e aguardando
+
+| Método e rota | O que faz | Tela |
+| --- | --- | --- |
+| `GET/POST /pessoas/`, `GET/PATCH/DELETE /pessoas/{id}/` | CRUD com `nome`, `papel`, `email`, `whatsapp`, `teams` e `cadencia_dias` (1 a 60, padrão 3). `?busca=` filtra pelo nome. Excluir tira os vínculos, não as tarefas | M22 |
+| `GET /pessoas/{id}/resumo/` | `pessoa`, `espera_de_voce` (`[{tarefa, titulo, prazo, folga, em_risco}]`), `voce_espera` (itens do aguardando), `minha_pontualidade` e `pontualidade_dela` (`{total, no_prazo, pct, atraso_medio}`), `ultimo_contato` e `proxima_cobranca` | M23 |
+| `GET /aguardando/` | O que você espera dos outros, tarefas abertas: `{vinculo, tarefa, titulo, pessoa, pessoa_nome, dias, ultima_cobranca, proxima_cobranca, cobrar_hoje}`, cobrar hoje primeiro | M22 |
+| `POST /aguardando/{vinculo}/cobrei/` | Registra a cobrança agora (evento `cobranca` na tarefa) e devolve o item com a próxima data. `400` se o vínculo não é "eu dependo dela" ou a tarefa não está aberta | M22, M23 |
 
 ## Seus dados (LGPD)
 

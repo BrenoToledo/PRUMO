@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from . import prioridade as motor
 from . import services
-from .models import Area, Bloco, ItemCaptura, Pessoa, Projeto, Rotina, Tarefa
+from .models import Area, Bloco, ItemCaptura, Pessoa, Projeto, Rotina, Tarefa, TarefaPessoa
 from .serializers import (
     AdiarTarefaSerializer,
     AreaSerializer,
@@ -96,6 +96,80 @@ class RotinaViewSet(DoUsuarioViewSet):
 class PessoaViewSet(DoUsuarioViewSet):
     queryset = Pessoa.objects.all()
     serializer_class = PessoaSerializer
+
+    def get_queryset(self):
+        busca = self.request.query_params.get("busca", "").strip()
+        qs = super().get_queryset()
+        return qs.filter(nome__icontains=busca) if busca else qs
+
+    def perform_create(self, serializer):
+        serializer.instance = services.criar_pessoa(self.request.user, serializer.validated_data)
+
+    def perform_update(self, serializer):
+        serializer.instance = services.atualizar_pessoa(serializer.instance, serializer.validated_data)
+
+    def perform_destroy(self, instance):
+        services.excluir_pessoa(instance)
+
+    @action(detail=True, methods=["get"])
+    def resumo(self, request, pk=None):
+        d = services.detalhe_pessoa(self.get_object())
+        return Response(
+            {
+                "pessoa": PessoaSerializer(d["pessoa"]).data,
+                "espera_de_voce": [
+                    {
+                        "tarefa": e["tarefa"].pk,
+                        "titulo": e["tarefa"].titulo,
+                        "prazo": e["prazo"],
+                        "folga": e["folga"],
+                        "em_risco": e["em_risco"],
+                    }
+                    for e in d["espera_de_voce"]
+                ],
+                "voce_espera": [_aguardando(i) for i in d["voce_espera"]],
+                "minha_pontualidade": _pontualidade(d["minha_pontualidade"]),
+                "pontualidade_dela": _pontualidade(d["pontualidade_dela"]),
+                "ultimo_contato": d["ultimo_contato"],
+                "proxima_cobranca": d["proxima_cobranca"],
+            }
+        )
+
+
+def _pontualidade(p) -> dict:
+    return {"total": p.total, "no_prazo": p.no_prazo, "pct": p.pct, "atraso_medio": p.atraso_medio}
+
+
+def _aguardando(item) -> dict:
+    return {
+        "vinculo": item["vinculo"].pk,
+        "tarefa": item["tarefa"].pk,
+        "titulo": item["tarefa"].titulo,
+        "pessoa": item["pessoa"].pk,
+        "pessoa_nome": item["pessoa"].nome,
+        "dias": item["dias"],
+        "ultima_cobranca": item["ultima_cobranca"],
+        "proxima_cobranca": item["proxima_cobranca"],
+        "cobrar_hoje": item["cobrar_hoje"],
+    }
+
+
+@api_view(["GET"])
+def aguardando(request):
+    return Response([_aguardando(i) for i in services.aguardando(request.user)])
+
+
+@api_view(["POST"])
+def cobrei(request, pk):
+    vinculo = get_object_or_404(
+        TarefaPessoa.objects.select_related("tarefa", "pessoa"), pk=pk, tarefa__usuario=request.user
+    )
+    try:
+        services.registrar_cobranca(vinculo)
+    except ValueError as exc:
+        return _erro(exc)
+    item = next(i for i in services.aguardando(request.user, vinculo.pessoa) if i["vinculo"].pk == vinculo.pk)
+    return Response(_aguardando(item))
 
 
 class CapturaViewSet(

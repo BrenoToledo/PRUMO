@@ -26,12 +26,17 @@ from ia.config import Config as ConfigIA
 from ia.provedores import ErroIA, Provedor, Resposta
 
 from . import calendario as cal
+from . import pessoas as pes
 from . import planejamento as plan
 from . import prioridade as motor
 from . import rotinas as rot
 from .contratos import (
+    Aguardando,
+    DetalhePessoa,
+    Expectativa,
     ExportacaoDados,
     ListaRapida,
+    PainelPessoas,
     PlanoDoDia,
     ProgressoProjeto,
     PropostaReplanejamento,
@@ -1703,3 +1708,160 @@ def semana_planejada(usuario, dia: date | None = None) -> SemanaPlanejada:
         ],
         "proposta": proposta_da_semana(usuario),
     }
+
+
+# --------------------------------------------------------------------------- pessoas e follow-up (P16)
+CAMPOS_PESSOA = ("nome", "papel", "email", "whatsapp", "teams", "cadencia_dias")
+
+
+def pessoas_de(usuario, busca: str = "") -> list[Pessoa]:
+    pessoas = Pessoa.objects.filter(usuario=usuario)
+    if busca.strip():
+        pessoas = pessoas.filter(nome__icontains=busca.strip())
+    return list(pessoas)
+
+
+def _gravar_pessoa(pessoa: Pessoa, dados: dict) -> Pessoa:
+    for campo in CAMPOS_PESSOA:
+        if campo in dados:
+            valor = dados[campo]
+            setattr(pessoa, campo, valor.strip() if isinstance(valor, str) else valor)
+    pessoa.full_clean(exclude=["usuario"])
+    pessoa.save()
+    return pessoa
+
+
+def criar_pessoa(usuario, dados: dict) -> Pessoa:
+    return _gravar_pessoa(Pessoa(usuario=usuario), dados)
+
+
+def atualizar_pessoa(pessoa: Pessoa, dados: dict) -> Pessoa:
+    return _gravar_pessoa(pessoa, dados)
+
+
+def excluir_pessoa(pessoa: Pessoa) -> None:
+    """Os vínculos saem junto (CASCADE); as tarefas ficam."""
+    pessoa.delete()
+
+
+def vincular_pessoa(tarefa: Tarefa, pessoa: Pessoa, relacao: str) -> TarefaPessoa:
+    if pessoa.usuario_id != tarefa.usuario_id:
+        raise ValueError("pessoa não encontrada")
+    if relacao not in TarefaPessoa.Relacao.values:
+        raise ValueError("relação inválida")
+    vinculo, _ = TarefaPessoa.objects.get_or_create(tarefa=tarefa, pessoa=pessoa, relacao=relacao)
+    return vinculo
+
+
+def desvincular_pessoa(vinculo: TarefaPessoa) -> None:
+    vinculo.delete()
+
+
+def _item_aguardando(vinculo: TarefaPessoa, dia: date) -> Aguardando:
+    tarefa, pessoa = vinculo.tarefa, vinculo.pessoa
+    desde = timezone.localtime(tarefa.criada_em).date()
+    ultima = timezone.localtime(vinculo.ultima_cobranca).date() if vinculo.ultima_cobranca else None
+    proxima = pes.proxima_cobranca(desde, ultima, pessoa.cadencia_dias)
+    return {
+        "vinculo": vinculo,
+        "tarefa": tarefa,
+        "pessoa": pessoa,
+        "dias": (dia - desde).days,
+        "ultima_cobranca": vinculo.ultima_cobranca,
+        "proxima_cobranca": proxima,
+        "cobrar_hoje": proxima <= dia,
+    }
+
+
+def _vinculos_abertos(usuario, relacao: str) -> QuerySet[TarefaPessoa]:
+    return TarefaPessoa.objects.filter(
+        tarefa__usuario=usuario, tarefa__status=Tarefa.Status.ABERTA, relacao=relacao
+    ).select_related("tarefa", "pessoa")
+
+
+def aguardando(usuario, pessoa: Pessoa | None = None) -> list[Aguardando]:
+    """O que espero dos outros: tarefas abertas "eu dependo dela", cobrar hoje primeiro."""
+    vinculos = _vinculos_abertos(usuario, TarefaPessoa.Relacao.EU_DEPENDO)
+    if pessoa is not None:
+        vinculos = vinculos.filter(pessoa=pessoa)
+    dia = hoje()
+    itens = [_item_aguardando(v, dia) for v in vinculos]
+    return sorted(itens, key=lambda i: (not i["cobrar_hoje"], i["proxima_cobranca"], -i["dias"], i["tarefa"].pk))
+
+
+def _expectativa(tarefa: Tarefa, dia: date) -> Expectativa:
+    folga = avaliar_tarefa(tarefa, referencia=dia).folga if tarefa.prazo else None
+    return {
+        "tarefa": tarefa,
+        "prazo": tarefa.prazo,
+        "folga": folga,
+        "em_risco": pes.em_risco(tarefa.prazo, folga, hoje=dia),
+    }
+
+
+def painel_pessoas(usuario, busca: str = "") -> PainelPessoas:
+    """A tela Pessoas (M22): quem espera de mim (com o risco), o aguardando e quem está sem pendências."""
+    pessoas = pessoas_de(usuario, busca)
+    ids = {p.pk for p in pessoas}
+    dia = hoje()
+    abertas: dict[int, int] = defaultdict(int)
+    riscos: dict[int, int] = defaultdict(int)
+    for v in _vinculos_abertos(usuario, TarefaPessoa.Relacao.DEPENDE_DE_MIM).filter(pessoa__in=ids):
+        abertas[v.pessoa_id] += 1
+        riscos[v.pessoa_id] += int(_expectativa(v.tarefa, dia)["em_risco"])
+    esperam = [{"pessoa": p, "abertas": abertas[p.pk], "em_risco": riscos[p.pk]} for p in pessoas if abertas[p.pk]]
+    esperam.sort(key=lambda e: (-e["em_risco"], -e["abertas"], e["pessoa"].nome))
+    voce_espera = [i for i in aguardando(usuario) if i["pessoa"].pk in ids]
+    com_pendencia = {e["pessoa"].pk for e in esperam} | {i["pessoa"].pk for i in voce_espera}
+    return {
+        "esperam_de_voce": esperam,
+        "voce_espera": voce_espera,
+        "sem_pendencias": [p for p in pessoas if p.pk not in com_pendencia],
+    }
+
+
+def _pontualidade(pessoa: Pessoa, relacao: str) -> pes.Pontualidade:
+    tarefas = Tarefa.objects.filter(
+        vinculos__pessoa=pessoa,
+        vinculos__relacao=relacao,
+        status=Tarefa.Status.CONCLUIDA,
+        prazo__isnull=False,
+        concluida_em__isnull=False,
+    ).distinct()
+    return pes.pontualidade((t.prazo, timezone.localtime(t.concluida_em).date()) for t in tarefas)
+
+
+def detalhe_pessoa(pessoa: Pessoa) -> DetalhePessoa:
+    """O detalhe da pessoa (M23): o que cada lado espera, pontualidade nos dois sentidos e as cobranças."""
+    dia = hoje()
+    tarefas = [
+        v.tarefa for v in _vinculos_abertos(pessoa.usuario, TarefaPessoa.Relacao.DEPENDE_DE_MIM).filter(pessoa=pessoa)
+    ]
+    espera = sorted(
+        (_expectativa(t, dia) for t in tarefas),
+        key=lambda e: (not e["em_risco"], e["prazo"] or date.max, e["tarefa"].pk),
+    )
+    voce_espera = aguardando(pessoa.usuario, pessoa)
+    ultimo = pessoa.vinculos.filter(ultima_cobranca__isnull=False).order_by("-ultima_cobranca").first()
+    return {
+        "pessoa": pessoa,
+        "espera_de_voce": espera,
+        "voce_espera": voce_espera,
+        "minha_pontualidade": _pontualidade(pessoa, TarefaPessoa.Relacao.DEPENDE_DE_MIM),
+        "pontualidade_dela": _pontualidade(pessoa, TarefaPessoa.Relacao.EU_DEPENDO),
+        "ultimo_contato": ultimo.ultima_cobranca if ultimo else None,
+        "proxima_cobranca": min((i["proxima_cobranca"] for i in voce_espera), default=None),
+    }
+
+
+@transaction.atomic
+def registrar_cobranca(vinculo: TarefaPessoa) -> TarefaPessoa:
+    """ "Cobrei": guarda a cobrança de agora e grava o evento `cobranca` na tarefa."""
+    if vinculo.relacao != TarefaPessoa.Relacao.EU_DEPENDO:
+        raise ValueError("só se cobra o que você espera da pessoa")
+    if vinculo.tarefa.status != Tarefa.Status.ABERTA:
+        raise ValueError("a tarefa não está mais aberta")
+    vinculo.ultima_cobranca = timezone.now()
+    vinculo.save(update_fields=["ultima_cobranca"])
+    evento(vinculo.tarefa, EventoTarefa.Tipo.COBRANCA, pessoa=vinculo.pessoa_id)
+    return vinculo

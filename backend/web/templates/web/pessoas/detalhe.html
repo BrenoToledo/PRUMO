@@ -1,0 +1,70 @@
+{% extends "web/base.html" %}
+{% block titulo %}{{ d.pessoa.nome }}{% endblock %}
+{% block estilos %}{% include "web/pessoas/_cabeca.html" %}{% endblock %}
+{% block conteudo %}
+{% with p=d.pessoa %}
+<div class="pessoa__topo">
+  <a class="voltar" href="{% url 'web:pessoas' %}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+    Pessoas
+  </a>
+  <a class="botao botao--pequeno" href="{% url 'web:editar_pessoa' p.pk %}">Editar</a>
+</div>
+
+<header class="pessoa__cabecalho">
+  <span class="pessoa-card__avatar pessoa-card__avatar--grande" aria-hidden="true">{{ p.nome|slice:":1"|upper }}</span>
+  <div>
+    <h1 class="detalhe__titulo">{{ p.nome }}</h1>
+    {% if p.papel %}<p class="cabecalho__sub">{{ p.papel }}</p>{% endif %}
+  </div>
+</header>
+
+{% if canais %}<ul class="pessoa__canais" aria-label="Canais">
+  {% for rotulo, url in canais %}<li><a class="botao botao--pequeno" href="{{ url }}" target="_blank" rel="noopener">{{ rotulo }}</a></li>{% endfor %}
+</ul>{% endif %}
+
+<section class="pessoa__pontualidade" aria-labelledby="titulo-pontualidade">
+  <h2 id="titulo-pontualidade" class="visualmente-oculto">Pontualidade</h2>
+  {% include "web/pessoas/_pontualidade.html" with titulo="Suas entregas para "|add:p.nome pont=d.minha_pontualidade %}
+  {% include "web/pessoas/_pontualidade.html" with titulo="Entregas de "|add:p.nome|add:" para você" pont=d.pontualidade_dela %}
+</section>
+
+<section aria-labelledby="titulo-espera">
+  <h2 id="titulo-espera" class="pessoa__secao">Espera de você ({{ d.espera_de_voce|length }})</h2>
+  {% if d.espera_de_voce %}<ul class="pessoas__lista">
+    {% for e in d.espera_de_voce %}<li>
+      <a class="pessoa-item" href="{% url 'web:tarefa' e.tarefa.pk %}">
+        <span class="pessoa-item__titulo">{{ e.tarefa.titulo }}</span>
+        {% if e.em_risco %}<span class="selo selo--risco">{% if e.prazo < hoje %}venceu {{ e.prazo|date:"j b" }}{% else %}folga {{ e.folga|floatformat:1 }}x{% endif %} · em risco</span>{% elif e.prazo %}<span class="selo selo--ok">{{ e.prazo|date:"j b" }} · no prazo</span>{% else %}<span class="selo">sem prazo</span>{% endif %}
+      </a>
+    </li>{% endfor %}
+  </ul>{% else %}<p class="pessoa__vazio">Nada aberto que {{ p.nome }} espere de você.</p>{% endif %}
+</section>
+
+<section aria-labelledby="titulo-voce-espera">
+  <h2 id="titulo-voce-espera" class="pessoa__secao">Você espera dele ({{ d.voce_espera|length }})</h2>
+  {% if d.voce_espera %}<ul class="pessoas__lista">
+    {% for i in d.voce_espera %}<li class="pessoa-item">
+      <a class="pessoa-item__titulo" href="{% url 'web:tarefa' i.tarefa.pk %}">{{ i.tarefa.titulo }}</a>
+      <span class="selo selo--espera">{% if i.cobrar_hoje %}cobrar hoje · {% endif %}há {{ i.dias }} dia{{ i.dias|pluralize }}</span>
+      <form method="post" action="{% url 'web:cobrei' i.vinculo.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="proximo" value="{{ aqui }}">
+        <button class="botao botao--pequeno" type="submit" aria-label="Cobrei: {{ i.tarefa.titulo }}">Cobrei</button>
+      </form>
+    </li>{% endfor %}
+  </ul>{% else %}<p class="pessoa__vazio">Você não está esperando nada de {{ p.nome }}.</p>{% endif %}
+</section>
+
+<dl class="fatos pessoa__fatos">
+  <div class="fatos__linha">
+    <dt>Último contato</dt>
+    <dd>{% if d.ultimo_contato %}cobrou {{ d.ultimo_contato|date:"j b" }}{% else %}nenhuma cobrança ainda{% endif %}</dd>
+  </div>
+  <div class="fatos__linha">
+    <dt>Próxima cobrança</dt>
+    <dd>{% if d.proxima_cobranca %}{% if d.proxima_cobranca <= hoje %}hoje{% else %}{{ d.proxima_cobranca|date:"j b" }}{% endif %}{% else %}nada aguardando{% endif %} · a cada {{ p.cadencia_dias }} dia{{ p.cadencia_dias|pluralize }}</dd>
+  </div>
+</dl>
+{% endwith %}
+{% endblock %}
