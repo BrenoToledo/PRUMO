@@ -306,7 +306,7 @@ A proposta distribui os blocos restantes das tarefas abertas (esforço alto e m�
 | `proposta_da_semana(usuario)` | `SugestaoIA \| None` | A pendente desta semana; a de semana passada não vale |
 | `mover_na_proposta(sugestao, tarefa, *, de, para)` | `SugestaoIA` | Move os blocos da tarefa entre dias (`None` = não couberam), juntando no destino. `ValueError` se a tarefa não está em `de`, se o dia não é da semana ou se a proposta já foi respondida |
 | `aprovar_semana(sugestao)` | `dict` | `{blocos, nao_couberam}`. Para cada dia (de hoje em diante) troca os blocos planejados e não iniciados pelos da proposta, com horário (`montar_plano_do_dia`: compromissos, pico de energia, hora atual). Tarefas fechadas no meio do caminho saem. A sugestão fica `aceita` ou `editada`, com `resposta` = versão final |
-| `semana_planejada(usuario, dia=None)` | `SemanaPlanejada` | `dias` ({dia, capacidade, planejados, blocos}) e `proposta` |
+| `semana_planejada(usuario, dia=None)` | `SemanaPlanejada` | `dias` ({dia, capacidade, planejados, blocos, rotinas}) e `proposta`. `rotinas`: as rotinas ativas que acontecem no dia pela recorrência ({rotina, horario, concluida}), pelo horário preferido, mesmo antes de a ocorrência existir |
 
 ## Pessoas e follow-up (P16, Fase 1)
 

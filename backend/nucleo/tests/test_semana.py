@@ -253,3 +253,51 @@ def test_semana_planejada_mostra_os_blocos_por_dia(usuario, tarefas):
     assert sum(len(d["blocos"]) for d in semana["dias"]) == Bloco.objects.count()
     assert all(d["planejados"] <= d["capacidade"] for d in semana["dias"])
     assert semana["proposta"] is None
+
+
+# ---------------------------------------------------------------- rotinas na semana
+def _rotina(usuario, nome="Limpar a areia", recorrencia="FREQ=WEEKLY;BYDAY=MO,WE,FR,SU", horario=time(6), ativa=True):
+    services.perfil_de(usuario)
+    return services.criar_rotina(
+        usuario,
+        {
+            "area": Area.objects.get(usuario=usuario, nome="Família"),
+            "nome": nome,
+            "recorrencia": recorrencia,
+            "horario_preferido": horario,
+            "duracao_min": 5,
+            "ativa": ativa,
+        },
+    )
+
+
+@freeze_time(SAB)
+def test_semana_planejada_mostra_as_rotinas_nos_dias_da_recorrencia(usuario):
+    rotina = _rotina(usuario)
+    _rotina(usuario, nome="Pausada", recorrencia="FREQ=DAILY", ativa=False)
+
+    semana = services.semana_planejada(usuario)
+
+    por_dia = {d["dia"]: d["rotinas"] for d in semana["dias"]}
+    assert [len(por_dia[date(2026, 10, d)]) for d in range(26, 31)] == [1, 0, 1, 0, 1]
+    item = por_dia[date(2026, 10, 26)][0]
+    assert (item["rotina"], item["horario"], item["concluida"]) == (rotina, time(6), False)
+
+
+@freeze_time(SEG)
+def test_rotinas_da_semana_ordenam_pelo_horario_e_marcam_a_concluida(usuario):
+    sem_horario = _rotina(usuario, nome="Ler", recorrencia="FREQ=DAILY", horario=None)
+    cedo = _rotina(usuario, nome="Areia", recorrencia="FREQ=DAILY", horario=time(6))
+    ocorrencia = next(t for t in services.gerar_ocorrencias(usuario) if t.rotina == cedo)
+    services.concluir_tarefa(ocorrencia)
+
+    hoje = services.semana_planejada(usuario)["dias"][0]["rotinas"]
+
+    assert [(r["rotina"], r["concluida"]) for r in hoje] == [(cedo, True), (sem_horario, False)]
+
+
+@freeze_time(SEG)
+def test_rotinas_de_outra_pessoa_nao_aparecem(usuario, outra):
+    _rotina(outra, recorrencia="FREQ=DAILY")
+
+    assert all(not d["rotinas"] for d in services.semana_planejada(usuario)["dias"])

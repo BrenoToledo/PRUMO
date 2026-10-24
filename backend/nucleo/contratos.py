@@ -14,9 +14,9 @@ from datetime import date
 from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
-    from datetime import datetime
+    from datetime import datetime, time
 
-    from .models import Bloco, Pessoa, Projeto, Revisao, SugestaoIA, Tarefa, TarefaPessoa
+    from .models import Bloco, Pessoa, Projeto, Revisao, Rotina, SugestaoIA, Tarefa, TarefaPessoa
     from .pessoas import Pontualidade
 
 # --------------------------------------------------------------------------- formatos devolvidos pelos serviços
@@ -36,11 +36,20 @@ class PlanoDoDia(TypedDict):
     rotinas: list[Tarefa]  # ocorrências de rotinas do dia (abertas e concluídas), pelo horário preferido
 
 
+class RotinaNaSemana(TypedDict):
+    """Uma rotina ativa que acontece no dia (pela recorrência), mesmo antes de a ocorrência existir."""
+
+    rotina: Rotina
+    horario: time | None  # horário preferido; sem horário, fica depois das outras
+    concluida: bool  # a ocorrência do dia já foi concluída
+
+
 class DiaDaSemana(TypedDict):
     dia: date
     capacidade: int  # blocos que cabem no dia inteiro (já sem eventos e rotinas com horário)
     planejados: int  # blocos não adiados do dia
     blocos: list[Bloco]  # em ordem de início
+    rotinas: list[RotinaNaSemana]  # pelo horário preferido (as sem horário no fim)
 
 
 class SemanaPlanejada(TypedDict):

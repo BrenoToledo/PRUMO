@@ -42,6 +42,7 @@ from .contratos import (
     ProgressoProjeto,
     PropostaReplanejamento,
     ResumoRevisaoDiaria,
+    RotinaNaSemana,
     SemanaPlanejada,
     UsoDeIA,
 )
@@ -1685,6 +1686,23 @@ def aprovar_semana(sugestao: SugestaoIA) -> dict:
     return {"blocos": criados, "nao_couberam": nao_couberam}
 
 
+def _rotinas_da_semana(usuario, desde: date, ate: date) -> dict[date, list[RotinaNaSemana]]:
+    """As rotinas ativas que acontecem em cada dia de `desde` a `ate`, pela recorrência, na ordem do modelo
+    (horário preferido, sem horário no fim). A ocorrência só existe no próprio dia, então não é ela que se lê."""
+    concluidas = set(
+        Tarefa.objects.filter(
+            usuario=usuario, rotina__isnull=False, prazo__range=(desde, ate), status=Tarefa.Status.CONCLUIDA
+        ).values_list("rotina_id", "prazo")
+    )
+    por_dia: dict[date, list[RotinaNaSemana]] = defaultdict(list)
+    for rotina in Rotina.objects.filter(usuario=usuario, ativa=True).select_related("area"):
+        for dia in rot.datas(rotina.recorrencia, rotina.inicio, desde, ate):
+            por_dia[dia].append(
+                {"rotina": rotina, "horario": rotina.horario_preferido, "concluida": (rotina.pk, dia) in concluidas}
+            )
+    return por_dia
+
+
 def semana_planejada(usuario, dia: date | None = None) -> SemanaPlanejada:
     """Os blocos de cada dia da semana e a capacidade (M28 depois de aprovar), mais a proposta pendente."""
     dias = dias_da_semana(dia)
@@ -1697,6 +1715,7 @@ def semana_planejada(usuario, dia: date | None = None) -> SemanaPlanejada:
     for b in blocos.select_related("tarefa", "tarefa__area"):
         por_dia[timezone.localtime(b.inicio_planejado).date()].append(b)
     compromissos = _compromissos(usuario, dias[0], dias[-1])
+    rotinas = _rotinas_da_semana(usuario, dias[0], dias[-1])
     return {
         "dias": [
             {
@@ -1704,6 +1723,7 @@ def semana_planejada(usuario, dia: date | None = None) -> SemanaPlanejada:
                 "capacidade": _capacidade(usuario, d, compromissos.get(d, [])),
                 "planejados": len(por_dia[d]),
                 "blocos": por_dia[d],
+                "rotinas": rotinas[d],
             }
             for d in dias
         ],
