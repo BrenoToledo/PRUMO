@@ -140,6 +140,21 @@ def test_service_worker_so_guarda_estaticos(client, db):
     assert "prumo-estaticos-" in js  # nome versionado: limpa caches antigos ao ativar
 
 
+def test_service_worker_vai_a_rede_primeiro_sem_hash_nos_nomes(client, db, settings):
+    # Sem hash (desenvolvimento), um CSS atualizado tem o mesmo nome: servir do cache mostra a versão velha.
+    settings.STORAGES = settings.STORAGES | {
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}
+    }
+    assert 'const MODO = "rede";' in client.get("/sw.js").content.decode()
+
+
+def test_service_worker_responde_do_cache_com_hash_nos_nomes(client, db, settings):
+    settings.STORAGES = settings.STORAGES | {
+        "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"}
+    }
+    assert 'const MODO = "cache";' in client.get("/sw.js").content.decode()
+
+
 def test_service_worker_so_aceita_get(client, db):
     assert client.post("/sw.js").status_code == 405
 

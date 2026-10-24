@@ -39,17 +39,18 @@
   background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
 }
 
-/* Rotinas: fixas no dia pela recorrência, com borda tracejada para não parecer bloco de foco */
+/* Rotinas: fixas no dia pela recorrência; card como o dos blocos, com o ícone de repetição */
 .dia__rotinas { list-style: none; margin: 0 0 var(--e2); padding: 0; display: flex; flex-wrap: wrap; gap: var(--e2); }
 .rotina-semana {
   display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px var(--e2); max-width: 100%;
   padding: var(--e1) var(--e3); border-radius: var(--raio-campo);
-  background: var(--superficie); border: 1px dashed color-mix(in srgb, var(--cor-area) 60%, var(--borda));
+  background: color-mix(in srgb, var(--cor-area) 8%, var(--superficie));
   border-left: 3px solid var(--cor-area);
   font-size: var(--legenda-tam); line-height: var(--legenda-alt);
 }
 .rotina-semana--feita .rotina-semana__titulo { text-decoration: line-through; color: var(--texto-secundario); }
-.rotina-semana__titulo { display: inline-flex; align-items: center; gap: var(--e1); min-width: 0; overflow-wrap: anywhere; }
+.rotina-semana__titulo { min-width: 0; overflow-wrap: anywhere; }
+.rotina-semana__hora { display: inline-flex; align-items: center; gap: var(--e1); white-space: nowrap; }
 .rotina-semana__icone { flex: none; width: 14px; height: 14px; color: var(--cor-area); }
 .rotina-semana__hora, .rotina-semana__meta { color: var(--texto-secundario); }
 

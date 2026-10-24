@@ -1,10 +1,12 @@
 // Service worker mínimo do Prumo (#10): guarda só os arquivos estáticos (CSS, JS, fonte, ícones).
 // Páginas e API vão sempre à rede: nada de dado do usuário fica em cache.
-// Servido em /sw.js por web/telas/pwa.py, que troca __STATIC_URL__ pelo STATIC_URL do Django.
+// Servido em /sw.js por web/telas/pwa.py, que preenche o prefixo dos estáticos (STATIC_URL) e o MODO: "rede"
+// quando os nomes não têm hash (desenvolvimento), porque aí um CSS novo tem o mesmo nome do velho.
 "use strict";
 
-const CACHE = "prumo-estaticos-v1";
+const CACHE = "prumo-estaticos-v2";
 const PREFIXO_ESTATICOS = "__STATIC_URL__";
+const MODO = "__MODO__"; // "rede" (nomes sem hash) ou "cache"
 
 self.addEventListener("install", function () {
   self.skipWaiting();
@@ -22,6 +24,20 @@ self.addEventListener("activate", function (evento) {
       .then(function () { return self.clients.claim(); })
   );
 });
+
+// Vai à rede e guarda a resposta; sem rede, fica a cópia guardada.
+async function responderDaRede(pedido) {
+  const cache = await caches.open(CACHE);
+  try {
+    const resposta = await fetch(pedido);
+    if (resposta.ok) await cache.put(pedido, resposta.clone());
+    return resposta;
+  } catch (erro) {
+    const guardada = await cache.match(pedido);
+    if (guardada) return guardada;
+    throw erro;
+  }
+}
 
 async function responderDoCache(evento, pedido) {
   const cache = await caches.open(CACHE);
@@ -43,5 +59,5 @@ self.addEventListener("fetch", function (evento) {
   const url = new URL(pedido.url);
   if (url.origin !== self.location.origin || !url.pathname.startsWith(PREFIXO_ESTATICOS)) return;
 
-  evento.respondWith(responderDoCache(evento, pedido));
+  evento.respondWith(MODO === "rede" ? responderDaRede(pedido) : responderDoCache(evento, pedido));
 });
