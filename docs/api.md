@@ -28,7 +28,7 @@ Base: `/api/`. Autenticação por sessão ou token. Para ferramentas (MCP, scrip
 
 | Método e rota | O que faz | Tela |
 | --- | --- | --- |
-| `GET /hoje/?dia=AAAA-MM-DD` | Capacidade, ocupação, blocos, tarefas leves e `eventos` do calendário (`titulo`, `inicio`, `fim`, `dia_inteiro`, `local`, `calendario`; os de dia inteiro primeiro). A capacidade já desconta os eventos com horário | M01, D01 |
+| `GET /hoje/?dia=AAAA-MM-DD` | Capacidade, ocupação, blocos, tarefas leves, `eventos` do calendário (`titulo`, `inicio`, `fim`, `dia_inteiro`, `local`, `calendario`; os de dia inteiro primeiro) e `rotinas` (as ocorrências do dia, abertas e concluídas, como tarefas; hoje, gera as que faltam). A capacidade já desconta os eventos com horário e as rotinas com horário preferido | M01, D01 |
 | `POST /hoje/gerar/?dia=` | Refaz os blocos ainda não iniciados a partir das prioridades. Hoje, o primeiro bloco começa depois da hora atual (arredondada para 5 min) e dos blocos já feitos, e só cabe o que resta da jornada. Nenhum bloco cai em cima de um evento do calendário | M01 |
 | `POST /hoje/meu-dia-quebrou/?dia=` `{blocos_uteis, motivo?}` | Mantém hoje o que cabe, move o resto e devolve as expectativas em risco | M13, M14 |
 | `POST /hoje/meu-dia-quebrou/simular/?dia=` `{blocos_uteis}` | A mesma proposta, sem gravar nada | M14 |
@@ -46,7 +46,7 @@ Base: `/api/`. Autenticação por sessão ou token. Para ferramentas (MCP, scrip
 
 ## Cadastros
 
-`/areas/`, `/projetos/`, `/rotinas/`, `/pessoas/` (CRUD) e `GET/PATCH /perfil/` (jornada, pico de energia, folga diária, duração do bloco, pesos e provedor de IA). `DELETE /areas/{id}/` devolve `409` se a área tiver tarefas, projetos ou rotinas, e `POST /areas/` põe a área nova no fim da ordem (M30).
+`/areas/`, `/projetos/`, `/rotinas/`, `/pessoas/` (CRUD; em `/rotinas/` a `recorrencia` é uma RRULE validada, com `400` se não servir, `inicio` é só leitura e `DELETE` cancela a ocorrência aberta) e `GET/PATCH /perfil/` (jornada, pico de energia, folga diária, duração do bloco, pesos e provedor de IA). `DELETE /areas/{id}/` devolve `409` se a área tiver tarefas, projetos ou rotinas, e `POST /areas/` põe a área nova no fim da ordem (M30).
 
 ## Seus dados (LGPD)
 

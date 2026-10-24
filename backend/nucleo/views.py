@@ -76,8 +76,19 @@ class ProjetoViewSet(DoUsuarioViewSet):
 
 
 class RotinaViewSet(DoUsuarioViewSet):
+    """Rotinas pelos serviços: a RRULE é validada e excluir cancela a ocorrência aberta (#75)."""
+
     queryset = Rotina.objects.select_related("area")
     serializer_class = RotinaSerializer
+
+    def perform_create(self, serializer):
+        serializer.instance = services.criar_rotina(self.request.user, serializer.validated_data)
+
+    def perform_update(self, serializer):
+        serializer.instance = services.atualizar_rotina(serializer.instance, serializer.validated_data)
+
+    def perform_destroy(self, instance):
+        services.excluir_rotina(instance)
 
 
 class PessoaViewSet(DoUsuarioViewSet):
@@ -236,6 +247,7 @@ class HojeView(APIView):
                 "blocos": BlocoSerializer(p["blocos"], many=True, context=ctx).data,
                 "tarefas_leves": TarefaSerializer(p["tarefas_leves"], many=True, context=ctx).data,
                 "eventos": EventoCalendarioSerializer(p["eventos"], many=True).data,
+                "rotinas": TarefaSerializer(p["rotinas"], many=True, context=ctx).data,
             }
         )
 

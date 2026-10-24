@@ -30,6 +30,7 @@ class PlanoDoDia(TypedDict):
     blocos: list[Bloco]  # em ordem de início planejado
     tarefas_leves: list[Tarefa]  # até 10, esforço baixo e abertas
     eventos: list  # EventoCalendario do dia, em ordem de início (os de dia inteiro primeiro); [] sem calendário
+    rotinas: list[Tarefa]  # ocorrências de rotinas do dia (abertas e concluídas), pelo horário preferido
 
 
 class ItemPlanejadoVsReal(TypedDict):
@@ -222,6 +223,13 @@ SERVICOS: dict[str, str] = {
     "sincronizar_se_preciso": "(usuario) -> 'None'",
     "remover_calendario": "(calendario: 'Calendario') -> 'None'",
     "eventos_do_dia": "(usuario, dia: 'date | None' = None) -> 'list[EventoCalendario]'",
+    # Rotinas (P14, #75–#77): a recorrência é uma RRULE; cada dia vira uma tarefa (ocorrência) fora do plano em blocos
+    "rotinas_de": "(usuario) -> 'list[Rotina]'",
+    "criar_rotina": "(usuario, dados: 'dict') -> 'Rotina'",
+    "atualizar_rotina": "(rotina: 'Rotina', dados: 'dict') -> 'Rotina'",
+    "excluir_rotina": "(rotina: 'Rotina') -> 'None'",
+    "gerar_ocorrencias": "(usuario, dia: 'date | None' = None) -> 'list[Tarefa]'",
+    "rotinas_do_dia": "(usuario, dia: 'date | None' = None) -> 'list[Tarefa]'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -307,7 +315,17 @@ CAMPOS_EXPORTACAO = (
     "chamadas_ia",
 )
 
-CAMPOS_HOJE = ("dia", "capacidade", "planejados", "ocupacao", "folga_diaria", "blocos", "tarefas_leves", "eventos")
+CAMPOS_HOJE = (
+    "dia",
+    "capacidade",
+    "planejados",
+    "ocupacao",
+    "folga_diaria",
+    "blocos",
+    "tarefas_leves",
+    "eventos",
+    "rotinas",
+)
 CAMPOS_EVENTO = ("titulo", "inicio", "fim", "dia_inteiro", "local", "calendario")  # `calendario` é o nome
 
 # --------------------------------------------------------------------------- interface web: um módulo por etapa
@@ -334,6 +352,7 @@ TELAS_WEB = (
     "tokens",
     "audio",
     "calendarios",
+    "rotinas",
 )
 
 # --------------------------------------------------------------------------- servidor MCP (P12, #29)

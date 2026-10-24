@@ -46,6 +46,7 @@ def ver_hoje(usuario, dia: str | None = None) -> dict:
         "blocos": [dict(b) for b in BlocoSerializer(p["blocos"], many=True).data],
         "tarefas_leves": [dict(t) for t in TarefaSerializer(p["tarefas_leves"], many=True).data],
         "eventos": [dict(e) for e in EventoCalendarioSerializer(p["eventos"], many=True).data],
+        "rotinas": [dict(t) for t in TarefaSerializer(p["rotinas"], many=True).data],
     }
 
 

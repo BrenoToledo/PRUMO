@@ -32,6 +32,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `claude/project-thread-vfwmcf` (P12 · MCP, #29) | #29 | backend | main (P1–P10) + contrato dos tokens (#30) | `backend/assistente/` (com os testes em `assistente/tests/`), `nucleo/management/commands/servidor_mcp.py`, `docs/mcp.md`; em `requirements.txt` só a linha do `mcp` |
 | `claude/project-thread-mpmxzo` (P11) | #28, #27 | backend + interface + infra | main (P1–P10, P12) | `nucleo/fila.py`, `config/celery.py`, `web/telas/audio.py`, `web/templates/web/audio/`, `web/templates/web/fila/`, `web/static/web/telas/audio.css`, `audio.js`, `fila.css`, `web/tests/test_audio.py`, `web/tests/test_fila.py`, `nucleo/tests/test_fila.py`, `nucleo/tests/test_audio.py`; em `deploy/` os serviços `redis` e `worker`; em `clarificacao` e `tarefas` só o "processando"; na captura só o botão Gravar áudio |
 | `claude/project-thread-mpmxzo` (P13 · Calendário) | #71, #72, #73 | backend + interface | main (P1–P12) | `nucleo/calendario.py`, `web/telas/calendarios.py`, `web/templates/web/calendarios/`, `web/static/web/telas/calendarios.css`, `web/templates/web/plano/_card_evento.html`, `nucleo/tests/test_calendario.py`, `nucleo/tests/test_calendarios.py`, `web/tests/test_calendarios.py`; em `planejamento.py` só os compromissos (`ocupados`); em `plano` só a linha do tempo com eventos; no perfil só o link para Calendários |
+| `claude/project-thread-mpmxzo` (P14 · Rotinas) | #75, #76, #77 | backend + interface | main (P1–P13) | `nucleo/rotinas.py`, `web/telas/rotinas.py`, `web/templates/web/rotinas/`, `web/static/web/telas/rotinas.css`, `nucleo/tests/test_rotinas.py`, `nucleo/tests/test_rotinas_regra.py`, `web/tests/test_rotinas.py`; em `projetos` só o alternador Projetos/Rotinas; em `plano` só a seção "Rotinas de hoje"; em `services.py` as rotinas entram em `_compromissos` e saem de `_abertas_no_dia` |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -92,6 +93,10 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:calendarios` | `/perfil/calendarios/` | GET, POST (conectar) | calendarios | `calendarios_de`, `conectar_calendario` |
 | `web:atualizar_calendario` | `/perfil/calendarios/<pk>/atualizar/` | POST | calendarios | `sincronizar_calendario` |
 | `web:remover_calendario` | `/perfil/calendarios/<pk>/remover/` | POST | calendarios | `remover_calendario` |
+| `web:rotinas` | `/rotinas/` | GET | rotinas | `rotinas_de` |
+| `web:nova_rotina` | `/rotinas/nova/` | GET, POST | rotinas | `criar_rotina` |
+| `web:editar_rotina` | `/rotinas/<pk>/editar/` | GET, POST | rotinas | `atualizar_rotina` |
+| `web:excluir_rotina` | `/rotinas/<pk>/excluir/` | POST | rotinas | `excluir_rotina` |
 | `web:service_worker` | `/sw.js` | GET (público) | pwa | — |
 
 Convenções das telas (as mesmas do P1): views com `require_GET`/`require_POST` e `login_required`; objetos buscados com `usuario=request.user` (404 se não for do usuário); resposta HTMX é um parcial, sem HTMX é redirect com mensagem; erro de validação volta com status 422.
@@ -265,6 +270,21 @@ O usuário cola o link iCal secreto do Google Agenda ou do Outlook (só leitura;
 | `eventos_do_dia(usuario, dia=None)` | `list[EventoCalendario]` | Os que tocam o dia; os de dia inteiro primeiro, depois por início |
 
 Regras do plano: eventos com horário descontam da capacidade (sobreposições contam uma vez, só o que cai na jornada) e nenhum bloco é posto em cima deles (`planejamento.montar_plano_do_dia(..., ocupados=[(início, fim)])`); eventos de dia inteiro não descontam. `blocos_livres_ate` (folga até o prazo) também desconta. `PlanoDoDia` ganhou `eventos`; `CAMPOS_HOJE` ganhou `eventos` (campos em `CAMPOS_EVENTO`), também no `ver_hoje` do MCP. O link é segredo: a tela mostra só `url_mascarada` e a exportação de dados não o inclui.
+
+## Rotinas (P14, Fase 1)
+
+A recorrência é uma RRULE do iCalendar (`FREQ=WEEKLY;BYDAY=MO,WE,FR`), contada a partir de `Rotina.inicio` (o dia em que foi criada). As regras puras ficam em `nucleo/rotinas.py`: `montar_rrule`/`ler_rrule` (o formulário M21 oferece diária, semanal, dias específicos, a cada N dias e "personalizada"), `validar_rrule`, `descrever` ("seg, qua, sex · 06:30") e `datas`.
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `rotinas_de(usuario)` | `list[Rotina]` | Pelo horário preferido (as sem horário no fim) |
+| `criar_rotina(usuario, dados)` | `Rotina` | Campos: `area`, `nome`, `recorrencia`, `horario_preferido`, `esforco`, `duracao_min` (5 a 480), `ativa`. RRULE inválida ou área de outra pessoa: `ValidationError` (chave `recorrencia` ou `area`) |
+| `atualizar_rotina(rotina, dados)` | `Rotina` | Leva nome, área, esforço e duração à ocorrência aberta; pausada (`ativa=False`), cancela a ocorrência aberta |
+| `excluir_rotina(rotina)` | `None` | Cancela a ocorrência aberta; as concluídas ficam no histórico, sem a rotina |
+| `gerar_ocorrencias(usuario, dia=None)` | `list[Tarefa]` | As criadas agora: uma tarefa por rotina ativa que acontece no dia (`rotina`, `prazo` = dia, `minutos_estimados` = duração), com o evento `criada` (`origem: "rotina"`). Idempotente. As abertas de dias anteriores são canceladas ("não feita no dia") |
+| `rotinas_do_dia(usuario, dia=None)` | `list[Tarefa]` | Ocorrências abertas e concluídas do dia, pelo horário; para hoje, gera as que faltam |
+
+Regras do plano: as ocorrências não entram nos blocos de foco nem nas tarefas leves (seção própria em Hoje). Rotina ativa com horário preferido ocupa a agenda como um compromisso, só nos dias da recorrência: desconta da capacidade e de `blocos_livres_ate`, e nenhum bloco cai em cima dela. `PlanoDoDia` e `CAMPOS_HOJE` ganharam `rotinas` (tarefas com `CAMPOS_TAREFA`), também no `ver_hoje` do MCP. Modelo: `Rotina.inicio` (migração `0008`). Dependência: `python-dateutil`.
 
 ## Mudar um contrato
 

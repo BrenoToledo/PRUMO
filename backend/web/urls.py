@@ -19,6 +19,7 @@ from .telas import (
     projetos,
     pwa,
     revisao,
+    rotinas,
     tarefas,
     tokens,
 )
@@ -50,3 +51,4 @@ urlpatterns += ia.urlpatterns
 urlpatterns += tokens.urlpatterns
 urlpatterns += audio.urlpatterns
 urlpatterns += calendarios.urlpatterns
+urlpatterns += rotinas.urlpatterns

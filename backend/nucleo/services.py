@@ -18,7 +18,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Count, Q, QuerySet, Sum
+from django.db.models import Count, F, Q, QuerySet, Sum
 from django.utils import timezone
 
 from ia import tarefas as ia_tarefas
@@ -28,6 +28,7 @@ from ia.provedores import ErroIA, Provedor, Resposta
 from . import calendario as cal
 from . import planejamento as plan
 from . import prioridade as motor
+from . import rotinas as rot
 from .contratos import (
     ExportacaoDados,
     ListaRapida,
@@ -135,7 +136,8 @@ def _capacidade(usuario, dia: date, compromissos: list[plan.Intervalo]) -> int:
 
 
 def _compromissos(usuario, desde: date, ate: date) -> dict[date, list[plan.Intervalo]]:
-    """Eventos com horário do calendário (os de dia inteiro não ocupam a agenda), por dia, numa consulta só."""
+    """O que ocupa a agenda, por dia: eventos com horário do calendário (os de dia inteiro não ocupam) e rotinas
+    ativas com horário preferido, nos dias da recorrência (#77)."""
     ini, _ = _limites_do_dia(desde)
     _, fim = _limites_do_dia(ate)
     eventos = EventoCalendario.objects.filter(
@@ -148,6 +150,12 @@ def _compromissos(usuario, desde: date, ate: date) -> dict[date, list[plan.Inter
         while dia <= termino.date():  # evento que atravessa a meia-noite ocupa os dois dias
             por_dia[dia].append((inicio, termino))
             dia += timedelta(days=1)
+    tz = timezone.get_current_timezone()
+    rotinas = Rotina.objects.filter(usuario=usuario, ativa=True, horario_preferido__isnull=False)
+    for rotina in rotinas.only("recorrencia", "inicio", "horario_preferido", "duracao_min"):
+        for dia in rot.datas(rotina.recorrencia, rotina.inicio, desde, ate):
+            inicio = datetime.combine(dia, rotina.horario_preferido, tzinfo=tz)
+            por_dia[dia].append((inicio, inicio + timedelta(minutes=rotina.duracao_min)))
     return por_dia
 
 
@@ -268,8 +276,12 @@ def caixa_de_entrada(usuario) -> QuerySet[ItemCaptura]:
 
 # --------------------------------------------------------------------------- plano do dia
 def _abertas_no_dia(usuario, dia: date) -> QuerySet[Tarefa]:
-    """Tarefas abertas que podem entrar no plano de `dia` (as adiadas só voltam na data escolhida)."""
-    abertas = Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA).exclude(adiada_ate__gt=dia)
+    """Tarefas abertas que podem entrar no plano de `dia` (as adiadas só voltam na data escolhida).
+
+    As ocorrências de rotinas ficam de fora: aparecem na seção própria de Hoje, não nos blocos nem nas leves.
+    """
+    abertas = Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA, rotina__isnull=True)
+    abertas = abertas.exclude(adiada_ate__gt=dia)
     return abertas.exclude(partes__status=Tarefa.Status.ABERTA)  # quebrada: as partes entram no lugar dela
 
 
@@ -328,6 +340,7 @@ def plano_do_dia(usuario, dia: date | None = None) -> PlanoDoDia:
         "blocos": blocos,
         "tarefas_leves": list(tarefas_leves(usuario)[:10]),
         "eventos": eventos_do_dia(usuario, dia),
+        "rotinas": rotinas_do_dia(usuario, dia),
     }
 
 
@@ -1406,3 +1419,116 @@ def eventos_do_dia(usuario, dia: date | None = None) -> list[EventoCalendario]:
     # inclui o evento sem duração que começa à meia-noite (fim == início)
     no_dia = Q(inicio__lt=fim) & (Q(fim__gt=ini) | Q(inicio__gte=ini))
     return list(EventoCalendario.objects.filter(no_dia, calendario__usuario=usuario).select_related("calendario"))
+
+
+# --------------------------------------------------------------------------- rotinas (P14, #75–#77)
+CAMPOS_ROTINA = ("area", "nome", "recorrencia", "horario_preferido", "esforco", "duracao_min", "ativa")
+MOTIVO_NAO_FEITA = "não feita no dia"
+
+
+def _gravar_rotina(rotina: Rotina, dados: dict) -> Rotina:
+    desconhecidos = set(dados) - set(CAMPOS_ROTINA)
+    if desconhecidos:
+        raise ValueError(f"campos que uma rotina não tem: {', '.join(sorted(desconhecidos))}")
+    for campo, valor in dados.items():
+        setattr(rotina, campo, valor)
+    if rotina.area_id and rotina.area.usuario_id != rotina.usuario_id:
+        raise ValidationError({"area": "Escolha uma das suas áreas."})
+    try:
+        rotina.recorrencia = rot.validar_rrule(rotina.recorrencia)
+    except ValueError as erro:
+        raise ValidationError({"recorrencia": str(erro).capitalize() + "."}) from erro
+    rotina.full_clean(exclude=["usuario"])
+    rotina.save()
+    return rotina
+
+
+def rotinas_de(usuario) -> list[Rotina]:
+    """As rotinas do usuário, pelo horário preferido (as sem horário no fim), ativas e pausadas (M20)."""
+    return list(Rotina.objects.filter(usuario=usuario).select_related("area"))
+
+
+def criar_rotina(usuario, dados: dict) -> Rotina:
+    """Rotina nova; a repetição conta de hoje. `ValidationError` se a RRULE não servir ou a área não for dele."""
+    return _gravar_rotina(Rotina(usuario=usuario, inicio=hoje()), dados)
+
+
+@transaction.atomic
+def atualizar_rotina(rotina: Rotina, dados: dict) -> Rotina:
+    """Muda a rotina e leva nome, área, esforço e duração à ocorrência aberta de hoje; pausada, ela sai de hoje."""
+    _gravar_rotina(rotina, dados)
+    abertas = rotina.ocorrencias.filter(status=Tarefa.Status.ABERTA)
+    if not rotina.ativa:
+        for tarefa in abertas:
+            cancelar_tarefa(tarefa, motivo="rotina pausada")
+        return rotina
+    abertas.update(
+        titulo=rotina.nome[:200],
+        proxima_acao=rotina.nome[:300],
+        area=rotina.area,
+        esforco=rotina.esforco,
+        minutos_estimados=rotina.duracao_min,
+        blocos_estimados=_blocos_da_rotina(rotina),
+    )
+    return rotina
+
+
+@transaction.atomic
+def excluir_rotina(rotina: Rotina) -> None:
+    """Apaga a rotina; a ocorrência aberta é cancelada e as concluídas ficam no histórico, sem a rotina."""
+    for tarefa in rotina.ocorrencias.filter(status=Tarefa.Status.ABERTA):
+        cancelar_tarefa(tarefa, motivo="rotina excluída")
+    rotina.delete()
+
+
+def _blocos_da_rotina(rotina: Rotina) -> int:
+    return rot.blocos_da_duracao(rotina.duracao_min, perfil_de(rotina.usuario).duracao_bloco_min)
+
+
+@transaction.atomic
+def gerar_ocorrencias(usuario, dia: date | None = None) -> list[Tarefa]:
+    """Cria a tarefa de cada rotina ativa que acontece em `dia` (hoje) e ainda não tem ocorrência nele (#76).
+
+    Idempotente: chamar de novo no mesmo dia não duplica, nem depois de concluir. As ocorrências abertas de dias
+    anteriores são canceladas ("não feita no dia"): rotina não acumula.
+    """
+    dia = dia or hoje()
+    atrasadas = Tarefa.objects.filter(usuario=usuario, rotina__isnull=False, status=Tarefa.Status.ABERTA, prazo__lt=dia)
+    for tarefa in atrasadas:
+        cancelar_tarefa(tarefa, motivo=MOTIVO_NAO_FEITA)
+    ja_tem = set(
+        Tarefa.objects.filter(usuario=usuario, rotina__isnull=False, prazo=dia).values_list("rotina_id", flat=True)
+    )
+    novas = []
+    for rotina in Rotina.objects.filter(usuario=usuario, ativa=True).exclude(pk__in=ja_tem):
+        if not rot.datas(rotina.recorrencia, rotina.inicio, dia, dia):
+            continue
+        tarefa = Tarefa.objects.create(
+            usuario=usuario,
+            rotina=rotina,
+            area_id=rotina.area_id,
+            titulo=rotina.nome[:200],
+            proxima_acao=rotina.nome[:300],
+            esforco=rotina.esforco,
+            prazo=dia,
+            minutos_estimados=rotina.duracao_min,
+            blocos_estimados=_blocos_da_rotina(rotina),
+        )
+        evento(tarefa, EventoTarefa.Tipo.CRIADA, origem="rotina", rotina=rotina.pk)
+        novas.append(tarefa)
+    return novas
+
+
+def rotinas_do_dia(usuario, dia: date | None = None) -> list[Tarefa]:
+    """As ocorrências de `dia` (abertas e concluídas), pelo horário da rotina; hoje, gera as que faltam (#77)."""
+    dia = dia or hoje()
+    if dia == hoje():
+        gerar_ocorrencias(usuario, dia)
+    ocorrencias = Tarefa.objects.filter(
+        usuario=usuario, rotina__isnull=False, prazo=dia, status__in=[Tarefa.Status.ABERTA, Tarefa.Status.CONCLUIDA]
+    )
+    return list(
+        ocorrencias.select_related("rotina", "area").order_by(
+            F("rotina__horario_preferido").asc(nulls_last=True), "titulo", "pk"
+        )
+    )
