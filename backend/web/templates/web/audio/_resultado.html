@@ -1,0 +1,35 @@
+<div class="audio__resultado" id="audio-resultado-conteudo">
+{% if erro and not sugestao %}
+  <p class="erro" role="alert">{{ erro }}</p>
+  <a class="botao" href="{% url 'web:capturar_audio' %}">Gravar de novo</a>
+{% elif pedido.status == "erro" %}
+  <p class="erro" role="alert">A transcrição não deu certo: {{ pedido.erro }}</p>
+  <a class="botao" href="{% url 'web:capturar_audio' %}">Gravar de novo</a>
+{% elif sugestao %}
+  <section class="cartao audio__transcricao" aria-labelledby="rotulo-transcricao">
+    <p id="rotulo-transcricao" class="audio__rotulo">Transcrição</p>
+    <p class="audio__fala">“{{ sugestao.conteudo.transcricao }}”</p>
+  </section>
+  <form class="audio__itens" method="post" action="{% url 'web:salvar_audio' sugestao.pk %}"
+        hx-post="{% url 'web:salvar_audio' sugestao.pk %}" hx-target="#audio-resultado-conteudo" hx-swap="outerHTML">
+    {% csrf_token %}
+    <div class="sugestao-ia audio__sugestao" role="note">
+      <p class="sugestao-ia__rotulo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M12 8l1.5 2.5L16 12l-2.5 1.5L12 16l-1.5-2.5L8 12l2.5-1.5z"/></svg> Sugestão da IA</p>
+      <p class="audio__quantos">Encontrei {{ itens|length }} ite{{ itens|length|pluralize:"m,ns" }}</p>
+      <ol class="audio__lista">{% for texto in itens %}
+        <li><label class="visualmente-oculto" for="item-{{ forloop.counter }}">Item {{ forloop.counter }}</label>
+          <input id="item-{{ forloop.counter }}" class="audio__item" type="text" name="item" value="{{ texto }}" maxlength="500"></li>{% endfor %}
+      </ol>
+      {% if itens|length > 1 %}<button class="botao botao--texto" type="submit" name="um" value="1" formnovalidate>Manter como 1</button>{% endif %}
+    </div>
+    {% if erro %}<p class="erro" role="alert">{{ erro }}</p>{% endif %}
+    <div class="audio__acoes">
+      <button class="botao" type="submit" formnovalidate
+              formaction="{% url 'web:descartar_audio' sugestao.pk %}" hx-post="{% url 'web:descartar_audio' sugestao.pk %}">Descartar</button>
+      <button class="botao botao--primario" type="submit">Salvar {{ itens|length }} ite{{ itens|length|pluralize:"m,ns" }}</button>
+    </div>
+  </form>
+{% else %}
+  <p>Este áudio já foi revisado. <a href="{% url 'web:capturar_audio' %}">Gravar outro</a></p>
+{% endif %}
+</div>

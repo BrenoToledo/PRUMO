@@ -1,0 +1,12 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Processando{% endblock %}
+{% block estilos %}<meta http-equiv="refresh" content="2">
+<link rel="stylesheet" href="{% static 'web/telas/fila.css' %}">{% endblock %}
+{% block conteudo %}
+<div class="processando processando--pagina" role="status">
+  <span class="processando__giro" aria-hidden="true"></span>
+  <span>{% if pedido.tipo == "audio" %}Transcrevendo o áudio…{% else %}A IA está pensando…{% endif %} Esta página se atualiza sozinha.</span>
+</div>
+<p><a href="{{ destino }}">Voltar</a></p>
+{% endblock %}

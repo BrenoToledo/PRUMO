@@ -21,10 +21,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import path, reverse
 from django.views.decorators.http import require_http_methods, require_POST
 
-from ia.provedores import ErroIA
 from nucleo import prioridade as motor
 from nucleo import services
-from nucleo.models import Esforco, ItemCaptura, Projeto, SugestaoIA
+from nucleo.models import Esforco, ItemCaptura, PedidoIA, Projeto, SugestaoIA
 
 AVISO_CRIADA = "Tarefa criada"
 TITULO_MAX = 200
@@ -108,7 +107,7 @@ def _destino_depois_de_salvar(usuario) -> str:
     return reverse(ROTA_CLARIFICAR, args=[proximo.pk]) if proximo else reverse("web:entrada")
 
 
-def _pagina(request, item, form, status=200, sugestao=None, erro_ia=""):
+def _pagina(request, item, form, status=200, sugestao=None, erro_ia="", pedido=None):
     contexto = {
         "aba": "entrada",
         "item": item,
@@ -116,6 +115,7 @@ def _pagina(request, item, form, status=200, sugestao=None, erro_ia=""):
         "sugestao": sugestao,
         "erro_ia": erro_ia,
         "ia": services.ia_disponivel(request.user),
+        "pedido": pedido,
     }
     modelo = PARCIAL if request.headers.get("HX-Request") else "web/clarificacao/clarificar.html"
     return render(request, modelo, contexto, status=status)
@@ -152,7 +152,8 @@ def clarificar(request, pk):
     if request.method == "GET":
         sugestao = _sugestao_pendente(request, item)
         form = _form_da_sugestao(request, sugestao) if sugestao else _form_vazio(request, item)
-        return _pagina(request, item, form, sugestao=sugestao)
+        pedido = services.pedido_em_andamento(request.user, item=item)
+        return _pagina(request, item, form, sugestao=sugestao, pedido=pedido)
 
     form = ClarificacaoForm(request.user, request.POST)
     sugestao = _sugestao_pendente(request, item, request.POST.get("sugestao", ""))
@@ -181,16 +182,20 @@ def clarificar(request, pk):
 @login_required
 def sugerir(request, pk):
     item = _item_do_usuario(request, pk)
-    try:
-        sugestao = services.sugerir_clarificacao(item, novo=request.POST.get("novo") == "1")
-    except ErroIA as erro:
-        if not request.headers.get("HX-Request"):
-            messages.error(request, f"A IA não ajudou agora: {erro}")
+    pedido = services.pedir_clarificacao(item, novo=request.POST.get("novo") == "1")
+    htmx = request.headers.get("HX-Request")
+    if pedido.status == PedidoIA.Status.ERRO:
+        if not htmx:
+            messages.error(request, f"A IA não ajudou agora: {pedido.erro}")
             return redirect(ROTA_CLARIFICAR, pk=item.pk)
-        return _pagina(request, item, _form_vazio(request, item), erro_ia=str(erro))
-    if not request.headers.get("HX-Request"):
+        return _pagina(request, item, _form_vazio(request, item), erro_ia=pedido.erro)
+    if not htmx:
         return redirect(ROTA_CLARIFICAR, pk=item.pk)
-    return _pagina(request, item, _form_da_sugestao(request, sugestao), sugestao=sugestao)
+    if pedido.em_andamento:  # com worker: a tela mostra "processando" e consulta o pedido até ficar pronto
+        sugestao = _sugestao_pendente(request, item)
+        form = _form_da_sugestao(request, sugestao) if sugestao else _form_vazio(request, item)
+        return _pagina(request, item, form, sugestao=sugestao, pedido=pedido)
+    return _pagina(request, item, _form_da_sugestao(request, pedido.sugestao), sugestao=pedido.sugestao)
 
 
 @require_POST

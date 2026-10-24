@@ -1,0 +1,14 @@
+/* "Processando" dos pedidos à IA (#28): aparece no lugar do botão enquanto o worker trabalha. */
+.processando {
+  display: flex; align-items: center; gap: var(--e2); margin: 0; padding: var(--e3);
+  border-radius: var(--raio-card); background: var(--primaria-suave); color: var(--primaria);
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: 600;
+}
+.processando--pagina { margin: var(--e6) 0 var(--e4); }
+.processando__giro {
+  flex: none; width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent;
+  animation: processando-giro 900ms linear infinite;
+}
+@keyframes processando-giro { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .processando__giro { animation: none; border-right-color: currentColor; opacity: .6; } }

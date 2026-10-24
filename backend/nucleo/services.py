@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 import secrets
 from collections import defaultdict
+from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count, QuerySet, Sum
@@ -16,7 +19,7 @@ from django.utils import timezone
 
 from ia import tarefas as ia_tarefas
 from ia.config import Config as ConfigIA
-from ia.provedores import ErroIA, Provedor
+from ia.provedores import ErroIA, Provedor, Resposta
 
 from . import planejamento as plan
 from . import prioridade as motor
@@ -31,11 +34,13 @@ from .contratos import (
 )
 from .models import (
     Area,
+    AudioCaptura,
     Bloco,
     ChamadaIA,
     Esforco,
     EventoTarefa,
     ItemCaptura,
+    PedidoIA,
     Perfil,
     Pessoa,
     Projeto,
@@ -59,6 +64,8 @@ JANELA_REPLANEJAMENTO_DIAS = 14
 JANELA_INTENCAO_DIAS = 7  # a intenção de sexta ainda vale na segunda (e depois de um feriado)
 STATUS_ABERTOS = (Bloco.Status.PLANEJADO, Bloco.Status.EM_FOCO)
 LISTA_RAPIDA_MAX_MIN = 10
+
+logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------- perfil e jornada
@@ -889,6 +896,10 @@ def uso_de_ia(usuario) -> UsoDeIA:
 
 def _chamar_ia(usuario, tipo: str, mensagens: list[dict]) -> str:
     """Pede ao provedor, respeitando os limites, e registra a chamada (custo e tokens) para os próximos limites."""
+    return _usar_provedor(usuario, tipo, lambda provedor: provedor.completar(mensagens, tipo=tipo))
+
+
+def _usar_provedor(usuario, tipo: str, pedir: Callable[[Provedor], Resposta]) -> str:
     provedor = provedor_de_ia(usuario)
     if provedor is None:
         raise ErroIA("A IA está desligada. Escolha um provedor configurado em IA e privacidade.")
@@ -896,7 +907,7 @@ def _chamar_ia(usuario, tipo: str, mensagens: list[dict]) -> str:
     if limite:
         raise ErroIA(limite)
     try:
-        resposta = provedor.completar(mensagens, tipo=tipo)
+        resposta = pedir(provedor)
     except ErroIA:
         ChamadaIA.objects.create(usuario=usuario, tipo=tipo, modelo=provedor.modelo, ok=False)
         raise
@@ -1080,3 +1091,159 @@ def autenticar_token_api(chave: str) -> TokenAPI | None:
         token.ultimo_uso_em = timezone.now()
         token.save(update_fields=["ultimo_uso_em"])
     return token
+
+
+# --------------------------------------------------------------------------- IA assíncrona e áudio (P11)
+TIPO_SEPARAR = "separar"
+TIPO_TRANSCRICAO = "transcricao"
+JANELA_PEDIDO = timedelta(minutes=5)  # pedido na fila há mais tempo que isso conta como perdido
+AUDIO_MAX_BYTES = 10 * 1024 * 1024
+ERRO_INESPERADO = "Algo deu errado do nosso lado. Tente de novo."
+
+
+def fila_assincrona() -> bool:
+    return bool(getattr(settings, "CELERY_BROKER_URL", ""))
+
+
+def _enfileirar(pedido: PedidoIA) -> PedidoIA:
+    """Com broker, manda o pedido ao worker depois do commit; sem broker, processa na hora."""
+    if not fila_assincrona():
+        return processar_pedido(pedido)
+    from . import fila  # fila importa services
+
+    transaction.on_commit(lambda: fila.processar.delay(pedido.pk))
+    return pedido
+
+
+def _pedido_pronto(usuario, tipo: str, sugestao: SugestaoIA, **alvo) -> PedidoIA:
+    agora = timezone.now()
+    return PedidoIA.objects.create(
+        usuario=usuario, tipo=tipo, status=PedidoIA.Status.PRONTO, sugestao=sugestao, concluido_em=agora, **alvo
+    )
+
+
+def pedir_clarificacao(item: ItemCaptura, *, novo: bool = False) -> PedidoIA:
+    if item.status != ItemCaptura.Status.PENDENTE:
+        raise ValueError("este item já foi processado")
+    andando = pedido_em_andamento(item.usuario, item=item)
+    if andando:
+        return andando
+    anterior = None if novo else _sugestao_pendente(item=item, tipo=TIPO_CLARIFICACAO)
+    if anterior:
+        return _pedido_pronto(item.usuario, PedidoIA.Tipo.CLARIFICACAO, anterior, item=item)
+    pedido = PedidoIA.objects.create(usuario=item.usuario, tipo=PedidoIA.Tipo.CLARIFICACAO, item=item, novo=novo)
+    return _enfileirar(pedido)
+
+
+def pedir_quebra(tarefa: Tarefa, *, novo: bool = False) -> PedidoIA:
+    if tarefa.status != Tarefa.Status.ABERTA:
+        raise ValueError("só uma tarefa aberta pode ser quebrada")
+    andando = pedido_em_andamento(tarefa.usuario, tarefa=tarefa)
+    if andando:
+        return andando
+    anterior = None if novo else _sugestao_pendente(tarefa=tarefa, tipo=TIPO_QUEBRA)
+    if anterior:
+        return _pedido_pronto(tarefa.usuario, PedidoIA.Tipo.QUEBRA, anterior, tarefa=tarefa)
+    pedido = PedidoIA.objects.create(usuario=tarefa.usuario, tipo=PedidoIA.Tipo.QUEBRA, tarefa=tarefa, novo=novo)
+    return _enfileirar(pedido)
+
+
+def pedido_em_andamento(usuario, *, item: ItemCaptura | None = None, tarefa: Tarefa | None = None) -> PedidoIA | None:
+    pedidos = PedidoIA.objects.filter(
+        usuario=usuario,
+        status__in=(PedidoIA.Status.NA_FILA, PedidoIA.Status.PROCESSANDO),
+        criado_em__gte=timezone.now() - JANELA_PEDIDO,
+    )
+    if item is not None:
+        pedidos = pedidos.filter(item=item)
+    if tarefa is not None:
+        pedidos = pedidos.filter(tarefa=tarefa)
+    return pedidos.first()
+
+
+def processar_pedido(pedido: PedidoIA) -> PedidoIA:
+    """O corpo do worker. Só um processo pega o pedido (troca de status atômica); o áudio sai no fim, sempre."""
+    pegou = PedidoIA.objects.filter(pk=pedido.pk, status=PedidoIA.Status.NA_FILA).update(
+        status=PedidoIA.Status.PROCESSANDO
+    )
+    pedido.refresh_from_db()
+    if not pegou:
+        return pedido
+    try:
+        pedido.sugestao = _executar(pedido)
+        pedido.status = PedidoIA.Status.PRONTO
+    except (ErroIA, ValueError) as erro:
+        pedido.status, pedido.erro = PedidoIA.Status.ERRO, str(erro)[:300]
+    except Exception:  # o pedido não pode ficar "processando" para sempre: a tela espera por ele
+        logger.exception("pedido à IA %s falhou", pedido.pk)
+        pedido.status, pedido.erro = PedidoIA.Status.ERRO, ERRO_INESPERADO
+    finally:
+        if pedido.audio_id:
+            AudioCaptura.objects.filter(pk=pedido.audio_id).delete()
+            pedido.audio = None
+    pedido.concluido_em = timezone.now()
+    pedido.save(update_fields=["status", "sugestao", "erro", "audio", "concluido_em"])
+    return pedido
+
+
+def _executar(pedido: PedidoIA) -> SugestaoIA:
+    if pedido.tipo == PedidoIA.Tipo.CLARIFICACAO:
+        return sugerir_clarificacao(pedido.item, novo=pedido.novo)
+    if pedido.tipo == PedidoIA.Tipo.QUEBRA:
+        return sugerir_quebra(pedido.tarefa, novo=pedido.novo)
+    return _transcrever_e_separar(pedido.usuario, pedido.audio)
+
+
+def audio_disponivel(usuario) -> bool:
+    provedor = provedor_de_ia(usuario)
+    return bool(provedor and getattr(provedor, "transcricao", "")) and ia_disponivel(usuario)
+
+
+def capturar_audio(usuario, conteudo: bytes, tipo_mime: str) -> PedidoIA:
+    tipo_mime = (tipo_mime or "").split(";")[0].strip().lower()
+    if not tipo_mime.startswith("audio/"):
+        raise ValueError("Envie um arquivo de áudio.")
+    if not conteudo:
+        raise ValueError("O áudio veio vazio. Grave de novo.")
+    if len(conteudo) > AUDIO_MAX_BYTES:
+        raise ValueError("O áudio passou de 10 MB. Grave um trecho mais curto.")
+    with transaction.atomic():
+        audio = AudioCaptura.objects.create(usuario=usuario, conteudo=conteudo, tipo_mime=tipo_mime[:60])
+        pedido = PedidoIA.objects.create(usuario=usuario, tipo=PedidoIA.Tipo.AUDIO, audio=audio)
+    return _enfileirar(pedido)
+
+
+def _transcrever_e_separar(usuario, audio: AudioCaptura | None) -> SugestaoIA:
+    if audio is None:
+        raise ValueError("o áudio deste pedido não existe mais")
+    conteudo, tipo_mime = bytes(audio.conteudo), audio.tipo_mime
+    transcricao = _usar_provedor(usuario, TIPO_TRANSCRICAO, lambda p: p.transcrever(conteudo, tipo_mime)).strip()
+    if not transcricao:
+        raise ErroIA("não deu para entender o áudio. Grave de novo, mais perto do microfone.")
+    try:
+        mensagens = ia_tarefas.mensagens_separar(transcricao, hoje())
+        itens = ia_tarefas.interpretar_separar(_chamar_ia(usuario, TIPO_SEPARAR, mensagens))
+    except ErroIA:  # a transcrição já vale: sem a separação, ela vira um item só
+        itens = [transcricao[: ia_tarefas.ITEM_MAX]]
+    return SugestaoIA.objects.create(
+        usuario=usuario,
+        tipo=TIPO_SEPARAR,
+        conteudo={"transcricao": transcricao, "itens": itens},
+        evidencia="Com base na transcrição do áudio. Revise antes de salvar.",
+    )
+
+
+@transaction.atomic
+def salvar_itens_do_audio(sugestao: SugestaoIA, itens: list[str]) -> list[ItemCaptura]:
+    if sugestao.tipo != TIPO_SEPARAR:
+        raise ValueError("esta sugestão não é de áudio")
+    if sugestao.status != SugestaoIA.Status.PENDENTE:
+        raise ValueError("esta sugestão já foi respondida")
+    limpos = [" ".join(str(texto).split()) for texto in itens]
+    limpos = [texto for texto in limpos if texto]
+    if not limpos:
+        raise ValueError("Escreva ao menos um item.")
+    transcricao = sugestao.conteudo.get("transcricao", "")
+    criados = [capturar(sugestao.usuario, texto, ItemCaptura.Origem.AUDIO, transcricao) for texto in limpos]
+    registrar_resposta(sugestao, {"transcricao": transcricao, "itens": limpos})
+    return criados

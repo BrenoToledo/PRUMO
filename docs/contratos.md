@@ -30,6 +30,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `claude/project-thread-t3hjty` (P12 · tokens, #30) | #30 | backend + interface | main (P1–P10) | `nucleo/autenticacao.py`, `web/telas/tokens.py`, `web/templates/web/tokens/`, `web/static/web/telas/tokens.css`, `web/tests/test_tokens.py`, `nucleo/tests/test_tokens_api.py`; no perfil só o link para os tokens, em `settings.py` só a classe de autenticação nova |
 | `claude/project-thread-2u8m3o` (P10 · IA) | #24, #25, #26 | backend + interface | main (P1–P5, P7, P8) | `backend/ia/` (com os testes em `ia/tests/`), `web/telas/ia.py`, `web/templates/web/ia/`, `web/templates/web/tarefas/quebrar.html` e `_quebra.html`, `web/static/web/telas/ia.css`, `web/tests/test_ia.py`, `web/tests/test_quebrar.py`, `web/tests/test_clarificacao_ia.py`, `nucleo/tests/test_ia.py`; em `clarificacao` só o botão da IA e as 4 respostas de importância, em `tarefas` só a rota de quebrar e o aviso de quebra, no perfil só o link para IA e privacidade |
 | `claude/project-thread-vfwmcf` (P12 · MCP, #29) | #29 | backend | main (P1–P10) + contrato dos tokens (#30) | `backend/assistente/` (com os testes em `assistente/tests/`), `nucleo/management/commands/servidor_mcp.py`, `docs/mcp.md`; em `requirements.txt` só a linha do `mcp` |
+| `claude/project-thread-mpmxzo` (P11) | #28, #27 | backend + interface + infra | main (P1–P10, P12) | `nucleo/fila.py`, `config/celery.py`, `web/telas/audio.py`, `web/templates/web/audio/`, `web/templates/web/fila/`, `web/static/web/telas/audio.css`, `audio.js`, `fila.css`, `web/tests/test_audio.py`, `web/tests/test_fila.py`, `nucleo/tests/test_fila.py`, `nucleo/tests/test_audio.py`; em `deploy/` os serviços `redis` e `worker`; em `clarificacao` e `tarefas` só o "processando"; na captura só o botão Gravar áudio |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -82,6 +83,11 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:descartar_quebra` | `/tarefas/<pk>/quebrar/descartar/` | POST | tarefas | `recusar_sugestao` |
 | `web:tokens` | `/perfil/tokens/` | GET, POST (criar e mostrar a chave uma vez) | tokens | `tokens_api_de`, `criar_token_api` |
 | `web:revogar_token` | `/perfil/tokens/<pk>/revogar/` | POST | tokens | `revogar_token_api` |
+| `web:capturar_audio` | `/capturar/audio/` (`?pedido=<pk>` mostra o resultado de um áudio enviado) | GET | audio | `audio_disponivel` |
+| `web:enviar_audio` | `/capturar/audio/enviar/` (multipart, campo `audio`) | POST | audio | `capturar_audio` |
+| `web:salvar_audio` | `/capturar/audio/<pk>/salvar/` (`item` repetido; `um=1` salva a transcrição inteira) | POST | audio | `salvar_itens_do_audio` |
+| `web:descartar_audio` | `/capturar/audio/<pk>/descartar/` | POST | audio | `recusar_sugestao` |
+| `web:pedido` | `/pedidos/<pk>/` (HTMX: devolve o "processando" de novo ou, pronto, `HX-Redirect` para a tela de origem; o de áudio devolve o resultado no lugar) | GET | audio | `processar_pedido` (só lê o status) |
 | `web:service_worker` | `/sw.js` | GET (público) | pwa | — |
 
 Convenções das telas (as mesmas do P1): views com `require_GET`/`require_POST` e `login_required`; objetos buscados com `usuario=request.user` (404 se não for do usuário); resposta HTMX é um parcial, sem HTMX é redirect com mensagem; erro de validação volta com status 422.
@@ -224,6 +230,22 @@ Cada usuário gera tokens com nome (um por ferramenta: MCP, atalhos, scripts) e 
 | `autenticar_token_api(chave)` | `TokenAPI \| None` | O token ativo com aquele hash, com `ultimo_uso_em` atualizado; `None` se não existir ou estiver revogado |
 
 Modelo novo `TokenAPI` (usuário, `nome`, `prefixo`, `hash`, `criado_em`, `ultimo_uso_em`, `revogado_em`). Na API, `Authorization: Bearer <chave>` autentica como o dono do token (classe `nucleo.autenticacao.TokenAPIAutenticacao`); chave inválida ou revogada dá `401`. O `POST /api/token/` e o `Authorization: Token …` continuam como estão. O servidor MCP (#29) usa `autenticar_token_api`.
+## IA assíncrona e áudio (P11, R3)
+
+Chamar a IA e transcrever áudio pode levar segundos; com fila, isso roda num worker Celery (Redis como broker) e a tela mostra "processando" e se atualiza sozinha. Sem `CELERY_BROKER_URL`, o pedido roda na hora, como no P10 (é o modo dos testes e do desenvolvimento).
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `fila_assincrona()` | `bool` | Há `CELERY_BROKER_URL` configurado |
+| `pedir_clarificacao(item, *, novo=False)` | `PedidoIA` | Tipo `clarificacao`. Sem `novo` e com sugestão pendente do item, já nasce `pronto` com ela (cache). Senão vai para a fila (ou roda na hora) |
+| `pedir_quebra(tarefa, *, novo=False)` | `PedidoIA` | O mesmo para `quebra` (só tarefa aberta, `ValueError`) |
+| `pedido_em_andamento(usuario, *, item=None, tarefa=None)` | `PedidoIA \| None` | O pedido `na_fila` ou `processando` mais recente (dos últimos 5 minutos; mais antigo que isso conta como perdido) |
+| `processar_pedido(pedido)` | `PedidoIA` | O corpo do worker: `processando` → chama `sugerir_clarificacao`, `sugerir_quebra` ou transcreve e separa o áudio → `pronto` com a `sugestao`, ou `erro` com a mensagem (`ErroIA`, `ValueError`). O áudio é apagado no fim, com ou sem sucesso. Pedido que não está na fila volta como está |
+| `audio_disponivel(usuario)` | `bool` | `ia_disponivel` e o provedor escolhido tem modelo de transcrição |
+| `capturar_audio(usuario, conteudo, tipo_mime)` | `PedidoIA` | Guarda o áudio (`AudioCaptura`, até 10 MB, `audio/*`; senão `ValueError`) e pede a transcrição. Pronto, o pedido tem uma `SugestaoIA` tipo `separar` com `conteudo = {"transcricao": str, "itens": [str]}` |
+| `salvar_itens_do_audio(sugestao, itens)` | `list[ItemCaptura]` | Cria um item da caixa de entrada por texto não vazio (origem `audio`, `transcricao` = a transcrição inteira). Registra a resposta (aceita se igual aos itens sugeridos, senão editada). `ValueError` sem nenhum texto |
+
+Modelos novos: `AudioCaptura` (temporário) e `PedidoIA` (tipo, status, item, tarefa, áudio, sugestão, erro). O worker chama `nucleo.fila.processar(pedido_id)`. Variáveis novas: `CELERY_BROKER_URL` (no docker-compose, `redis://redis:6379/0`) e o modelo de transcrição de cada provedor, `PRUMO_IA_TRANSCRICAO`, `PRUMO_IA_TRANSCRICAO_PROPRIA` e `PRUMO_IA_TRANSCRICAO_LOCAL` (ex.: `whisper-1`, `groq/whisper-large-v3`; com `PRUMO_IA_MODELO=falso`, a transcrição também é falsa).
 
 ## Mudar um contrato
 

@@ -22,6 +22,8 @@ BLOCOS_MAX = 50
 BLOCOS_MAX_PARTE = 20
 MIN_PARTES = 2
 MAX_PARTES = 6
+ITEM_MAX = 500
+MAX_ITENS_AUDIO = 10
 
 SISTEMA = (
     "Você é o assistente do Prumo, um gerenciador de tarefas e de atenção. Escreva em português do Brasil, com "
@@ -41,6 +43,12 @@ PEDIDO_QUEBRA = (
     "Quebre a tarefa em 2 a 6 partes em sequência, cada uma com um resultado claro. Devolva o JSON "
     '{"partes": [{"titulo": str, "blocos": int, "esforco": "alto" | "medio" | "baixo"}]}. '
     "A soma dos blocos deve ficar perto dos blocos estimados da tarefa."
+)
+
+PEDIDO_SEPARAR = (
+    "O texto é a transcrição de um áudio gravado para lembrar de coisas. Separe em itens de captura, um por "
+    'assunto ou ação, e devolva o JSON {"itens": [str]}. Cada item é uma frase curta e completa, com prazos e '
+    "detalhes ditos no áudio. Não invente nada que não foi dito; se for um assunto só, devolva um item."
 )
 
 _CERCA = re.compile(r"```(?:json)?\s*(.*?)```", re.S)
@@ -154,3 +162,17 @@ def interpretar_quebra(resposta: str) -> list[dict]:
     if len(limpas) < MIN_PARTES:
         raise ErroIA("a IA não sugeriu partes suficientes")
     return limpas
+
+
+# --------------------------------------------------------------------------- separar o áudio em itens (#27)
+def mensagens_separar(transcricao: str, hoje: date | None) -> list[dict]:
+    return _mensagens(PEDIDO_SEPARAR, {"transcricao": transcricao, "hoje": _data(hoje)})
+
+
+def interpretar_separar(resposta: str) -> list[str]:
+    itens = extrair_json(resposta).get("itens")
+    limpos = [_texto(item, ITEM_MAX) for item in itens if isinstance(item, str)] if isinstance(itens, list) else []
+    limpos = [item for item in limpos if item][:MAX_ITENS_AUDIO]
+    if not limpos:
+        raise ErroIA("a IA não separou nenhum item")
+    return limpos

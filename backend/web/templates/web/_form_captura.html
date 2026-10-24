@@ -9,5 +9,8 @@
     <p id="erro-captura" class="erro" role="alert">{{ form_captura.errors.texto.0 }}</p>
   {% endif %}
   <p class="captura__dica">Sem classificar agora. Você decide na revisão da caixa de entrada.</p>
-  <button class="botao botao--primario" type="submit">Salvar na entrada</button>
+  <div class="captura__acoes" style="display: flex; gap: var(--e3); justify-content: flex-end;">
+    <a class="botao" href="{% url 'web:capturar_audio' %}" style="text-decoration: none;">Gravar áudio</a>
+    <button class="botao botao--primario" type="submit">Salvar na entrada</button>
+  </div>
 </form>

@@ -18,8 +18,23 @@ services:
   backend:
     build: ./backend
     env_file: .env
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # Worker da fila (#28): pedidos à IA e transcrição de áudio rodam aqui, fora da requisição.
+  worker:
+    build: ./backend
+    env_file: .env
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+    command: celery -A config worker -l info --concurrency 2
     depends_on:
       db:
         condition: service_healthy

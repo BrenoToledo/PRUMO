@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol
@@ -29,26 +31,39 @@ class Resposta:
 
 class Provedor(Protocol):
     modelo: str
+    transcricao: str  # modelo de transcrição de áudio; "" se o provedor não transcreve
 
     def completar(self, mensagens: list[dict], *, tipo: str) -> Resposta: ...
+
+    def transcrever(self, conteudo: bytes, tipo_mime: str) -> Resposta: ...
+
+
+def _extensao(tipo_mime: str) -> str:
+    """`audio/webm;codecs=opus` → `webm`: os provedores reconhecem o formato pelo nome do arquivo."""
+    subtipo = tipo_mime.split(";")[0].strip().split("/")[-1].lower()
+    return {"mpeg": "mp3", "x-m4a": "m4a", "mp4": "m4a", "x-wav": "wav", "wave": "wav"}.get(subtipo, subtipo) or "webm"
 
 
 class ProvedorLiteLLM:
     """Qualquer modelo que o LiteLLM conhece, ex.: `anthropic/claude-haiku-5-5`, `ollama/llama3.2`."""
 
-    def __init__(self, modelo: str, *, chave: str = "", url: str = "", timeout: float = TIMEOUT_PADRAO_S):
+    def __init__(
+        self, modelo: str, *, chave: str = "", url: str = "", transcricao: str = "", timeout: float = TIMEOUT_PADRAO_S
+    ):
         self.modelo, self.chave, self.url, self.timeout = modelo, chave, url, timeout
+        self.transcricao = transcricao
 
-    def completar(self, mensagens: list[dict], *, tipo: str) -> Resposta:
-        try:
-            import litellm
-        except ImportError as erro:  # pragma: no cover - o pacote está no requirements.txt
-            raise ErroIA("o pacote litellm não está instalado") from erro
-        argumentos = {"model": self.modelo, "messages": mensagens, "timeout": self.timeout}
+    def _argumentos(self, modelo: str) -> dict:
+        argumentos = {"model": modelo, "timeout": self.timeout}
         if self.chave:
             argumentos["api_key"] = self.chave
         if self.url:
             argumentos["api_base"] = self.url
+        return argumentos
+
+    def completar(self, mensagens: list[dict], *, tipo: str) -> Resposta:
+        litellm = _litellm()
+        argumentos = self._argumentos(self.modelo) | {"messages": mensagens}
         try:
             resposta = litellm.completion(**argumentos)
         except Exception as erro:  # cada provedor tem as próprias exceções; todas viram ErroIA
@@ -61,6 +76,27 @@ class ProvedorLiteLLM:
             tokens_saida=getattr(uso, "completion_tokens", 0) or 0,
             custo_usd=_custo(litellm, resposta),
         )
+
+    def transcrever(self, conteudo: bytes, tipo_mime: str) -> Resposta:
+        if not self.transcricao:
+            raise ErroIA("este provedor não tem modelo de transcrição configurado")
+        litellm = _litellm()
+        arquivo = io.BytesIO(conteudo)
+        arquivo.name = f"audio.{_extensao(tipo_mime)}"
+        try:
+            resposta = litellm.transcription(**self._argumentos(self.transcricao), file=arquivo)
+        except Exception as erro:  # cada provedor tem as próprias exceções; todas viram ErroIA
+            raise ErroIA(f"a transcrição falhou ({erro.__class__.__name__})") from erro
+        texto = getattr(resposta, "text", "") or ""
+        return Resposta(texto=texto.strip(), modelo=self.transcricao, custo_usd=_custo(litellm, resposta))
+
+
+def _litellm():
+    try:
+        import litellm
+    except ImportError as erro:  # pragma: no cover - o pacote está no requirements.txt
+        raise ErroIA("o pacote litellm não está instalado") from erro
+    return litellm
 
 
 def _custo(litellm, resposta) -> float:
@@ -107,10 +143,18 @@ def _quebra_padrao(mensagens: list[dict]) -> str:
     return json.dumps({"partes": partes}, ensure_ascii=False)
 
 
+def _separar_padrao(mensagens: list[dict]) -> str:
+    texto = str(_pedido(mensagens).get("transcricao", ""))
+    frases = [frase.strip() for frase in re.split(r"[.;!?\n]+", texto) if frase.strip()]
+    return json.dumps({"itens": frases or [texto]}, ensure_ascii=False)
+
+
 RESPOSTAS_PADRAO: dict[str, Callable[[list[dict]], str]] = {
     "clarificacao": _clarificacao_padrao,
     "quebra": _quebra_padrao,
+    "separar": _separar_padrao,
 }
+TRANSCRICAO_PADRAO = "Ligar para o banco amanhã cedo. Comprar o presente da Ana até sábado."
 
 
 class ProvedorFalso:
@@ -124,7 +168,10 @@ class ProvedorFalso:
         *,
         custo_usd: float = 0.0,
         erro: Exception | None = None,
+        transcricao_texto: str = TRANSCRICAO_PADRAO,
     ):
+        self.transcricao = "falso"
+        self.transcricao_texto = transcricao_texto
         self.respostas = respostas or {}
         self.custo_usd = custo_usd
         self.erro = erro
@@ -139,3 +186,9 @@ class ProvedorFalso:
             raise ErroIA(f"o provedor falso não sabe responder a {tipo}")
         texto = resposta(mensagens) if callable(resposta) else resposta
         return Resposta(texto=texto, modelo=self.modelo, custo_usd=self.custo_usd)
+
+    def transcrever(self, conteudo: bytes, tipo_mime: str) -> Resposta:
+        self.chamadas.append(("transcricao", []))
+        if self.erro:
+            raise self.erro
+        return Resposta(texto=self.transcricao_texto.strip(), modelo=self.transcricao, custo_usd=self.custo_usd)

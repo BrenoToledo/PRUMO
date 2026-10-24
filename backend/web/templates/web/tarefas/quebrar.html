@@ -1,7 +1,8 @@
 {% extends "web/base.html" %}
 {% load static %}
 {% block titulo %}Quebrar tarefa{% endblock %}
-{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/tarefas.css' %}">{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/tarefas.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/fila.css' %}">{% endblock %}
 {% block conteudo %}
 <div class="quebra">
   <a class="voltar" href="{% url 'web:tarefa' tarefa.pk %}">
@@ -11,7 +12,9 @@
   <h1 class="detalhe__titulo">{{ tarefa.titulo }}</h1>
   {% if motivo %}<p class="quebra__motivo">{{ motivo }}</p>{% endif %}
 
-  {% if sugestao %}
+  {% if pedido %}
+  {% include "web/fila/_processando.html" %}
+  {% elif sugestao %}
   <form class="quebra__form" method="post" action="{% url 'web:aplicar_quebra' tarefa.pk %}">
     {% csrf_token %}
     <input type="hidden" name="sugestao" value="{{ sugestao.pk }}">

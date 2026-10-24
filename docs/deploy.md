@@ -71,6 +71,9 @@ Por HTTP o login só funciona em `http://localhost:8000/` (no próprio servidor)
 | `PRUMO_IA_MODELO_PROPRIO`, `PRUMO_IA_CHAVE_PROPRIA` | `openai/gpt-4o-mini` | Opcional: a opção "Minha chave de API" |
 | `PRUMO_IA_MODELO_LOCAL`, `PRUMO_IA_URL_LOCAL` | `ollama/llama3.2`, `http://ollama:11434` | Opcional: a opção "Modelo local" |
 | `PRUMO_IA_LIMITE_DIARIO`, `PRUMO_IA_LIMITE_MENSAL_USD` | `50`, `2` | Limites por usuário: sugestões por dia e gasto por mês em dólar |
+| `PRUMO_IA_TRANSCRICAO`, `PRUMO_IA_TRANSCRICAO_PROPRIA`, `PRUMO_IA_TRANSCRICAO_LOCAL` | `whisper-1`, `groq/whisper-large-v3` | Opcional: modelo de transcrição de cada opção, para a captura por áudio (usa a chave e o endereço da opção). Sem ele, o botão Gravar áudio explica como ligar. O microfone só funciona em HTTPS |
+
+O `docker compose up -d` também sobe o **Redis** e o **worker** (Celery): os pedidos à IA e a transcrição de áudio rodam no worker e a tela mostra "processando" até ficarem prontos. Para ver o que o worker está fazendo: `docker compose logs -f worker`. Sem `CELERY_BROKER_URL` (por exemplo em `manage.py runserver`), tudo roda na hora, dentro da requisição.
 
 ## HTTPS (obrigatório para o celular)
 
