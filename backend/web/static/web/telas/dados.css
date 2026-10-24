@@ -2,3 +2,7 @@
 .dados__dica { margin: var(--e2) 0 var(--e4); color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
 .dados__lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--e2) var(--e4); margin: 0; padding: var(--e4); list-style: none; }
 .dados__baixar { display: inline-flex; margin-bottom: var(--e6); text-decoration: none; }
+.dados__excluir { margin-bottom: var(--e6); }
+.dados__botao-perigo { width: 100%; border-color: var(--prioridade-critica); background: var(--prioridade-critica); color: var(--texto-na-primaria); }
+.dados__botao-perigo:focus-visible { outline: 2px solid var(--prioridade-critica); outline-offset: 2px; }
+.dados__perigo { margin: 0 0 var(--e6); }

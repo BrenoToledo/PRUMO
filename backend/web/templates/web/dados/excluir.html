@@ -1,0 +1,30 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Excluir minha conta{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/tarefas.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/dados.css' %}">{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'web:dados' %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+  Excluir minha conta
+</a>
+<p class="dados__dica">A conta e tudo o que você guardou no Prumo serão apagados de vez. Depois não dá para desfazer.</p>
+
+<section class="secao" aria-labelledby="titulo-some">
+  <h2 id="titulo-some">O que será apagado</h2>
+  <ul class="cartao dados__lista">
+    {% for item in itens %}<li>{{ item }}</li>{% endfor %}
+  </ul>
+  <p class="dados__dica">Também somem o seu perfil, o histórico de cada tarefa e os tokens da API. Quer guardar uma cópia? <a href="{% url 'web:exportar_dados' %}" download>Baixe seus dados antes</a>.</p>
+</section>
+
+<form class="dados__excluir" method="post" action="{% url 'web:excluir_conta' %}">
+  {% csrf_token %}
+  {% if erro %}<p class="erro" role="alert">{{ erro }}</p>{% endif %}
+  <div class="campo">
+    <label for="id_senha">Digite sua senha para confirmar</label>
+    <input id="id_senha" name="senha" type="password" autocomplete="current-password" required{% if erro %} aria-invalid="true" autofocus{% endif %}>
+  </div>
+  <button class="botao dados__botao-perigo" type="submit">Excluir minha conta e meus dados</button>
+</form>
+{% endblock %}

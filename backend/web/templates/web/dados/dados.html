@@ -19,4 +19,6 @@
 </section>
 
 <a class="botao botao--primario dados__baixar" href="{% url 'web:exportar_dados' %}" download>Baixar meus dados (JSON)</a>
+
+<p class="dados__perigo"><a class="botao botao--texto-perigo" href="{% url 'web:excluir_conta' %}">Excluir minha conta</a></p>
 {% endblock %}

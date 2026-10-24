@@ -347,3 +347,12 @@ def exportar(request):
     resposta = Response(services.exportar_dados(request.user))
     resposta["Content-Disposition"] = f'attachment; filename="prumo-dados-{services.hoje():%Y-%m-%d}.json"'
     return resposta
+
+
+@api_view(["DELETE"])
+def excluir_conta(request):
+    try:
+        services.excluir_conta(request.user, str(request.data.get("senha") or ""))
+    except ValueError as erro:
+        return Response({"senha": [str(erro)]}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(status=status.HTTP_204_NO_CONTENT)

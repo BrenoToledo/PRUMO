@@ -822,6 +822,18 @@ def contagem_dos_dados(usuario) -> dict[str, int]:
     return {chave: consulta.count() for chave, consulta in _consultas_dos_dados(usuario).items()}
 
 
+def excluir_conta(usuario, senha: str) -> None:
+    """Apaga o usuário e tudo o que é dele (LGPD, #68); sem a senha atual, não apaga nada."""
+    if not senha or not usuario.check_password(senha):
+        raise ValueError("A senha não confere.")
+    with transaction.atomic():
+        # Tarefas, projetos e rotinas apontam para a área com PROTECT: saem antes do cascade do usuário.
+        Tarefa.objects.filter(usuario=usuario).delete()
+        Projeto.objects.filter(usuario=usuario).delete()
+        Rotina.objects.filter(usuario=usuario).delete()
+        usuario.delete()
+
+
 # --------------------------------------------------------------------------- IA que ajuda (P10)
 TIPO_CLARIFICACAO = "clarificacao"
 TIPO_QUEBRA = "quebra"
