@@ -14,7 +14,7 @@ from datetime import date
 from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
-    from .models import Bloco, Projeto, Revisao, Tarefa
+    from .models import Bloco, Projeto, Revisao, SugestaoIA, Tarefa
 
 # --------------------------------------------------------------------------- formatos devolvidos pelos serviços
 
@@ -31,6 +31,20 @@ class PlanoDoDia(TypedDict):
     tarefas_leves: list[Tarefa]  # até 10, esforço baixo e abertas
     eventos: list  # EventoCalendario do dia, em ordem de início (os de dia inteiro primeiro); [] sem calendário
     rotinas: list[Tarefa]  # ocorrências de rotinas do dia (abertas e concluídas), pelo horário preferido
+
+
+class DiaDaSemana(TypedDict):
+    dia: date
+    capacidade: int  # blocos que cabem no dia inteiro (já sem eventos e rotinas com horário)
+    planejados: int  # blocos não adiados do dia
+    blocos: list[Bloco]  # em ordem de início
+
+
+class SemanaPlanejada(TypedDict):
+    """`services.semana_planejada`: o que a tela Semana (M28, D04) mostra depois de aprovar (#80)."""
+
+    dias: list[DiaDaSemana]  # de hoje (ou da segunda seguinte, no fim de semana) até sexta
+    proposta: SugestaoIA | None  # a proposta pendente da semana (tipo "semana"), se houver
 
 
 class ItemPlanejadoVsReal(TypedDict):
@@ -230,6 +244,14 @@ SERVICOS: dict[str, str] = {
     "excluir_rotina": "(rotina: 'Rotina') -> 'None'",
     "gerar_ocorrencias": "(usuario, dia: 'date | None' = None) -> 'list[Tarefa]'",
     "rotinas_do_dia": "(usuario, dia: 'date | None' = None) -> 'list[Tarefa]'",
+    # Planejamento da semana (P15, #79–#81): proposta como SugestaoIA (tipo "semana"); só vira bloco ao aprovar
+    "dias_da_semana": "(dia: 'date | None' = None) -> 'list[date]'",
+    "propor_semana": "(usuario, dia: 'date | None' = None) -> 'SugestaoIA'",
+    "proposta_da_semana": "(usuario) -> 'SugestaoIA | None'",
+    "mover_na_proposta": "(sugestao: 'SugestaoIA', tarefa: 'int', *, de: 'date | None', para: 'date | None') "
+    "-> 'SugestaoIA'",
+    "aprovar_semana": "(sugestao: 'SugestaoIA') -> 'dict'",
+    "semana_planejada": "(usuario, dia: 'date | None' = None) -> 'SemanaPlanejada'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -353,6 +375,7 @@ TELAS_WEB = (
     "audio",
     "calendarios",
     "rotinas",
+    "semana",
 )
 
 # --------------------------------------------------------------------------- servidor MCP (P12, #29)

@@ -33,6 +33,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `claude/project-thread-mpmxzo` (P11) | #28, #27 | backend + interface + infra | main (P1–P10, P12) | `nucleo/fila.py`, `config/celery.py`, `web/telas/audio.py`, `web/templates/web/audio/`, `web/templates/web/fila/`, `web/static/web/telas/audio.css`, `audio.js`, `fila.css`, `web/tests/test_audio.py`, `web/tests/test_fila.py`, `nucleo/tests/test_fila.py`, `nucleo/tests/test_audio.py`; em `deploy/` os serviços `redis` e `worker`; em `clarificacao` e `tarefas` só o "processando"; na captura só o botão Gravar áudio |
 | `claude/project-thread-mpmxzo` (P13 · Calendário) | #71, #72, #73 | backend + interface | main (P1–P12) | `nucleo/calendario.py`, `web/telas/calendarios.py`, `web/templates/web/calendarios/`, `web/static/web/telas/calendarios.css`, `web/templates/web/plano/_card_evento.html`, `nucleo/tests/test_calendario.py`, `nucleo/tests/test_calendarios.py`, `web/tests/test_calendarios.py`; em `planejamento.py` só os compromissos (`ocupados`); em `plano` só a linha do tempo com eventos; no perfil só o link para Calendários |
 | `claude/project-thread-mpmxzo` (P14 · Rotinas) | #75, #76, #77 | backend + interface | main (P1–P13) | `nucleo/rotinas.py`, `web/telas/rotinas.py`, `web/templates/web/rotinas/`, `web/static/web/telas/rotinas.css`, `nucleo/tests/test_rotinas.py`, `nucleo/tests/test_rotinas_regra.py`, `web/tests/test_rotinas.py`; em `projetos` só o alternador Projetos/Rotinas; em `plano` só a seção "Rotinas de hoje"; em `services.py` as rotinas entram em `_compromissos` e saem de `_abertas_no_dia` |
+| `claude/project-thread-mpmxzo` (P15 · Semana) | #79, #80, #81 | backend + interface | main (P1–P14) | `web/telas/semana.py`, `web/templates/web/semana/`, `web/static/web/telas/semana.css`, `semana.js`, `nucleo/tests/test_planejamento_semana.py`, `nucleo/tests/test_semana.py`, `web/tests/test_semana.py`; em `planejamento.py` só `montar_semana`; em `services.py` o plano do dia passa a gravar por `_gravar_plano` (sem mudar o comportamento); em `plano` só o link "ver a semana"; em `base.html`/`app.css` só o item Semana da barra lateral (desktop) |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -97,6 +98,10 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:nova_rotina` | `/rotinas/nova/` | GET, POST | rotinas | `criar_rotina` |
 | `web:editar_rotina` | `/rotinas/<pk>/editar/` | GET, POST | rotinas | `atualizar_rotina` |
 | `web:excluir_rotina` | `/rotinas/<pk>/excluir/` | POST | rotinas | `excluir_rotina` |
+| `web:semana` | `/semana/` | GET | semana | `semana_planejada` |
+| `web:propor_semana` | `/semana/propor/` | POST (HTMX: parcial `#semana`) | semana | `propor_semana` |
+| `web:mover_na_semana` | `/semana/mover/` (`tarefa`, `de`, `para`; vazio = não couberam) | POST (HTMX: parcial `#semana`) | semana | `mover_na_proposta` |
+| `web:aprovar_semana` | `/semana/aprovar/` | POST | semana | `aprovar_semana` |
 | `web:service_worker` | `/sw.js` | GET (público) | pwa | — |
 
 Convenções das telas (as mesmas do P1): views com `require_GET`/`require_POST` e `login_required`; objetos buscados com `usuario=request.user` (404 se não for do usuário); resposta HTMX é um parcial, sem HTMX é redirect com mensagem; erro de validação volta com status 422.
@@ -285,6 +290,21 @@ A recorrência é uma RRULE do iCalendar (`FREQ=WEEKLY;BYDAY=MO,WE,FR`), contada
 | `rotinas_do_dia(usuario, dia=None)` | `list[Tarefa]` | Ocorrências abertas e concluídas do dia, pelo horário; para hoje, gera as que faltam |
 
 Regras do plano: as ocorrências não entram nos blocos de foco nem nas tarefas leves (seção própria em Hoje). Rotina ativa com horário preferido ocupa a agenda como um compromisso, só nos dias da recorrência: desconta da capacidade e de `blocos_livres_ate`, e nenhum bloco cai em cima dela. `PlanoDoDia` e `CAMPOS_HOJE` ganharam `rotinas` (tarefas com `CAMPOS_TAREFA`), também no `ver_hoje` do MCP. Modelo: `Rotina.inicio` (migração `0008`). Dependência: `python-dateutil`.
+
+## Planejamento da semana (P15, Fase 1)
+
+A proposta distribui os blocos restantes das tarefas abertas (esforço alto e médio) de hoje até sexta (no fim de semana, a semana seguinte), pela regra pura `planejamento.montar_semana`: mesma ordem do plano do dia (prazo rígido vencendo, depois prioridade), até 2 blocos por tarefa no dia, até a capacidade livre de cada dia (já sem folga, eventos e rotinas com horário). É um algoritmo, sem chamada ao provedor de IA, mas segue a regra da IA: fica numa `SugestaoIA` (tipo `semana`) e só vira bloco ao aprovar.
+
+`SugestaoIA.conteudo`: `inicio` (primeiro dia ISO), `capacidade` ({dia: blocos}), `original` e `atual`, cada um com `dias` ({dia: [{tarefa, blocos}]}) e `nao_couberam` ([{tarefa, blocos}]).
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `dias_da_semana(dia=None)` | `list[date]` | Dias úteis de hoje até sexta; sábado e domingo levam à semana seguinte |
+| `propor_semana(usuario, dia=None)` | `SugestaoIA` | Nova proposta pendente; a pendente anterior fica recusada |
+| `proposta_da_semana(usuario)` | `SugestaoIA \| None` | A pendente desta semana; a de semana passada não vale |
+| `mover_na_proposta(sugestao, tarefa, *, de, para)` | `SugestaoIA` | Move os blocos da tarefa entre dias (`None` = não couberam), juntando no destino. `ValueError` se a tarefa não está em `de`, se o dia não é da semana ou se a proposta já foi respondida |
+| `aprovar_semana(sugestao)` | `dict` | `{blocos, nao_couberam}`. Para cada dia (de hoje em diante) troca os blocos planejados e não iniciados pelos da proposta, com horário (`montar_plano_do_dia`: compromissos, pico de energia, hora atual). Tarefas fechadas no meio do caminho saem. A sugestão fica `aceita` ou `editada`, com `resposta` = versão final |
+| `semana_planejada(usuario, dia=None)` | `SemanaPlanejada` | `dias` ({dia, capacidade, planejados, blocos}) e `proposta` |
 
 ## Mudar um contrato
 

@@ -5,7 +5,7 @@
     <span class="capacidade__valor">{{ plano.planejados }} de {{ plano.capacidade }} blocos · {{ ocupacao_pct }}%</span>
   </div>
   <progress class="capacidade__barra" aria-labelledby="titulo-capacidade" max="100" value="{{ barra_pct }}">{{ barra_pct }}%</progress>
-  <p class="capacidade__folga">{{ folga_pct }}% do dia livre para imprevistos</p>
+  <p class="capacidade__folga">{{ folga_pct }}% do dia livre para imprevistos · <a href="{% url 'web:semana' %}">ver a semana</a></p>
 </section>
 
 <div class="plano__secao">

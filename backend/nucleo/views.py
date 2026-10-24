@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.db import transaction
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action, api_view
@@ -23,6 +24,7 @@ from .serializers import (
     ItemCapturaSerializer,
     ListaRapidaSerializer,
     MeuDiaQuebrouSerializer,
+    MoverNaSemanaSerializer,
     PerfilSerializer,
     PessoaSerializer,
     ProjetoSerializer,
@@ -274,6 +276,66 @@ def simular_meu_dia_quebrou(request):
     ser.is_valid(raise_exception=True)
     blocos_uteis = ser.validated_data["blocos_uteis"]
     return Response(services.simular_meu_dia_quebrou(request.user, blocos_uteis=blocos_uteis, dia=_dia(request)))
+
+
+def _proposta(sugestao) -> dict | None:
+    if sugestao is None:
+        return None
+    c = sugestao.conteudo
+    return {
+        "id": sugestao.pk,
+        "inicio": c["inicio"],
+        "capacidade": c["capacidade"],
+        "dias": c["atual"]["dias"],
+        "nao_couberam": c["atual"]["nao_couberam"],
+        "ajustada": c["atual"] != c["original"],
+    }
+
+
+def _proposta_ou_404(request):
+    sugestao = services.proposta_da_semana(request.user)
+    if sugestao is None:
+        raise Http404("sem proposta pendente para esta semana")
+    return sugestao
+
+
+class SemanaView(APIView):
+    """Blocos de cada dia da semana e a proposta pendente (M28, D04)."""
+
+    def get(self, request):
+        s = services.semana_planejada(request.user)
+        ctx = {"request": request}
+        dias = [
+            {
+                "dia": d["dia"],
+                "capacidade": d["capacidade"],
+                "planejados": d["planejados"],
+                "blocos": BlocoSerializer(d["blocos"], many=True, context=ctx).data,
+            }
+            for d in s["dias"]
+        ]
+        return Response({"dias": dias, "proposta": _proposta(s["proposta"])})
+
+
+@api_view(["POST"])
+def propor_semana(request):
+    return Response(_proposta(services.propor_semana(request.user)), status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+def mover_na_semana(request):
+    ser = MoverNaSemanaSerializer(data=request.data)
+    ser.is_valid(raise_exception=True)
+    try:
+        sugestao = services.mover_na_proposta(_proposta_ou_404(request), **ser.validated_data)
+    except ValueError as exc:
+        return _erro(exc)
+    return Response(_proposta(sugestao))
+
+
+@api_view(["POST"])
+def aprovar_semana(request):
+    return Response(services.aprovar_semana(_proposta_ou_404(request)))
 
 
 class BlocoViewSet(viewsets.ReadOnlyModelViewSet):

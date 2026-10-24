@@ -36,6 +36,7 @@ from .contratos import (
     ProgressoProjeto,
     PropostaReplanejamento,
     ResumoRevisaoDiaria,
+    SemanaPlanejada,
     UsoDeIA,
 )
 from .models import (
@@ -301,23 +302,33 @@ def gerar_plano_do_dia(usuario, dia: date | None = None) -> plan.Plano:
     Os blocos novos começam depois da hora atual e dos blocos já feitos no dia (`plan.inicio_do_plano`).
     """
     dia = dia or hoje()
-    _blocos_do_dia(usuario, dia).filter(status=Bloco.Status.PLANEJADO).delete()
-    ja_feitos = _blocos_do_dia(usuario, dia).exclude(status__in=[Bloco.Status.PLANEJADO, Bloco.Status.ADIADO])
-    ocupado_ate = max((b.fim_real or b.fim_planejado for b in ja_feitos), default=None)
     abertas = list(_abertas_no_dia(usuario, dia).exclude(esforco=Esforco.BAIXO))
     for t in abertas:
         recalcular_prioridade(t)
     candidatas = [
         plan.Candidata(t.id, t.prioridade, t.esforco, t.blocos_restantes, t.prazo, t.prazo_rigido) for t in abertas
     ]
-    jornada = jornada_de(perfil_de(usuario))
+    return _gravar_plano(usuario, dia, candidatas, {t.id: t for t in abertas})
+
+
+def _a_partir_de(usuario, dia: date, jornada: plan.Jornada) -> datetime:
+    """Onde os blocos novos do dia podem começar: depois de agora e dos blocos já começados ou feitos."""
+    ja_feitos = _blocos_do_dia(usuario, dia).exclude(status__in=[Bloco.Status.PLANEJADO, Bloco.Status.ADIADO])
+    ocupado_ate = max((b.fim_real or b.fim_planejado for b in ja_feitos), default=None)
+    tz = timezone.get_current_timezone()
+    return plan.inicio_do_plano(dia, jornada, agora=timezone.now(), ocupado_ate=ocupado_ate, tz=tz)
+
+
+def _gravar_plano(usuario, dia: date, candidatas: list[plan.Candidata], por_id: dict[int, Tarefa]) -> plan.Plano:
+    """Troca os blocos ainda não iniciados do dia pelos de `candidatas`, com horário (`plan.montar_plano_do_dia`)."""
+    _blocos_do_dia(usuario, dia).filter(status=Bloco.Status.PLANEJADO).delete()
     if dia.weekday() not in DIAS_UTEIS:
         return plan.Plano(capacidade=0, nao_couberam=[c.id for c in candidatas])
+    jornada = jornada_de(perfil_de(usuario))
     tz = timezone.get_current_timezone()
-    a_partir_de = plan.inicio_do_plano(dia, jornada, agora=timezone.now(), ocupado_ate=ocupado_ate, tz=tz)
+    a_partir_de = _a_partir_de(usuario, dia, jornada)
     ocupados = _compromissos(usuario, dia, dia).get(dia, [])
     resultado = plan.montar_plano_do_dia(dia, jornada, candidatas, tz=tz, a_partir_de=a_partir_de, ocupados=ocupados)
-    por_id = {t.id: t for t in abertas}
     for slot in resultado.slots:
         Bloco.objects.create(
             usuario=usuario, tarefa=por_id[slot.tarefa_id], inicio_planejado=slot.inicio, fim_planejado=slot.fim
@@ -1532,3 +1543,163 @@ def rotinas_do_dia(usuario, dia: date | None = None) -> list[Tarefa]:
             F("rotina__horario_preferido").asc(nulls_last=True), "titulo", "pk"
         )
     )
+
+
+# --------------------------------------------------------------------------- planejamento da semana (P15, #79–#81)
+TIPO_SEMANA = "semana"
+
+
+def dias_da_semana(dia: date | None = None) -> list[date]:
+    """Dias úteis de `dia` (hoje) até sexta; no fim de semana, a semana seguinte inteira."""
+    dia = dia or hoje()
+    if dia.weekday() not in DIAS_UTEIS:
+        dia += timedelta(days=7 - dia.weekday())
+    return [dia + timedelta(days=n) for n in range(5 - dia.weekday())]
+
+
+def _capacidade_livre(usuario, dia: date, compromissos: list[plan.Intervalo]) -> int:
+    """Blocos que ainda cabem no dia, como `montar_plano_do_dia` conta: depois de agora e do que já foi feito."""
+    if dia.weekday() not in DIAS_UTEIS:
+        return 0
+    jornada = jornada_de(perfil_de(usuario))
+    tz = timezone.get_current_timezone()
+    inicio, _ = plan._limites_da_jornada(dia, jornada, tz)
+    a_partir_de = _a_partir_de(usuario, dia, jornada)
+    passados = max(0, int((a_partir_de - inicio).total_seconds() // 60))
+    ocupados = plan.minutos_ocupados(dia, jornada, compromissos, tz=tz, a_partir_de=a_partir_de)
+    return plan.capacidade_blocos(jornada, passados + ocupados)
+
+
+def _proposta_valida(sugestao: SugestaoIA) -> bool:
+    return sugestao.conteudo.get("inicio", "") >= dias_da_semana()[0].isoformat()
+
+
+@transaction.atomic
+def propor_semana(usuario, dia: date | None = None) -> SugestaoIA:
+    """Proposta de blocos por dia para a semana (M28, #79): uma `SugestaoIA` pendente, nada vira bloco ainda.
+
+    `conteudo`: `inicio` (primeiro dia), `capacidade` ({dia ISO: blocos}), `original` e `atual` (a versão com os
+    ajustes), cada um com `dias` ({dia ISO: [{tarefa, blocos}]}) e `nao_couberam` ([{tarefa, blocos}]).
+    Gerar de novo recusa a proposta pendente anterior.
+    """
+    dias = dias_da_semana(dia)
+    for antiga in SugestaoIA.objects.filter(usuario=usuario, tipo=TIPO_SEMANA, status=SugestaoIA.Status.PENDENTE):
+        _responder(antiga, SugestaoIA.Status.RECUSADA)
+    compromissos = _compromissos(usuario, dias[0], dias[-1])
+    capacidade = {d: _capacidade_livre(usuario, d, compromissos.get(d, [])) for d in dias}
+    abertas = list(_abertas_no_dia(usuario, dias[-1]).exclude(esforco=Esforco.BAIXO))
+    for t in abertas:
+        recalcular_prioridade(t)
+    candidatas = [
+        plan.Candidata(t.id, t.prioridade, t.esforco, t.blocos_restantes, t.prazo, t.prazo_rigido) for t in abertas
+    ]
+    semana = plan.montar_semana(capacidade, candidatas, hoje=dias[0])
+    proposta = {
+        "dias": {
+            d.isoformat(): [{"tarefa": a.tarefa_id, "blocos": a.blocos} for a in alocadas]
+            for d, alocadas in semana.dias.items()
+        },
+        "nao_couberam": [{"tarefa": a.tarefa_id, "blocos": a.blocos} for a in semana.nao_couberam],
+    }
+    conteudo = {
+        "inicio": dias[0].isoformat(),
+        "capacidade": {d.isoformat(): n for d, n in capacidade.items()},
+        "original": proposta,
+        "atual": proposta,
+    }
+    return SugestaoIA.objects.create(usuario=usuario, tipo=TIPO_SEMANA, conteudo=conteudo)
+
+
+def proposta_da_semana(usuario) -> SugestaoIA | None:
+    """A proposta pendente desta semana (ou da próxima, no fim de semana); a de uma semana que passou não vale."""
+    sugestao = _sugestao_pendente(usuario=usuario, tipo=TIPO_SEMANA)
+    return sugestao if sugestao is not None and _proposta_valida(sugestao) else None
+
+
+def mover_na_proposta(sugestao: SugestaoIA, tarefa: int, *, de: date | None, para: date | None) -> SugestaoIA:
+    """Leva os blocos de `tarefa` de um dia (ou de "não couberam", `None`) para outro (#80). Junta se já houver."""
+    if sugestao.tipo != TIPO_SEMANA or sugestao.status != SugestaoIA.Status.PENDENTE:
+        raise ValueError("esta proposta já foi respondida")
+    atual = sugestao.conteudo["atual"]
+    dias = {d: list(alocadas) for d, alocadas in atual["dias"].items()}
+    fora = list(atual["nao_couberam"])
+
+    def lista(dia: date | None) -> list[dict]:
+        if dia is None:
+            return fora
+        if dia.isoformat() not in dias:
+            raise ValueError("escolha um dia desta semana")
+        return dias[dia.isoformat()]
+
+    origem, destino = lista(de), lista(para)
+    alocacao = next((a for a in origem if a["tarefa"] == tarefa), None)
+    if alocacao is None:
+        raise ValueError("a tarefa não está nesse dia")
+    if origem is destino:
+        return sugestao
+    origem.remove(alocacao)
+    junto = next((a for a in destino if a["tarefa"] == tarefa), None)
+    if junto is None:
+        destino.append(dict(alocacao))
+    else:
+        destino[destino.index(junto)] = {"tarefa": tarefa, "blocos": junto["blocos"] + alocacao["blocos"]}
+    sugestao.conteudo = sugestao.conteudo | {"atual": {"dias": dias, "nao_couberam": fora}}
+    sugestao.save(update_fields=["conteudo"])
+    return sugestao
+
+
+@transaction.atomic
+def aprovar_semana(sugestao: SugestaoIA) -> dict:
+    """Vira blocos com horário, dia a dia (#80): troca os planejados e não iniciados desses dias.
+
+    Devolve `{"blocos": criados, "nao_couberam": [ids]}` (o que a agenda do dia não comportou). A sugestão fica
+    aceita, ou editada se a versão atual mudou, com a versão final em `resposta`.
+    """
+    if sugestao.tipo != TIPO_SEMANA or sugestao.status != SugestaoIA.Status.PENDENTE:
+        raise ValueError("esta proposta já foi respondida")
+    usuario = sugestao.usuario
+    atual = sugestao.conteudo["atual"]
+    ids = {a["tarefa"] for alocadas in atual["dias"].values() for a in alocadas}
+    por_id = {t.id: t for t in _abertas_no_dia(usuario, date.max).filter(pk__in=ids)}
+    criados, nao_couberam = 0, []
+    for iso, alocadas in atual["dias"].items():
+        dia = date.fromisoformat(iso)
+        if dia < hoje():
+            continue
+        candidatas = [
+            plan.Candidata(t.id, t.prioridade, t.esforco, a["blocos"], t.prazo, t.prazo_rigido)
+            for a in alocadas
+            if (t := por_id.get(a["tarefa"])) is not None
+        ]
+        resultado = _gravar_plano(usuario, dia, candidatas, por_id)
+        criados += len(resultado.slots)
+        nao_couberam += [i for i in resultado.nao_couberam if i not in nao_couberam]
+    igual = atual == sugestao.conteudo["original"]
+    _responder(sugestao, SugestaoIA.Status.ACEITA if igual else SugestaoIA.Status.EDITADA, atual)
+    return {"blocos": criados, "nao_couberam": nao_couberam}
+
+
+def semana_planejada(usuario, dia: date | None = None) -> SemanaPlanejada:
+    """Os blocos de cada dia da semana e a capacidade (M28 depois de aprovar), mais a proposta pendente."""
+    dias = dias_da_semana(dia)
+    ini, _ = _limites_do_dia(dias[0])
+    _, fim = _limites_do_dia(dias[-1])
+    blocos = Bloco.objects.filter(usuario=usuario, inicio_planejado__gte=ini, inicio_planejado__lt=fim).exclude(
+        status=Bloco.Status.ADIADO
+    )
+    por_dia: dict[date, list[Bloco]] = defaultdict(list)
+    for b in blocos.select_related("tarefa", "tarefa__area"):
+        por_dia[timezone.localtime(b.inicio_planejado).date()].append(b)
+    compromissos = _compromissos(usuario, dias[0], dias[-1])
+    return {
+        "dias": [
+            {
+                "dia": d,
+                "capacidade": _capacidade(usuario, d, compromissos.get(d, [])),
+                "planejados": len(por_dia[d]),
+                "blocos": por_dia[d],
+            }
+            for d in dias
+        ],
+        "proposta": proposta_da_semana(usuario),
+    }
