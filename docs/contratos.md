@@ -50,7 +50,7 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | --- | --- | --- | --- | --- |
 | `web:hoje` | `/` | GET | plano | `plano_do_dia` |
 | `web:gerar_plano` | `/hoje/gerar/` | POST | plano | `gerar_plano_do_dia` |
-| `web:clarificar` | `/entrada/<pk>/clarificar/` | GET, POST | clarificacao | `clarificar` |
+| `web:clarificar` | `/entrada/<pk>/clarificar/` | GET, POST (campos opcionais `pessoa_<id>` com a relação) | clarificacao | `clarificar` |
 | `web:foco` | `/foco/` (`?fim=1` fim do bloco, M11; `?sair=1` sair sem JS) | GET | foco | `bloco_em_foco` |
 | `web:iniciar_bloco` | `/blocos/<pk>/iniciar/` | POST | foco | `iniciar_bloco` |
 | `web:concluir_bloco` | `/blocos/<pk>/concluir/` | POST | foco | `concluir_bloco` |

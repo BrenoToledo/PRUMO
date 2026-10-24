@@ -46,6 +46,17 @@
     {% if form.projeto.errors %}<p id="erro-projeto" class="erro" role="alert">{{ form.projeto.errors|join:" " }}</p>{% endif %}
   </div>{% endif %}
 
+  <fieldset class="clarificacao__campo clarificacao__pessoas">
+    <legend class="clarificacao__rotulo">Pessoas <span class="clarificacao__opcional">(opcional)</span></legend>
+    {% for campo in form.campos_pessoas %}<div class="clarificacao__pessoa">
+      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+      <select id="{{ campo.id_for_label }}" name="{{ campo.html_name }}"{% if campo.errors %} aria-describedby="erro-{{ campo.html_name }}"{% endif %}>
+        {% for valor, rotulo in campo.field.choices %}<option value="{{ valor }}"{% if campo.value == valor %} selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+      </select>
+      {% if campo.errors %}<p id="erro-{{ campo.html_name }}" class="erro" role="alert">{{ campo.errors|join:" " }}</p>{% endif %}
+    </div>{% empty %}<p class="clarificacao__opcional">Você ainda não tem pessoas. <a href="{% url 'web:nova_pessoa' %}">Cadastrar pessoa</a></p>{% endfor %}
+  </fieldset>
+
   <div class="clarificacao__linha">
     {% include "web/clarificacao/_campo.html" with campo=form.prazo %}
     {% include "web/clarificacao/_campo.html" with campo=form.blocos_estimados %}
