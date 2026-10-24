@@ -14,7 +14,10 @@ from datetime import date
 from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
-    from .models import Bloco, Projeto, Revisao, SugestaoIA, Tarefa
+    from datetime import datetime
+
+    from .models import Bloco, Pessoa, Projeto, Revisao, SugestaoIA, Tarefa, TarefaPessoa
+    from .pessoas import Pontualidade
 
 # --------------------------------------------------------------------------- formatos devolvidos pelos serviços
 
@@ -45,6 +48,53 @@ class SemanaPlanejada(TypedDict):
 
     dias: list[DiaDaSemana]  # de hoje (ou da segunda seguinte, no fim de semana) até sexta
     proposta: SugestaoIA | None  # a proposta pendente da semana (tipo "semana"), se houver
+
+
+class Aguardando(TypedDict):
+    """Um item da lista Aguardando (#86): algo que espero de uma pessoa ("eu dependo dela"), tarefa aberta."""
+
+    vinculo: TarefaPessoa  # o "Cobrei" age sobre ele
+    tarefa: Tarefa
+    pessoa: Pessoa
+    dias: int  # há quantos dias espero (desde a criação da tarefa)
+    ultima_cobranca: datetime | None
+    proxima_cobranca: date  # última cobrança (ou criação) + cadência da pessoa
+    cobrar_hoje: bool  # próxima cobrança é hoje ou já passou
+
+
+class PessoaQueEspera(TypedDict):
+    pessoa: Pessoa
+    abertas: int  # tarefas abertas "depende de mim"
+    em_risco: int  # dessas, com prazo vencido ou folga abaixo de 1,2x
+
+
+class PainelPessoas(TypedDict):
+    """`services.painel_pessoas`: a tela Pessoas (M22, #84)."""
+
+    esperam_de_voce: list[PessoaQueEspera]  # mais em risco primeiro, depois mais abertas, depois nome
+    voce_espera: list[Aguardando]  # cobrar hoje primeiro, depois pela próxima cobrança
+    sem_pendencias: list[Pessoa]  # cadastradas sem nada aberto nos dois sentidos
+
+
+class Expectativa(TypedDict):
+    """Algo que a pessoa espera de mim ("depende de mim"), tarefa aberta."""
+
+    tarefa: Tarefa
+    prazo: date | None
+    folga: float | None
+    em_risco: bool
+
+
+class DetalhePessoa(TypedDict):
+    """`services.detalhe_pessoa`: o detalhe da pessoa (M23, #85)."""
+
+    pessoa: Pessoa
+    espera_de_voce: list[Expectativa]  # em risco primeiro, depois pelo prazo
+    voce_espera: list[Aguardando]
+    minha_pontualidade: Pontualidade  # minhas entregas para ela (concluídas, com prazo)
+    pontualidade_dela: Pontualidade  # as entregas dela para mim
+    ultimo_contato: datetime | None  # a cobrança mais recente
+    proxima_cobranca: date | None  # a mais próxima entre os itens aguardando
 
 
 class ItemPlanejadoVsReal(TypedDict):
@@ -252,6 +302,17 @@ SERVICOS: dict[str, str] = {
     "-> 'SugestaoIA'",
     "aprovar_semana": "(sugestao: 'SugestaoIA') -> 'dict'",
     "semana_planejada": "(usuario, dia: 'date | None' = None) -> 'SemanaPlanejada'",
+    # Pessoas e follow-up (P16, #84–#86): regras puras em `nucleo/pessoas.py`
+    "pessoas_de": "(usuario, busca: 'str' = '') -> 'list[Pessoa]'",
+    "criar_pessoa": "(usuario, dados: 'dict') -> 'Pessoa'",
+    "atualizar_pessoa": "(pessoa: 'Pessoa', dados: 'dict') -> 'Pessoa'",
+    "excluir_pessoa": "(pessoa: 'Pessoa') -> 'None'",
+    "vincular_pessoa": "(tarefa: 'Tarefa', pessoa: 'Pessoa', relacao: 'str') -> 'TarefaPessoa'",
+    "desvincular_pessoa": "(vinculo: 'TarefaPessoa') -> 'None'",
+    "aguardando": "(usuario, pessoa: 'Pessoa | None' = None) -> 'list[Aguardando]'",
+    "painel_pessoas": "(usuario, busca: 'str' = '') -> 'PainelPessoas'",
+    "detalhe_pessoa": "(pessoa: 'Pessoa') -> 'DetalhePessoa'",
+    "registrar_cobranca": "(vinculo: 'TarefaPessoa') -> 'TarefaPessoa'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -350,6 +411,29 @@ CAMPOS_HOJE = (
 )
 CAMPOS_EVENTO = ("titulo", "inicio", "fim", "dia_inteiro", "local", "calendario")  # `calendario` é o nome
 
+# Pessoas e follow-up (P16): `/api/pessoas/`, `/api/pessoas/{id}/resumo/` e `/api/aguardando/`
+CAMPOS_PESSOA = ("id", "nome", "papel", "email", "whatsapp", "teams", "cadencia_dias")
+CAMPOS_AGUARDANDO = (
+    "vinculo",
+    "tarefa",
+    "titulo",
+    "pessoa",
+    "pessoa_nome",
+    "dias",
+    "ultima_cobranca",
+    "proxima_cobranca",
+    "cobrar_hoje",
+)
+CAMPOS_RESUMO_PESSOA = (
+    "pessoa",  # CAMPOS_PESSOA
+    "espera_de_voce",  # [{tarefa, titulo, prazo, folga, em_risco}]
+    "voce_espera",  # CAMPOS_AGUARDANDO
+    "minha_pontualidade",  # {total, no_prazo, pct, atraso_medio}
+    "pontualidade_dela",
+    "ultimo_contato",
+    "proxima_cobranca",
+)
+
 # --------------------------------------------------------------------------- interface web: um módulo por etapa
 # Cada módulo em `web/telas/` pertence a uma etapa e já está ligado em `web/urls.py`. Uma etapa só edita o próprio
 # módulo, os próprios templates (`web/templates/web/<modulo>/`), o próprio CSS (`web/static/web/telas/<modulo>.css`)
@@ -376,6 +460,7 @@ TELAS_WEB = (
     "calendarios",
     "rotinas",
     "semana",
+    "pessoas",
 )
 
 # --------------------------------------------------------------------------- servidor MCP (P12, #29)

@@ -34,6 +34,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `claude/project-thread-mpmxzo` (P13 · Calendário) | #71, #72, #73 | backend + interface | main (P1–P12) | `nucleo/calendario.py`, `web/telas/calendarios.py`, `web/templates/web/calendarios/`, `web/static/web/telas/calendarios.css`, `web/templates/web/plano/_card_evento.html`, `nucleo/tests/test_calendario.py`, `nucleo/tests/test_calendarios.py`, `web/tests/test_calendarios.py`; em `planejamento.py` só os compromissos (`ocupados`); em `plano` só a linha do tempo com eventos; no perfil só o link para Calendários |
 | `claude/project-thread-mpmxzo` (P14 · Rotinas) | #75, #76, #77 | backend + interface | main (P1–P13) | `nucleo/rotinas.py`, `web/telas/rotinas.py`, `web/templates/web/rotinas/`, `web/static/web/telas/rotinas.css`, `nucleo/tests/test_rotinas.py`, `nucleo/tests/test_rotinas_regra.py`, `web/tests/test_rotinas.py`; em `projetos` só o alternador Projetos/Rotinas; em `plano` só a seção "Rotinas de hoje"; em `services.py` as rotinas entram em `_compromissos` e saem de `_abertas_no_dia` |
 | `claude/project-thread-mpmxzo` (P15 · Semana) | #79, #80, #81 | backend + interface | main (P1–P14) | `web/telas/semana.py`, `web/templates/web/semana/`, `web/static/web/telas/semana.css`, `semana.js`, `nucleo/tests/test_planejamento_semana.py`, `nucleo/tests/test_semana.py`, `web/tests/test_semana.py`; em `planejamento.py` só `montar_semana`; em `services.py` o plano do dia passa a gravar por `_gravar_plano` (sem mudar o comportamento); em `plano` só o link "ver a semana"; em `base.html`/`app.css` só o item Semana da barra lateral (desktop) |
+| `claude/project-thread-mpmxzo` (P16 · Pessoas) | #84, #85, #86 | backend + interface | main (P1–P15) | `nucleo/pessoas.py`, `web/telas/pessoas.py`, `web/templates/web/pessoas/`, `web/static/web/telas/pessoas.css`, `nucleo/tests/test_pessoas.py`, `nucleo/tests/test_pessoas_regra.py`, `web/tests/test_pessoas.py`; em `tarefas` só a lista de pessoas do detalhe (parcial `web/pessoas/_vinculos.html`); em `base.html` só o item Pessoas da navegação; migração `0009` |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -305,6 +306,24 @@ A proposta distribui os blocos restantes das tarefas abertas (esforço alto e m�
 | `mover_na_proposta(sugestao, tarefa, *, de, para)` | `SugestaoIA` | Move os blocos da tarefa entre dias (`None` = não couberam), juntando no destino. `ValueError` se a tarefa não está em `de`, se o dia não é da semana ou se a proposta já foi respondida |
 | `aprovar_semana(sugestao)` | `dict` | `{blocos, nao_couberam}`. Para cada dia (de hoje em diante) troca os blocos planejados e não iniciados pelos da proposta, com horário (`montar_plano_do_dia`: compromissos, pico de energia, hora atual). Tarefas fechadas no meio do caminho saem. A sugestão fica `aceita` ou `editada`, com `resposta` = versão final |
 | `semana_planejada(usuario, dia=None)` | `SemanaPlanejada` | `dias` ({dia, capacidade, planejados, blocos}) e `proposta` |
+
+## Pessoas e follow-up (P16, Fase 1)
+
+Uma pessoa liga-se a tarefas por `TarefaPessoa.relacao`: "depende de mim" (ela espera algo de mim), "eu dependo dela" (o Aguardando) ou "envolvida". As regras puras ficam em `nucleo/pessoas.py`: `pontualidade` (% no prazo, atraso médio só das atrasadas, `no_prazo/total`), `em_risco` (prazo vencido ou folga abaixo de 1,2x), `proxima_cobranca` e `canais` (links `wa.me`, `mailto:` e chat do Teams; número com 10 ou 11 dígitos ganha o 55).
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `pessoas_de(usuario, busca="")` | `list[Pessoa]` | Pelo nome; `busca` filtra o nome (sem diferenciar maiúsculas) |
+| `criar_pessoa(usuario, dados)` / `atualizar_pessoa(pessoa, dados)` | `Pessoa` | Campos: `nome`, `papel`, `email`, `whatsapp`, `teams`, `cadencia_dias` (1 a 60, padrão 3). Inválido: `ValidationError` |
+| `excluir_pessoa(pessoa)` | `None` | Os vínculos saem; as tarefas ficam |
+| `vincular_pessoa(tarefa, pessoa, relacao)` | `TarefaPessoa` | Sem duplicar. Pessoa de outro usuário: `ValueError` |
+| `desvincular_pessoa(vinculo)` | `None` | |
+| `aguardando(usuario, pessoa=None)` | `list[Aguardando]` | Tarefas abertas "eu dependo dela". Próxima cobrança = última cobrança (ou criação da tarefa) + cadência; vencida, `cobrar_hoje` e sobe na lista |
+| `painel_pessoas(usuario, busca="")` | `PainelPessoas` | `esperam_de_voce` (por pessoa: abertas "depende de mim" e quantas em risco), `voce_espera` e `sem_pendencias` |
+| `detalhe_pessoa(pessoa)` | `DetalhePessoa` | Listas nos dois sentidos, pontualidade nos dois sentidos (tarefas concluídas com prazo; entregue = dia de `concluida_em`), último contato (cobrança mais recente) e próxima cobrança |
+| `registrar_cobranca(vinculo)` | `TarefaPessoa` | `ultima_cobranca` = agora e o evento `cobranca` (`{pessoa}`) na tarefa. `ValueError` se não é "eu dependo dela" ou a tarefa não está aberta |
+
+Modelos (migração `0009`): `Pessoa.cadencia_dias`, `TarefaPessoa.ultima_cobranca` e o tipo `cobranca` em `EventoTarefa`. Telas: `/pessoas/` (M22, com busca por HTMX), `/pessoas/<id>/` (M23), cadastro, "Cobrei" (`/aguardando/<vinculo>/cobrei/`) e, no detalhe da tarefa (M04), vincular e desvincular pessoas.
 
 ## Mudar um contrato
 

@@ -8,6 +8,7 @@ from django.db import models
 from django.utils import timezone
 
 from . import prioridade as motor
+from .pessoas import CADENCIA_MAX, CADENCIA_PADRAO
 
 Usuario = settings.AUTH_USER_MODEL
 
@@ -143,7 +144,12 @@ class Pessoa(models.Model):
     papel = models.CharField(max_length=60, blank=True, help_text="chefe, colega, cliente, familiar…")
     email = models.EmailField(blank=True)
     whatsapp = models.CharField(max_length=20, blank=True)
-    teams = models.CharField(max_length=120, blank=True)
+    teams = models.CharField(max_length=120, blank=True, help_text="e-mail ou usuário do Teams")
+    cadencia_dias = models.PositiveSmallIntegerField(
+        default=CADENCIA_PADRAO,
+        validators=[MinValueValidator(1), MaxValueValidator(CADENCIA_MAX)],
+        help_text="De quantos em quantos dias cobrar o que se espera desta pessoa.",
+    )
 
     class Meta:
         ordering = ["nome"]
@@ -219,6 +225,7 @@ class TarefaPessoa(models.Model):
     tarefa = models.ForeignKey(Tarefa, on_delete=models.CASCADE, related_name="vinculos")
     pessoa = models.ForeignKey(Pessoa, on_delete=models.CASCADE, related_name="vinculos")
     relacao = models.CharField(max_length=15, choices=Relacao.choices)
+    ultima_cobranca = models.DateTimeField(null=True, blank=True, help_text="Só para \"eu dependo dela\".")
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["tarefa", "pessoa", "relacao"], name="vinculo_unico")]
@@ -278,6 +285,7 @@ class EventoTarefa(models.Model):
         REPLANEJADA = "replanejada", "Replanejada"
         CANCELADA = "cancelada", "Cancelada"
         QUEBRADA = "quebrada", "Quebrada em partes"
+        COBRANCA = "cobranca", "Cobrança"
 
     tarefa = models.ForeignKey(Tarefa, on_delete=models.CASCADE, related_name="eventos")
     tipo = models.CharField(max_length=12, choices=Tipo.choices)
