@@ -10,13 +10,14 @@ Rotas do contrato:
 - POST `semana/aprovar/` → `web:aprovar_semana`, chama `services.aprovar_semana`.
 """
 
-from datetime import date
+from datetime import date, time
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.urls import path
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from nucleo import services
@@ -38,7 +39,14 @@ def _pct(planejados: int, capacidade: int) -> int:
     return round(planejados / capacidade * 100) if capacidade else (100 if planejados else 0)
 
 
-def _proposta(usuario, sugestao) -> dict:
+def _agenda(dia: dict) -> list[dict]:
+    """Blocos e rotinas do dia numa lista só, pelo horário; rotinas sem horário vão para o fim."""
+    itens = [{"hora": timezone.localtime(b.inicio_planejado).time(), "bloco": b} for b in dia["blocos"]]
+    itens += [{"hora": r["horario"], "rotina": r} for r in dia["rotinas"]]
+    return sorted(itens, key=lambda i: (i["hora"] is None, i["hora"] or time()))
+
+
+def _proposta(usuario, sugestao, rotinas: dict[str, list]) -> dict:
     """A proposta pronta para o template: tarefas no lugar dos ids (as que fecharam no meio do caminho saem)."""
     atual = sugestao.conteudo["atual"]
     ids = {a["tarefa"] for alocadas in atual["dias"].values() for a in alocadas}
@@ -66,6 +74,7 @@ def _proposta(usuario, sugestao) -> dict:
                 "pct": pct,
                 "acima": blocos > capacidade,
                 "itens": lista,
+                "rotinas": rotinas.get(iso, []),
             }
         )
     return {"sugestao": sugestao, "dias": dias, "nao_couberam": itens(atual["nao_couberam"])}
@@ -81,10 +90,12 @@ def _contexto(usuario, **extra) -> dict:
             "iso": d["dia"].isoformat(),
             "pct": _pct(d["planejados"], d["capacidade"]),
             "acima": d["planejados"] > d["capacidade"],
+            "agenda": _agenda(d),
         }
         for d in semana["dias"]
     ]
-    proposta = _proposta(usuario, semana["proposta"]) if semana["proposta"] else None
+    rotinas = {d["dia"].isoformat(): d["rotinas"] for d in semana["dias"]}
+    proposta = _proposta(usuario, semana["proposta"], rotinas) if semana["proposta"] else None
     return {"aba": "semana", "titulo": _titulo(dias), "planejada": planejada, "proposta": proposta, **extra}
 
 

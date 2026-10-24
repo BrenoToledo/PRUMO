@@ -451,6 +451,16 @@ class SemanaView(APIView):
                 "capacidade": d["capacidade"],
                 "planejados": d["planejados"],
                 "blocos": BlocoSerializer(d["blocos"], many=True, context=ctx).data,
+                "rotinas": [
+                    {
+                        "rotina": r["rotina"].pk,
+                        "nome": r["rotina"].nome,
+                        "horario": r["horario"].isoformat() if r["horario"] else None,
+                        "duracao_min": r["rotina"].duracao_min,
+                        "concluida": r["concluida"],
+                    }
+                    for r in d["rotinas"]
+                ],
             }
             for d in s["dias"]
         ]

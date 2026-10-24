@@ -5,7 +5,7 @@
       {{ titulo }}
     </a>
     {% if proposta %}<p class="semana__sub">Proposta do Prumo pelas prioridades, pela sua agenda e pelo seu pico de energia. Nada vira bloco até você aprovar.</p>
-    {% else %}<p class="semana__sub">Blocos de foco planejados em cada dia.</p>{% endif %}
+    {% else %}<p class="semana__sub">Blocos de foco e rotinas de cada dia.</p>{% endif %}
   </header>
   {% if erro %}<p class="erro" role="alert">{{ erro }}</p>{% endif %}
 
@@ -17,6 +17,9 @@
           <span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>
           <span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.blocos }} de {{ d.capacidade }} blocos">{{ d.pct }}%</span>
         </div>
+        {% if d.rotinas %}<ul class="dia__rotinas" aria-label="Rotinas">
+          {% for r in d.rotinas %}<li class="rotina-semana{% if r.concluida %} rotina-semana--feita{% endif %}" style="--cor-area: {{ r.rotina.area.cor }}">{% include "web/semana/_rotina.html" with r=r %}</li>{% endfor %}
+        </ul>{% endif %}
         <ul class="dia__tarefas">
           {% for i in d.itens %}<li class="tarefa-semana" style="--cor-area: {{ i.tarefa.area.cor }}" draggable="true" data-tarefa="{{ i.tarefa.pk }}" data-de="{{ d.iso }}">{% include "web/semana/_item.html" with item=i de=d.iso %}</li>{% empty %}<li class="dia__vazio">Livre</li>{% endfor %}
         </ul>
@@ -49,10 +52,10 @@
         <span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.planejados }} de {{ d.capacidade }} blocos">{{ d.pct }}%</span>
       </div>
       <ul class="dia__tarefas">
-        {% for b in d.blocos %}<li class="tarefa-semana" style="--cor-area: {{ b.tarefa.area.cor }}">
-          <span class="tarefa-semana__hora">{{ b.inicio_planejado|time:"H:i" }}</span>
-          <span class="tarefa-semana__titulo">{{ b.tarefa.titulo }}</span>
-        </li>{% empty %}<li class="dia__vazio">Sem blocos</li>{% endfor %}
+        {% for item in d.agenda %}{% if item.bloco %}<li class="tarefa-semana" style="--cor-area: {{ item.bloco.tarefa.area.cor }}">
+          <span class="tarefa-semana__hora">{{ item.bloco.inicio_planejado|time:"H:i" }}</span>
+          <span class="tarefa-semana__titulo">{{ item.bloco.tarefa.titulo }}</span>
+        </li>{% else %}<li class="rotina-semana{% if item.rotina.concluida %} rotina-semana--feita{% endif %}" style="--cor-area: {{ item.rotina.rotina.area.cor }}">{% include "web/semana/_rotina.html" with r=item.rotina %}</li>{% endif %}{% empty %}<li class="dia__vazio">Sem blocos</li>{% endfor %}
       </ul>
     </li>{% endfor %}
   </ol>

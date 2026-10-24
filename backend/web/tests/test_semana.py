@@ -1,13 +1,13 @@
 """Planejamento da semana (#79, #80, #81): tela M28/D04, mover, aprovar e a API."""
 
-from datetime import date
+from datetime import date, time
 
 import pytest
 from django.urls import reverse
 from freezegun import freeze_time
 
 from nucleo import services
-from nucleo.models import Bloco, SugestaoIA
+from nucleo.models import Area, Bloco, SugestaoIA
 from nucleo.tests.apoio import nova_tarefa
 
 HTMX = {"HTTP_HX_REQUEST": "true"}
@@ -55,6 +55,41 @@ def test_hoje_leva_para_a_semana(logado, tarefas):
 @freeze_time(SEG)
 def test_navegacao_tem_semana(logado, tarefas):
     assert 'href="/semana/"' in logado.get(reverse("web:projetos")).content.decode()
+
+
+def _rotina(usuario, horario=None):
+    return services.criar_rotina(
+        usuario,
+        {
+            "area": Area.objects.get(usuario=usuario, nome="Família"),
+            "nome": "Limpar a Areia da Natasha",
+            "recorrencia": "FREQ=WEEKLY;BYDAY=TU,TH",
+            "horario_preferido": horario,
+            "duracao_min": 5,
+        },
+    )
+
+
+@freeze_time(SEG)
+def test_semana_planejada_mostra_as_rotinas_com_horario(logado, usuario, tarefas):
+    _rotina(usuario, horario=time(6))
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert html.count("Limpar a Areia da Natasha") == 2  # terça e quinta
+    assert "06:00" in html
+    assert "rotina-semana" in html
+
+
+@freeze_time(SEG)
+def test_proposta_mostra_as_rotinas_sem_deixar_arrastar(logado, usuario, tarefas):
+    _rotina(usuario)
+    logado.post(reverse("web:propor_semana"))
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert html.count("Limpar a Areia da Natasha") == 2
+    assert 'class="rotina-semana"' in html
 
 
 # ---------------------------------------------------------------- mover e aprovar (#80, #81)
@@ -144,6 +179,17 @@ def test_api_propor_mover_aprovar(api, usuario, tarefas):
     semana = api.get("/api/semana/").json()
     assert semana["proposta"] is None
     assert [d["dia"] for d in semana["dias"]] == [str(date(2026, 10, d)) for d in range(19, 24)]
+
+
+@freeze_time(SEG)
+def test_api_semana_traz_as_rotinas(api, usuario, tarefas):
+    rotina = _rotina(usuario, horario=time(6))
+
+    dias = api.get("/api/semana/").json()["dias"]
+
+    assert dias[0]["rotinas"] == []
+    esperado = {"rotina": rotina.pk, "nome": rotina.nome, "horario": "06:00:00", "duracao_min": 5, "concluida": False}
+    assert dias[1]["rotinas"] == [esperado]
 
 
 @freeze_time(SEG)
