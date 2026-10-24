@@ -92,6 +92,16 @@ def test_proposta_mostra_as_rotinas_sem_deixar_arrastar(logado, usuario, tarefas
     assert 'class="rotina-semana"' in html
 
 
+@freeze_time(SEG)
+def test_icone_da_rotina_tem_tamanho_mesmo_sem_o_css(logado, usuario, tarefas):
+    # Com o semana.css velho em cache, o SVG sem tamanho ocupava a coluna inteira.
+    _rotina(usuario, horario=time(6))
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert 'class="rotina-semana__icone" width="14" height="14"' in html
+
+
 # ---------------------------------------------------------------- mover e aprovar (#80, #81)
 @freeze_time(SEG)
 def test_mover_por_formulario(logado, usuario, tarefas):
