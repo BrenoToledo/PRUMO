@@ -5,6 +5,7 @@ e avise as branches que dependem dele (tabela em docs/contratos.md).
 """
 
 import inspect
+from datetime import date
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -121,3 +122,15 @@ def test_campos_de_pessoas_na_api(api, usuario, tarefa):
     assert set(api.get(f"/api/pessoas/{pessoa.pk}/").json()) == set(contratos.CAMPOS_PESSOA)
     assert set(api.get("/api/aguardando/").json()[0]) == set(contratos.CAMPOS_AGUARDANDO)
     assert set(api.get(f"/api/pessoas/{pessoa.pk}/resumo/").json()) == set(contratos.CAMPOS_RESUMO_PESSOA)
+
+
+@freeze_time(f"{SEG} 08:00")
+def test_campos_da_mensagem_e_da_expectativa_na_api(api, usuario, tarefa):
+    pessoa = services.criar_pessoa(usuario, {"nome": "Gestor", "email": "g@e.com"})
+    vinculo = services.vincular_pessoa(tarefa, pessoa, "depende_de_mim")
+    tarefa.prazo = date(2026, 10, 18)
+    tarefa.save()
+
+    assert set(api.post(f"/api/vinculos/{vinculo.pk}/mensagem/").json()) == set(contratos.CAMPOS_MENSAGEM)
+    assert set(api.get("/api/expectativas-em-risco/").json()[0]) == set(contratos.CAMPOS_EXPECTATIVA_EM_RISCO)
+    assert set(services.expectativas_em_risco(usuario)[0]) == _chaves(contratos.ExpectativaEmRisco)

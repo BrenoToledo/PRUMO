@@ -35,6 +35,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `claude/project-thread-mpmxzo` (P14 · Rotinas) | #75, #76, #77 | backend + interface | main (P1–P13) | `nucleo/rotinas.py`, `web/telas/rotinas.py`, `web/templates/web/rotinas/`, `web/static/web/telas/rotinas.css`, `nucleo/tests/test_rotinas.py`, `nucleo/tests/test_rotinas_regra.py`, `web/tests/test_rotinas.py`; em `projetos` só o alternador Projetos/Rotinas; em `plano` só a seção "Rotinas de hoje"; em `services.py` as rotinas entram em `_compromissos` e saem de `_abertas_no_dia` |
 | `claude/project-thread-mpmxzo` (P15 · Semana) | #79, #80, #81 | backend + interface | main (P1–P14) | `web/telas/semana.py`, `web/templates/web/semana/`, `web/static/web/telas/semana.css`, `semana.js`, `nucleo/tests/test_planejamento_semana.py`, `nucleo/tests/test_semana.py`, `web/tests/test_semana.py`; em `planejamento.py` só `montar_semana`; em `services.py` o plano do dia passa a gravar por `_gravar_plano` (sem mudar o comportamento); em `plano` só o link "ver a semana"; em `base.html`/`app.css` só o item Semana da barra lateral (desktop) |
 | `claude/project-thread-mpmxzo` (P16 · Pessoas) | #84, #85, #86 | backend + interface | main (P1–P15) | `nucleo/pessoas.py`, `web/telas/pessoas.py`, `web/templates/web/pessoas/`, `web/static/web/telas/pessoas.css`, `nucleo/tests/test_pessoas.py`, `nucleo/tests/test_pessoas_regra.py`, `web/tests/test_pessoas.py`; em `tarefas` só a lista de pessoas do detalhe (parcial `web/pessoas/_vinculos.html`); em `base.html` só o item Pessoas da navegação; migração `0009` |
+| `claude/project-thread-mpmxzo` (P17 · Mensagens) | #87 | backend + interface | main (P1–P16) | `web/templates/web/pessoas/mensagem.html`, `teams.html`, `web/static/web/telas/mensagens.js`; em `web/telas/pessoas.py` as rotas da mensagem, `nucleo/tests/test_mensagens.py`, `web/tests/test_mensagens.py`; em `ia/tarefas.py` e `ia/provedores.py` só o pedido `mensagem`; em `plano` (e `hoje.css`) só o card "Expectativa em risco" do painel do desktop; migração `0010` |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -324,6 +325,18 @@ Uma pessoa liga-se a tarefas por `TarefaPessoa.relacao`: "depende de mim" (ela e
 | `registrar_cobranca(vinculo)` | `TarefaPessoa` | `ultima_cobranca` = agora e o evento `cobranca` (`{pessoa}`) na tarefa. `ValueError` se não é "eu dependo dela" ou a tarefa não está aberta |
 
 Modelos (migração `0009`): `Pessoa.cadencia_dias`, `TarefaPessoa.ultima_cobranca` e o tipo `cobranca` em `EventoTarefa`. Telas: `/pessoas/` (M22, com busca por HTMX), `/pessoas/<id>/` (M23), cadastro, "Cobrei" (`/aguardando/<vinculo>/cobrei/`) e, no detalhe da tarefa (M04), vincular e desvincular pessoas.
+
+## Mensagem de follow-up (P17, Fase 1)
+
+M24 redige a mensagem para cobrar (vínculo "eu dependo dela") ou renegociar o prazo (vínculo "depende de mim"). O texto fica numa `SugestaoIA` tipo `mensagem`, com `tarefa` e `conteudo` = `{vinculo, pessoa, motivo: cobrar|renegociar, texto, origem: ia|modelo, nova_data}`. Com a IA ligada, o pedido leva até 3 mensagens já enviadas pelo usuário como exemplo de estilo; sem IA ou com erro do provedor, entra o modelo pronto de `pessoas.modelo_mensagem`. **O Prumo não envia nada**: `pessoas.link_mensagem` monta o link do app (`wa.me/…?text=`, `mailto:…?subject=&body=`, chat do Teams com `message=`).
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `redigir_mensagem(vinculo, *, novo=False)` | `SugestaoIA` | Reaproveita a pendente do vínculo; `novo` (Reescrever) recusa a pendente e redige outra. Renegociar sugere a primeira data em que os blocos livres cobrem os restantes com folga de 1,2x (até 30 dias). `ValueError` se a tarefa não está aberta |
+| `enviar_mensagem(sugestao, *, canal, texto, lembrar=False)` | `str` (o link) | Registra a resposta (`{canal, texto, lembrar}`; `aceita` se o texto não mudou, senão `editada`). Cobrar grava a cobrança (`registrar_cobranca`). `lembrar`: próxima cobrança em 2 dias (`TarefaPessoa.proxima_cobranca`); ao renegociar, passa a aguardar a resposta da pessoa (vínculo "eu dependo dela" na mesma tarefa). `ValueError` com texto vazio, canal sem contato ou sugestão já respondida |
+| `expectativas_em_risco(usuario)` | `list[ExpectativaEmRisco]` | Vínculos "depende de mim" de tarefas abertas em risco (prazo vencido ou folga abaixo de 1,2x), pelo prazo |
+
+`registrar_cobranca` limpa o lembrete (`proxima_cobranca`), e a cadência volta a valer. Migração `0010`. Telas: "Mensagem" nos itens aguardando e "Renegociar" nas entregas em risco (M22, M23) levam a M24 (`POST /mensagens/vinculo/<id>/` → `/mensagens/<sugestao>/`); o painel de Hoje no desktop mostra o card "Expectativa em risco" com "Redigir mensagem".
 
 ## Mudar um contrato
 

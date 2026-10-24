@@ -21,4 +21,17 @@
   {% else %}
   <p class="painel-hoje__vazio">Nenhuma tarefa aberta. <a href="{% url 'web:entrada' %}">Clarifique a entrada</a> para ver as prioridades.</p>
   {% endif %}
+  {% if expectativas %}<section class="painel-hoje__risco" aria-labelledby="titulo-risco">
+    <h2 id="titulo-risco" class="painel-hoje__cabecalho">Expectativa em risco</h2>
+    <ul class="painel-hoje__lista">
+      {% for e in expectativas %}<li class="painel-hoje__alerta">
+        <a class="painel-hoje__titulo" href="{% url 'web:tarefa' e.tarefa.pk %}">{{ e.tarefa.titulo }}</a>
+        <span class="painel-hoje__nota">{{ e.pessoa.nome }} espera · {% if e.prazo < plano.dia %}venceu {{ e.prazo|date:"j b" }}{% else %}folga {{ e.folga|floatformat:1 }}x{% endif %}</span>
+        <form method="post" action="{% url 'web:redigir_mensagem' e.vinculo.pk %}">
+          {% csrf_token %}
+          <button class="botao botao--pequeno" type="submit">Redigir mensagem</button>
+        </form>
+      </li>{% endfor %}
+    </ul>
+  </section>{% endif %}
 </aside>

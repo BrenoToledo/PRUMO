@@ -81,3 +81,51 @@ def test_whatsapp_sem_codigo_do_pais_vira_brasil():
 
 def test_canais_vazios_ficam_de_fora():
     assert p.canais(whatsapp="", email="mae@casa.com", teams="") == [("E-mail", "mailto:mae@casa.com")]
+
+
+# ---------------------------------------------------------------- mensagem de follow-up (#87)
+def test_modelo_de_cobranca():
+    texto = p.modelo_mensagem("cobrar", pessoa="Gestor Silva", tarefa="Aprovar acesso ao servidor", hoje=HOJE)
+
+    assert texto.startswith("Oi, Gestor!")
+    assert "aprovar acesso ao servidor" in texto
+    assert "?" in texto
+
+
+def test_modelo_de_renegociacao_com_nova_data():
+    texto = p.modelo_mensagem(
+        "renegociar", pessoa="Gestor", tarefa="Relatório semanal", hoje=HOJE, nova_data=date(2026, 10, 21)
+    )
+
+    assert "relatório semanal" in texto
+    assert "quarta, 21 out" in texto
+    assert texto.endswith("Pode ser?")
+
+
+def test_modelo_de_renegociacao_sem_nova_data():
+    texto = p.modelo_mensagem("renegociar", pessoa="Gestor", tarefa="Relatório", hoje=HOJE)
+
+    assert "nova data" in texto
+
+
+def test_motivo_desconhecido_e_erro():
+    with pytest.raises(ValueError):
+        p.modelo_mensagem("xingar", pessoa="Gestor", tarefa="Relatório", hoje=HOJE)
+
+
+def test_link_da_mensagem_por_canal():
+    contatos = {"whatsapp": "11 98765-4321", "email": "gestor@empresa.com", "teams": "gestor@empresa.com"}
+
+    assert p.link_mensagem("whatsapp", "Oi & tchau", assunto="Relatório", **contatos) == (
+        "https://wa.me/5511987654321?text=Oi%20%26%20tchau"
+    )
+    assert p.link_mensagem("email", "Oi", assunto="Relatório semanal", **contatos) == (
+        "mailto:gestor@empresa.com?subject=Relat%C3%B3rio%20semanal&body=Oi"
+    )
+    assert p.link_mensagem("teams", "Oi", assunto="", **contatos) == (
+        "https://teams.microsoft.com/l/chat/0/0?users=gestor%40empresa.com&message=Oi"
+    )
+
+
+def test_link_sem_o_contato_do_canal_e_vazio():
+    assert p.link_mensagem("whatsapp", "Oi", assunto="", whatsapp="", email="", teams="") == ""

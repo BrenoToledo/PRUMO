@@ -1,0 +1,52 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Mensagem para {{ pessoa.nome }}{% endblock %}
+{% block estilos %}{% include "web/pessoas/_cabeca.html" %}
+<link rel="stylesheet" href="{% static 'web/telas/rotinas.css' %}">{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'web:pessoa' pessoa.pk %}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  Mensagem para {{ pessoa.nome }}
+</a>
+<p class="mensagem__motivo"><span class="selo selo--risco">{{ motivo }} · {{ sugestao.tarefa.titulo }}</span></p>
+
+{% if erro %}<p class="erro" role="alert">{{ erro }}</p>{% endif %}
+{% if canais %}
+<form class="mensagem" method="post" action="{% url 'web:enviar_mensagem' sugestao.pk %}">
+  {% csrf_token %}
+  <fieldset class="projeto-form__campo">
+    <legend class="projeto-form__rotulo">Canal</legend>
+    <div class="opcoes">
+      {% for valor, rotulo in canais %}<label class="opcao">
+        <input type="radio" name="canal" value="{{ valor }}" data-rotulo="{{ rotulo }}"{% if valor == canal %} checked{% endif %}>
+        <span>{{ rotulo }}</span>
+      </label>{% endfor %}
+    </div>
+  </fieldset>
+  <label class="visualmente-oculto" for="id_texto">Mensagem</label>
+  <textarea id="id_texto" class="mensagem__texto" name="texto" rows="7" maxlength="1000" required>{{ texto }}</textarea>
+  <p class="mensagem__aviso">{{ sugestao.evidencia }}</p>
+  <label class="mensagem__lembrar">
+    <span>Lembrar de cobrar resposta em 2 dias</span>
+    <input type="checkbox" name="lembrar" role="switch"{% if lembrar %} checked{% endif %}>
+  </label>
+  <div class="mensagem__acoes">
+    {% if ia %}<button class="botao" type="submit" form="reescrever">Reescrever</button>{% endif %}
+    <button class="botao botao--primario" type="submit" data-abrir>Abrir no {% for valor, rotulo in canais %}{% if valor == canal %}{{ rotulo }}{% endif %}{% endfor %}</button>
+  </div>
+</form>
+{% if ia %}<form id="reescrever" method="post" action="{% url 'web:redigir_mensagem' sugestao.conteudo.vinculo %}">
+  {% csrf_token %}
+  <input type="hidden" name="novo" value="1">
+</form>{% endif %}
+{% else %}
+<div class="vazio">
+  <p class="vazio__titulo">Sem canal cadastrado.</p>
+  <p>Cadastre o WhatsApp, o e-mail ou o Teams de {{ pessoa.nome }} para abrir a mensagem no app. Enquanto isso, copie o texto:</p>
+</div>
+<label class="visualmente-oculto" for="id_texto_copia">Mensagem</label>
+<textarea id="id_texto_copia" class="mensagem__texto" rows="7" readonly>{{ texto }}</textarea>
+<a class="botao" href="{% url 'web:editar_pessoa' pessoa.pk %}">Cadastrar canal</a>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{% static 'web/telas/mensagens.js' %}" defer></script>{% endblock %}

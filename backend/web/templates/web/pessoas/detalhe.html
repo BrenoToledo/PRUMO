@@ -32,11 +32,13 @@
 <section aria-labelledby="titulo-espera">
   <h2 id="titulo-espera" class="pessoa__secao">Espera de você ({{ d.espera_de_voce|length }})</h2>
   {% if d.espera_de_voce %}<ul class="pessoas__lista">
-    {% for e in d.espera_de_voce %}<li>
-      <a class="pessoa-item" href="{% url 'web:tarefa' e.tarefa.pk %}">
-        <span class="pessoa-item__titulo">{{ e.tarefa.titulo }}</span>
-        {% if e.em_risco %}<span class="selo selo--risco">{% if e.prazo < hoje %}venceu {{ e.prazo|date:"j b" }}{% else %}folga {{ e.folga|floatformat:1 }}x{% endif %} · em risco</span>{% elif e.prazo %}<span class="selo selo--ok">{{ e.prazo|date:"j b" }} · no prazo</span>{% else %}<span class="selo">sem prazo</span>{% endif %}
-      </a>
+    {% for e in espera %}<li class="pessoa-item">
+      <a class="pessoa-item__titulo" href="{% url 'web:tarefa' e.tarefa.pk %}">{{ e.tarefa.titulo }}</a>
+      {% if e.em_risco %}<span class="selo selo--risco">{% if e.prazo < hoje %}venceu {{ e.prazo|date:"j b" }}{% else %}folga {{ e.folga|floatformat:1 }}x{% endif %} · em risco</span>
+      <form method="post" action="{% url 'web:redigir_mensagem' e.vinculo %}">
+        {% csrf_token %}
+        <button class="botao botao--pequeno" type="submit" aria-label="Renegociar o prazo: {{ e.tarefa.titulo }}">Renegociar</button>
+      </form>{% elif e.prazo %}<span class="selo selo--ok">{{ e.prazo|date:"j b" }} · no prazo</span>{% else %}<span class="selo">sem prazo</span>{% endif %}
     </li>{% endfor %}
   </ul>{% else %}<p class="pessoa__vazio">Nada aberto que {{ p.nome }} espere de você.</p>{% endif %}
 </section>
@@ -51,6 +53,10 @@
         {% csrf_token %}
         <input type="hidden" name="proximo" value="{{ aqui }}">
         <button class="botao botao--pequeno" type="submit" aria-label="Cobrei: {{ i.tarefa.titulo }}">Cobrei</button>
+      </form>
+      <form method="post" action="{% url 'web:redigir_mensagem' i.vinculo.pk %}">
+        {% csrf_token %}
+        <button class="botao botao--texto" type="submit" aria-label="Mensagem: {{ i.tarefa.titulo }}">Mensagem</button>
       </form>
     </li>{% endfor %}
   </ul>{% else %}<p class="pessoa__vazio">Você não está esperando nada de {{ p.nome }}.</p>{% endif %}
