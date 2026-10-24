@@ -80,3 +80,18 @@
 }
 .botao-icone:hover { color: var(--texto); background: var(--superficie); }
 .botao-icone:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
+
+/* Eventos do calendário (#73): compromissos entre os blocos, sem cor de área nem ações. */
+.evento-faixa { list-style: none; margin: 0 0 var(--e3); padding: 0; display: flex; flex-wrap: wrap; gap: var(--e2); }
+.evento--dia-inteiro {
+  padding: var(--e1) var(--e3); border-radius: var(--raio-chip); background: var(--primaria-suave); color: var(--primaria);
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: 600;
+}
+.evento--horario {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e1) var(--e3);
+  padding: var(--e2) var(--e4); border: 1px dashed var(--borda); border-radius: var(--raio-card);
+  color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.evento__horario { font-variant-numeric: tabular-nums; }
+.evento__titulo { color: var(--texto); font-weight: 600; }
+.evento__local::before { content: "· "; }

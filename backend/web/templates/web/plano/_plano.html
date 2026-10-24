@@ -31,10 +31,15 @@
   {% endif %}
 </div>
 
-{% if plano.blocos %}
+{% if dia_inteiro %}<ul class="evento-faixa" aria-label="Eventos de dia inteiro">
+  {% for evento in dia_inteiro %}<li class="evento evento--dia-inteiro">{{ evento.titulo }}</li>{% endfor %}
+</ul>{% endif %}
+{% if agenda %}
 <ol class="plano__blocos">
-  {% for bloco in plano.blocos %}<li>{% include "web/plano/_card_bloco.html" %}</li>{% endfor %}
+  {% for item in agenda %}<li>{% if item.tipo == "evento" %}{% include "web/plano/_card_evento.html" with evento=item.evento %}{% else %}{% include "web/plano/_card_bloco.html" with bloco=item.bloco %}{% endif %}</li>{% endfor %}
 </ol>
+{% endif %}
+{% if plano.blocos %}
 {% elif fim_de_semana %}
 <div class="vazio">
   <p class="vazio__titulo">Fim de semana.</p>

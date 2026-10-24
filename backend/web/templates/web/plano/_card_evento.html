@@ -1,0 +1,5 @@
+<article class="evento evento--horario" aria-label="Compromisso do calendário {{ evento.calendario.nome }}">
+  <span class="evento__horario">{{ evento.inicio|time:"H:i" }}{% if evento.fim != evento.inicio %} – {{ evento.fim|time:"H:i" }}{% endif %}</span>
+  <span class="evento__titulo">{{ evento.titulo }}</span>
+  {% if evento.local %}<span class="evento__local">{{ evento.local }}</span>{% endif %}
+</article>

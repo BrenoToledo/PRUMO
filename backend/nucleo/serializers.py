@@ -4,6 +4,7 @@ from . import prioridade as motor
 from .models import (
     Area,
     Bloco,
+    EventoCalendario,
     EventoTarefa,
     ItemCaptura,
     Perfil,
@@ -206,6 +207,15 @@ class BlocoSerializer(serializers.ModelSerializer):
             "motivo",
             "minutos_focados",
         ]
+        read_only_fields = fields
+
+
+class EventoCalendarioSerializer(serializers.ModelSerializer):
+    calendario = serializers.CharField(source="calendario.nome", read_only=True)
+
+    class Meta:
+        model = EventoCalendario
+        fields = ["titulo", "inicio", "fim", "dia_inteiro", "local", "calendario"]
         read_only_fields = fields
 
 

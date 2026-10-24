@@ -8,3 +8,5 @@ whitenoise>=6.7
 litellm==1.79.3
 mcp==2.3.0
 celery[redis]==5.4.0
+icalendar==7.3.0
+recurring-ical-events==3.8.2

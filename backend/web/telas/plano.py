@@ -3,6 +3,8 @@
 Rotas do contrato:
 - GET `/` → `web:hoje`, usa `services.plano_do_dia` (formato `contratos.PlanoDoDia`).
 - POST `hoje/gerar/` → `web:gerar_plano`, chama `services.gerar_plano_do_dia`.
+
+Os eventos do calendário (P13, #73) entram na mesma linha do tempo dos blocos; os de dia inteiro, numa faixa no topo.
 """
 
 from django.contrib import messages
@@ -17,6 +19,13 @@ from nucleo.models import Bloco
 SABADO = 5
 
 
+def _agenda(plano) -> list[dict]:
+    """Blocos e eventos com horário numa linha do tempo só, em ordem de início (#73)."""
+    itens = [{"tipo": "bloco", "bloco": b, "inicio": b.inicio_planejado} for b in plano["blocos"]]
+    itens += [{"tipo": "evento", "evento": e, "inicio": e.inicio} for e in plano["eventos"] if not e.dia_inteiro]
+    return sorted(itens, key=lambda item: (item["inicio"], item["tipo"] == "bloco"))
+
+
 def _contexto(usuario, **extra) -> dict:
     plano = services.plano_do_dia(usuario)
     blocos = plano["blocos"]
@@ -26,6 +35,8 @@ def _contexto(usuario, **extra) -> dict:
     return {
         "aba": "hoje",
         "plano": plano,
+        "agenda": _agenda(plano),
+        "dia_inteiro": [e for e in plano["eventos"] if e.dia_inteiro],
         "ocupacao_pct": ocupacao,
         "barra_pct": min(ocupacao, 100),
         "folga_pct": round(plano["folga_diaria"] * 100),
@@ -55,6 +66,7 @@ def _resumo(resultado) -> str:
 @require_GET
 @login_required
 def hoje(request):
+    services.sincronizar_se_preciso(request.user)  # calendários lidos há mais de 30 min (#71)
     return render(request, "web/hoje.html", _contexto(request.user))
 
 

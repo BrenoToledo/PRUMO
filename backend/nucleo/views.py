@@ -17,6 +17,7 @@ from .serializers import (
     CancelarTarefaSerializer,
     ClarificarSerializer,
     ConcluirBlocoSerializer,
+    EventoCalendarioSerializer,
     EventoTarefaSerializer,
     IniciarBlocoSerializer,
     ItemCapturaSerializer,
@@ -234,6 +235,7 @@ class HojeView(APIView):
                 "folga_diaria": p["folga_diaria"],
                 "blocos": BlocoSerializer(p["blocos"], many=True, context=ctx).data,
                 "tarefas_leves": TarefaSerializer(p["tarefas_leves"], many=True, context=ctx).data,
+                "eventos": EventoCalendarioSerializer(p["eventos"], many=True).data,
             }
         )
 

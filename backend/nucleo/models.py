@@ -418,3 +418,45 @@ class PedidoIA(models.Model):
     @property
     def em_andamento(self) -> bool:
         return self.status in (self.Status.NA_FILA, self.Status.PROCESSANDO)
+
+
+class Calendario(models.Model):
+    """Calendário externo lido pelo link iCal secreto (Google Agenda, Outlook). Só leitura (#71)."""
+
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="calendarios")
+    nome = models.CharField(max_length=60)
+    url = models.CharField(max_length=1000, help_text="Link secreto: dá acesso à agenda, nunca é mostrado inteiro.")
+    sincronizado_em = models.DateTimeField(null=True, blank=True)
+    erro = models.CharField(max_length=300, blank=True)
+    criado_em = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["nome", "id"]
+
+    def __str__(self):
+        return self.nome
+
+    @property
+    def url_mascarada(self) -> str:
+        from .calendario import mascarar_url
+
+        return mascarar_url(self.url)
+
+
+class EventoCalendario(models.Model):
+    """Um evento (ou uma ocorrência de evento repetido) dos próximos dias, refeito a cada sincronização."""
+
+    calendario = models.ForeignKey(Calendario, on_delete=models.CASCADE, related_name="eventos")
+    uid = models.CharField(max_length=255)
+    titulo = models.CharField(max_length=200)
+    inicio = models.DateTimeField()
+    fim = models.DateTimeField()
+    dia_inteiro = models.BooleanField(default=False)
+    local = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ["-dia_inteiro", "inicio", "fim", "id"]
+        indexes = [models.Index(fields=["calendario", "inicio"])]
+
+    def __str__(self):
+        return f"{self.titulo} · {self.inicio:%d/%m %H:%M}"
