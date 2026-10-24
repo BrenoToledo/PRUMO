@@ -226,6 +226,9 @@ class TarefaPessoa(models.Model):
     pessoa = models.ForeignKey(Pessoa, on_delete=models.CASCADE, related_name="vinculos")
     relacao = models.CharField(max_length=15, choices=Relacao.choices)
     ultima_cobranca = models.DateTimeField(null=True, blank=True, help_text='Só para "eu dependo dela".')
+    proxima_cobranca = models.DateField(
+        null=True, blank=True, help_text="Lembrete marcado na mensagem (M24); vazio = última cobrança + cadência."
+    )
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["tarefa", "pessoa", "relacao"], name="vinculo_unico")]

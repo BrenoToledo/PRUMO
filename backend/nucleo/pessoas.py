@@ -7,7 +7,7 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, timedelta
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 CADENCIA_PADRAO = 3  # dias entre uma cobrança e a próxima
 CADENCIA_MAX = 60
@@ -63,3 +63,48 @@ def canais(*, whatsapp: str, email: str, teams: str) -> list[tuple[str, str]]:
     if teams:
         links.append(("Teams", f"https://teams.microsoft.com/l/chat/0/0?users={quote(teams, safe='')}"))
     return links
+
+
+# --------------------------------------------------------------------------- mensagem de follow-up (#87)
+COBRAR = "cobrar"  # algo que espero da pessoa
+RENEGOCIAR = "renegociar"  # uma entrega dela em risco: pedir mais prazo
+CANAIS = ("whatsapp", "email", "teams")
+DIAS_DA_SEMANA = ("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo")
+MESES = ("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
+
+
+def dia_por_extenso(dia: date, hoje: date) -> str:
+    if dia == hoje + timedelta(days=1):
+        return "amanhã"
+    return f"{DIAS_DA_SEMANA[dia.weekday()]}, {dia.day} {MESES[dia.month - 1]}"
+
+
+def _minuscula(texto: str) -> str:
+    return texto[:1].lower() + texto[1:]
+
+
+def modelo_mensagem(motivo: str, *, pessoa: str, tarefa: str, hoje: date, nova_data: date | None = None) -> str:
+    """O texto pronto quando a IA está desligada: curto, educado e com um pedido claro."""
+    nome = (pessoa.split() or [pessoa])[0]
+    assunto = _minuscula(tarefa)
+    if motivo == COBRAR:
+        return f"Oi, {nome}! Tudo bem? Passando para saber como está {assunto}. Consegue me dar um retorno?"
+    if motivo == RENEGOCIAR:
+        if nova_data:
+            prazo = f"Consigo entregar {dia_por_extenso(nova_data, hoje)}."
+        else:
+            prazo = "Te passo uma nova data ainda hoje."
+        return f"Oi, {nome}! Sobre {assunto}: vou precisar de um pouco mais de tempo. {prazo} Pode ser?"
+    raise ValueError("motivo de mensagem desconhecido")
+
+
+def link_mensagem(canal: str, texto: str, *, assunto: str, whatsapp: str, email: str, teams: str) -> str:
+    """O link que abre o canal com o texto já escrito. Vazio se a pessoa não tem esse contato. Nada é enviado."""
+    links = dict(canais(whatsapp=whatsapp, email=email, teams=teams))
+    if canal == "whatsapp" and "WhatsApp" in links:
+        return f"{links['WhatsApp']}?text={quote(texto, safe='')}"
+    if canal == "email" and email:
+        return f"mailto:{email}?" + urlencode({"subject": assunto, "body": texto}, quote_via=quote)
+    if canal == "teams" and teams:
+        return f"{links['Teams']}&message={quote(texto, safe='')}"
+    return ""

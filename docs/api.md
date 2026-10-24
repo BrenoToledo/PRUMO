@@ -60,6 +60,9 @@ Base: `/api/`. Autenticação por sessão ou token. Para ferramentas (MCP, scrip
 | `GET /pessoas/{id}/resumo/` | `pessoa`, `espera_de_voce` (`[{tarefa, titulo, prazo, folga, em_risco}]`), `voce_espera` (itens do aguardando), `minha_pontualidade` e `pontualidade_dela` (`{total, no_prazo, pct, atraso_medio}`), `ultimo_contato` e `proxima_cobranca` | M23 |
 | `GET /aguardando/` | O que você espera dos outros, tarefas abertas: `{vinculo, tarefa, titulo, pessoa, pessoa_nome, dias, ultima_cobranca, proxima_cobranca, cobrar_hoje}`, cobrar hoje primeiro | M22 |
 | `POST /aguardando/{vinculo}/cobrei/` | Registra a cobrança agora (evento `cobranca` na tarefa) e devolve o item com a próxima data. `400` se o vínculo não é "eu dependo dela" ou a tarefa não está aberta | M22, M23 |
+| `POST /vinculos/{id}/mensagem/` `{novo?}` | Redige a mensagem de cobrança ("eu dependo dela") ou de renegociação ("depende de mim"): `{id, vinculo, pessoa, motivo, texto, origem: ia\|modelo, canais: [{canal, url}], status}`. Reaproveita a pendente; `novo` pede outra versão. `400` se a tarefa não está aberta | M24 |
+| `POST /mensagens/{id}/enviar/` `{canal: whatsapp\|email\|teams, texto, lembrar?}` | **Não envia nada**: registra a resposta (aceita ou editada), a cobrança e, com `lembrar`, a próxima em 2 dias; devolve `{link}` para abrir o app. `400` com texto vazio, canal sem contato ou mensagem já respondida | M24 |
+| `GET /expectativas-em-risco/` | Entregas "depende de mim" em risco: `[{vinculo, tarefa, titulo, pessoa, pessoa_nome, prazo, folga}]` | D01 |
 
 ## Seus dados (LGPD)
 

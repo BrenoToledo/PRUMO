@@ -97,6 +97,16 @@ class DetalhePessoa(TypedDict):
     proxima_cobranca: date | None  # a mais próxima entre os itens aguardando
 
 
+class ExpectativaEmRisco(TypedDict):
+    """`services.expectativas_em_risco`: entregas "depende de mim" em risco (card do Hoje no desktop, D01, #87)."""
+
+    vinculo: TarefaPessoa  # "Redigir mensagem" age sobre ele
+    tarefa: Tarefa
+    pessoa: Pessoa
+    prazo: date
+    folga: float | None
+
+
 class ItemPlanejadoVsReal(TypedDict):
     tarefa: str
     inicio: object  # datetime
@@ -313,6 +323,10 @@ SERVICOS: dict[str, str] = {
     "painel_pessoas": "(usuario, busca: 'str' = '') -> 'PainelPessoas'",
     "detalhe_pessoa": "(pessoa: 'Pessoa') -> 'DetalhePessoa'",
     "registrar_cobranca": "(vinculo: 'TarefaPessoa') -> 'TarefaPessoa'",
+    # Mensagem de follow-up (P17, #87): SugestaoIA tipo "mensagem"; o Prumo só abre o app, nunca envia
+    "redigir_mensagem": "(vinculo: 'TarefaPessoa', *, novo: 'bool' = False) -> 'SugestaoIA'",
+    "enviar_mensagem": "(sugestao: 'SugestaoIA', *, canal: 'str', texto: 'str', lembrar: 'bool' = False) -> 'str'",
+    "expectativas_em_risco": "(usuario) -> 'list[ExpectativaEmRisco]'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -433,6 +447,9 @@ CAMPOS_RESUMO_PESSOA = (
     "ultimo_contato",
     "proxima_cobranca",
 )
+# Mensagem de follow-up (P17): `POST /api/vinculos/{id}/mensagem/` e `GET /api/expectativas-em-risco/`
+CAMPOS_MENSAGEM = ("id", "vinculo", "pessoa", "motivo", "texto", "origem", "canais", "status")
+CAMPOS_EXPECTATIVA_EM_RISCO = ("vinculo", "tarefa", "titulo", "pessoa", "pessoa_nome", "prazo", "folga")
 
 # --------------------------------------------------------------------------- interface web: um módulo por etapa
 # Cada módulo em `web/telas/` pertence a uma etapa e já está ligado em `web/urls.py`. Uma etapa só edita o próprio
