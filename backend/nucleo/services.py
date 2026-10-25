@@ -33,6 +33,7 @@ from . import rotinas as rot
 from .contratos import (
     Aguardando,
     DetalhePessoa,
+    DiaDaSemana,
     Expectativa,
     ExpectativaEmRisco,
     ExportacaoDados,
@@ -1729,6 +1730,26 @@ def semana_planejada(usuario, dia: date | None = None) -> SemanaPlanejada:
         ],
         "proposta": proposta_da_semana(usuario),
     }
+
+
+def agenda_do_periodo(usuario, desde: date, ate: date) -> list[DiaDaSemana]:
+    """Blocos, capacidade e rotinas de cada dia de `desde` a `ate` (semana, dias úteis ou mês; #99, #100)."""
+    raise NotImplementedError
+
+
+def mover_bloco(bloco: Bloco, inicio: datetime) -> Bloco:
+    """Leva um bloco planejado para `inicio` (outro horário ou dia), mantendo a duração (#101)."""
+    raise NotImplementedError
+
+
+def trocar_blocos(a: Bloco, b: Bloco) -> tuple[Bloco, Bloco]:
+    """Troca os horários de dois blocos planejados (#101)."""
+    raise NotImplementedError
+
+
+def trocar_na_proposta(sugestao: SugestaoIA, a: int, b: int, *, de_a: date | None, de_b: date | None) -> SugestaoIA:
+    """Troca de dia (ou com "não couberam") as tarefas `a` e `b` da proposta (#101)."""
+    raise NotImplementedError
 
 
 # --------------------------------------------------------------------------- pessoas e follow-up (P16)

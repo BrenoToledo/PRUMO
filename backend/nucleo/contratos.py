@@ -321,6 +321,12 @@ SERVICOS: dict[str, str] = {
     "-> 'SugestaoIA'",
     "aprovar_semana": "(sugestao: 'SugestaoIA') -> 'dict'",
     "semana_planejada": "(usuario, dia: 'date | None' = None) -> 'SemanaPlanejada'",
+    # Navegação, visões e arrastar no calendário (#99–#101): qualquer período; mover e trocar blocos com horário
+    "agenda_do_periodo": "(usuario, desde: 'date', ate: 'date') -> 'list[DiaDaSemana]'",
+    "mover_bloco": "(bloco: 'Bloco', inicio: 'datetime') -> 'Bloco'",
+    "trocar_blocos": "(a: 'Bloco', b: 'Bloco') -> 'tuple[Bloco, Bloco]'",
+    "trocar_na_proposta": "(sugestao: 'SugestaoIA', a: 'int', b: 'int', *, de_a: 'date | None', de_b: 'date | None') "
+    "-> 'SugestaoIA'",
     # Pessoas e follow-up (P16, #84–#86): regras puras em `nucleo/pessoas.py`
     "pessoas_de": "(usuario, busca: 'str' = '') -> 'list[Pessoa]'",
     "criar_pessoa": "(usuario, dados: 'dict') -> 'Pessoa'",

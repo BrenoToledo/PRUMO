@@ -36,6 +36,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `claude/project-thread-mpmxzo` (P15 · Semana) | #79, #80, #81 | backend + interface | main (P1–P14) | `web/telas/semana.py`, `web/templates/web/semana/`, `web/static/web/telas/semana.css`, `semana.js`, `nucleo/tests/test_planejamento_semana.py`, `nucleo/tests/test_semana.py`, `web/tests/test_semana.py`; em `planejamento.py` só `montar_semana`; em `services.py` o plano do dia passa a gravar por `_gravar_plano` (sem mudar o comportamento); em `plano` só o link "ver a semana"; em `base.html`/`app.css` só o item Semana da barra lateral (desktop) |
 | `claude/project-thread-mpmxzo` (P16 · Pessoas) | #84, #85, #86 | backend + interface | main (P1–P15) | `nucleo/pessoas.py`, `web/telas/pessoas.py`, `web/templates/web/pessoas/`, `web/static/web/telas/pessoas.css`, `nucleo/tests/test_pessoas.py`, `nucleo/tests/test_pessoas_regra.py`, `web/tests/test_pessoas.py`; em `tarefas` só a lista de pessoas do detalhe (parcial `web/pessoas/_vinculos.html`); em `base.html` só o item Pessoas da navegação; migração `0009` |
 | `claude/project-thread-mpmxzo` (P17 · Mensagens) | #87 | backend + interface | main (P1–P16) | `web/templates/web/pessoas/mensagem.html`, `teams.html`, `web/static/web/telas/mensagens.js`; em `web/telas/pessoas.py` as rotas da mensagem, `nucleo/tests/test_mensagens.py`, `web/tests/test_mensagens.py`; em `ia/tarefas.py` e `ia/provedores.py` só o pedido `mensagem`; em `plano` (e `hoje.css`) só o card "Expectativa em risco" do painel do desktop; migração `0010` |
+| `claude/project-thread-0nn6nm` (calendário: navegar, visões e arrastar) | #99, #100, #101 | backend + interface | main (P1–P17) | `web/telas/semana.py`, `web/templates/web/semana/`, `web/static/web/telas/semana.css`, `semana.js`, `nucleo/tests/test_calendario_visoes.py`, `web/tests/test_calendario_visoes.py`; em `planejamento.py` só `VISOES`, `dias_da_visao`, `vizinhos` e `motivo_para_nao_encaixar`; em `services.py` só `agenda_do_periodo` (que `semana_planejada` passa a usar), `mover_bloco`, `trocar_blocos` e `trocar_na_proposta` |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -102,10 +103,13 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:nova_rotina` | `/rotinas/nova/` | GET, POST | rotinas | `criar_rotina` |
 | `web:editar_rotina` | `/rotinas/<pk>/editar/` | GET, POST | rotinas | `atualizar_rotina` |
 | `web:excluir_rotina` | `/rotinas/<pk>/excluir/` | POST | rotinas | `excluir_rotina` |
-| `web:semana` | `/semana/` | GET | semana | `semana_planejada` |
+| `web:semana` | `/semana/` (`?data=AAAA-MM-DD`, padrão hoje; `?visao=uteis\|semana\|mes`, padrão a última escolhida, guardada na sessão) | GET (HTMX: parcial `#semana`) | semana | `semana_planejada`, `agenda_do_periodo` |
 | `web:propor_semana` | `/semana/propor/` | POST (HTMX: parcial `#semana`) | semana | `propor_semana` |
 | `web:mover_na_semana` | `/semana/mover/` (`tarefa`, `de`, `para`; vazio = não couberam) | POST (HTMX: parcial `#semana`) | semana | `mover_na_proposta` |
 | `web:aprovar_semana` | `/semana/aprovar/` | POST | semana | `aprovar_semana` |
+| `web:trocar_na_semana` | `/semana/trocar/` (`a`, `de_a`, `b`, `de_b`; vazio = não couberam) | POST (HTMX: parcial `#semana`) | semana | `trocar_na_proposta` |
+| `web:mover_bloco_na_semana` | `/semana/blocos/<pk>/mover/` (`dia=AAAA-MM-DD`, `hora=HH:MM`) | POST (HTMX: parcial `#semana`) | semana | `mover_bloco` |
+| `web:trocar_blocos_na_semana` | `/semana/blocos/trocar/` (`a`, `b`: ids dos blocos) | POST (HTMX: parcial `#semana`) | semana | `trocar_blocos` |
 | `web:service_worker` | `/sw.js` | GET (público) | pwa | — |
 
 Convenções das telas (as mesmas do P1): views com `require_GET`/`require_POST` e `login_required`; objetos buscados com `usuario=request.user` (404 se não for do usuário); resposta HTMX é um parcial, sem HTMX é redirect com mensagem; erro de validação volta com status 422.
