@@ -1,0 +1,27 @@
+{# Conteúdo de um bloco na grade da semana; o item de lista (arrastável se planejado) fica em _semana.html. #}
+<span class="tarefa-semana__hora">{{ item.bloco.inicio_planejado|time:"H:i" }}</span>
+<span class="tarefa-semana__titulo">{{ item.bloco.tarefa.titulo }}</span>
+{% if item.movel %}<details class="tarefa-semana__mover">
+  <summary>Mover</summary>
+  <form method="post" action="{% url 'web:mover_bloco_na_semana' item.bloco.pk %}" hx-post="{% url 'web:mover_bloco_na_semana' item.bloco.pk %}" hx-target="#semana" hx-swap="outerHTML">
+    {% csrf_token %}
+    <input type="hidden" name="data" value="{{ referencia }}">
+    <input type="hidden" name="visao" value="{{ visao }}">
+    <label class="visualmente-oculto" for="dia-bloco-{{ item.bloco.pk }}">Dia de “{{ item.bloco.tarefa.titulo }}”</label>
+    <input id="dia-bloco-{{ item.bloco.pk }}" type="date" name="dia" value="{{ d.iso }}" required>
+    <label class="visualmente-oculto" for="hora-bloco-{{ item.bloco.pk }}">Hora de “{{ item.bloco.tarefa.titulo }}”</label>
+    <input id="hora-bloco-{{ item.bloco.pk }}" type="time" name="hora" step="900" value="{{ item.bloco.inicio_planejado|time:'H:i' }}" required>
+    <button class="botao botao--pequeno" type="submit">Mover</button>
+  </form>
+  {% if moveis|length > 1 %}<form method="post" action="{% url 'web:trocar_blocos_na_semana' %}" hx-post="{% url 'web:trocar_blocos_na_semana' %}" hx-target="#semana" hx-swap="outerHTML">
+    {% csrf_token %}
+    <input type="hidden" name="a" value="{{ item.bloco.pk }}">
+    <input type="hidden" name="data" value="{{ referencia }}">
+    <input type="hidden" name="visao" value="{{ visao }}">
+    <label class="visualmente-oculto" for="trocar-bloco-{{ item.bloco.pk }}">Trocar “{{ item.bloco.tarefa.titulo }}” com</label>
+    <select id="trocar-bloco-{{ item.bloco.pk }}" name="b">
+      {% for o in moveis %}{% if o.pk != item.bloco.pk %}<option value="{{ o.pk }}">{{ o.inicio_planejado|date:"D j" }}, {{ o.inicio_planejado|time:"H:i" }} · {{ o.tarefa.titulo }}</option>{% endif %}{% endfor %}
+    </select>
+    <button class="botao botao--pequeno" type="submit">Trocar</button>
+  </form>{% endif %}
+</details>{% endif %}

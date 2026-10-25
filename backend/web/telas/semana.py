@@ -10,21 +10,27 @@ Rotas do contrato:
   `services.mover_na_proposta`. Com HTMX devolve o parcial `#semana`; o arrastar do desktop (`semana.js`) usa
   esta mesma rota.
 - POST `semana/aprovar/` → `web:aprovar_semana`, chama `services.aprovar_semana`.
+- POST `semana/trocar/` → `web:trocar_na_semana` (`a`, `de_a`, `b`, `de_b`), chama `services.trocar_na_proposta`:
+  soltar uma tarefa da proposta em cima de outra troca as duas de dia (#101).
+- POST `semana/blocos/<pk>/mover/` → `web:mover_bloco_na_semana` (`dia`, `hora`), chama `services.mover_bloco`, e
+  POST `semana/blocos/trocar/` → `web:trocar_blocos_na_semana` (`a`, `b`), chama `services.trocar_blocos` (#101).
+  Nas visões de semana, cada dia é uma grade de horários (`semana.js` arrasta); no celular, "Mover" e "Trocar com".
+  As ações levam `data` e `visao` para voltar ao mesmo lugar.
 """
 
-from datetime import date, time
+from datetime import date, datetime, time
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import path, reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from nucleo import planejamento as plan
 from nucleo import services
-from nucleo.models import Tarefa
+from nucleo.models import Bloco, Tarefa
 
 ROTA = "web:semana"
 DIAS_CURTOS = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
@@ -44,7 +50,10 @@ def _pct(planejados: int, capacidade: int) -> int:
 
 def _agenda(dia: dict) -> list[dict]:
     """Blocos e rotinas do dia numa lista só, pelo horário; rotinas sem horário vão para o fim."""
-    itens = [{"hora": timezone.localtime(b.inicio_planejado).time(), "bloco": b} for b in dia["blocos"]]
+    itens = [
+        {"hora": timezone.localtime(b.inicio_planejado).time(), "bloco": b, "movel": b.status == Bloco.Status.PLANEJADO}
+        for b in dia["blocos"]
+    ]
     itens += [{"hora": r["horario"], "rotina": r} for r in dia["rotinas"]]
     return sorted(itens, key=lambda i: (i["hora"] is None, i["hora"] or time()))
 
@@ -123,11 +132,42 @@ def _dia(d: dict, referencia: date) -> dict:
         "acima": d["planejados"] > d["capacidade"],
         "fim_de_semana": d["dia"].weekday() >= 5,
         "agenda": agenda,
+        "com_horario": [i for i in agenda if i["hora"] is not None],
+        "sem_horario": [i["rotina"] for i in agenda if i["hora"] is None],
         "resumo": agenda[:ITENS_NO_MES],
         "mais": max(0, len(agenda) - ITENS_NO_MES),
         "fora": d["dia"].month != referencia.month,
         "hoje": d["dia"] == services.hoje(),
         "endereco": _endereco("semana", d["dia"]),
+    }
+
+
+def _minutos(hora: time) -> int:
+    return hora.hour * 60 + hora.minute
+
+
+def _grade(usuario, planejada: list[dict]) -> dict:
+    """A grade de horários das visões de semana (#101): da hora cheia antes do início da jornada (ou do primeiro
+    item) até a hora cheia depois do fim (ou do último). Cada item com horário ganha `ini` e `dur`, em minutos."""
+    jornada = services.jornada_de(services.perfil_de(usuario))
+    inicios, fins = [_minutos(jornada.inicio)], [_minutos(jornada.fim) or 24 * 60]
+    for d in planejada:
+        for item in d["com_horario"]:
+            item["dur"] = (
+                int((item["bloco"].fim_planejado - item["bloco"].inicio_planejado).total_seconds() // 60)
+                if "bloco" in item
+                else item["rotina"]["rotina"].duracao_min
+            )
+            inicios.append(_minutos(item["hora"]))
+            fins.append(min(24 * 60, _minutos(item["hora"]) + item["dur"]))
+    ini, fim = min(inicios) // 60 * 60, min(24 * 60, -(-max(fins) // 60) * 60)
+    for d in planejada:
+        for item in d["com_horario"]:
+            item["ini"] = _minutos(item["hora"]) - ini
+    return {
+        "ini": f"{ini // 60:02d}:00",
+        "minutos": fim - ini,
+        "horas": [{"rotulo": f"{h // 60:02d}:00", "ini": h - ini} for h in range(ini, fim, 60)],
     }
 
 
@@ -147,6 +187,7 @@ def _contexto(request, referencia: date | None = None, visao: str | None = None,
         proposta["colunas"] = len(proposta["dias"]) + len(proposta["fim_de_semana"])
     anterior, proxima = plan.vizinhos(referencia, visao)
     mes = visao == "mes"
+    moveis = [i["bloco"] for d in planejada for i in d["com_horario"] if i.get("movel")]
     return {
         "aba": "semana",
         "titulo": f"{MESES_LONGOS[referencia.month - 1]} de {referencia.year}" if mes else _titulo(dias),
@@ -163,6 +204,8 @@ def _contexto(request, referencia: date | None = None, visao: str | None = None,
         "proposta_no_mes": _endereco("uteis", services.dias_da_semana()[0]) if mes and da_proposta else "",
         "dias_curtos": DIAS_CURTOS,
         "planejada": planejada,
+        "grade": None if mes or proposta else _grade(usuario, planejada),
+        "moveis": moveis,
         "proposta": proposta,
         **extra,
     }
@@ -198,10 +241,13 @@ def semana(request):
 @require_POST
 @login_required
 def propor_semana(request):
-    services.propor_semana(request.user)
+    sugestao = services.propor_semana(request.user)
+    inicio = date.fromisoformat(sugestao.conteudo["inicio"])  # mostra a semana da proposta, em qualquer visão
+    visao = _visao(request, request.POST.get("visao"))
+    visao = "uteis" if visao == "mes" else visao
     if request.headers.get("HX-Request"):
-        return _render(request, _contexto(request))
-    return redirect(ROTA)
+        return _render(request, _contexto(request, inicio, visao))
+    return redirect(_endereco(visao, inicio))
 
 
 def _data(texto: str) -> date | None:
@@ -240,9 +286,64 @@ def aprovar_semana(request):
     return redirect(ROTA)
 
 
+def _id(texto: str | None) -> int:
+    try:
+        return int(texto or "")
+    except ValueError as erro:
+        raise Http404("id inválido") from erro
+
+
+def _quando(dia: str, hora: str) -> datetime:
+    try:
+        return timezone.make_aware(datetime.combine(date.fromisoformat(dia), time.fromisoformat(hora)))
+    except ValueError as erro:
+        raise ValueError("escolha o dia e a hora do bloco") from erro
+
+
+@require_POST
+@login_required
+def trocar_na_semana(request):
+    sugestao = services.proposta_da_semana(request.user)
+    if sugestao is None:
+        raise Http404("sem proposta pendente")
+    try:
+        a, b = int(request.POST.get("a", "")), int(request.POST.get("b", ""))
+        de_a, de_b = _data(request.POST.get("de_a", "")), _data(request.POST.get("de_b", ""))
+        services.trocar_na_proposta(sugestao, a, b, de_a=de_a, de_b=de_b)
+    except ValueError as erro:
+        return _erro(request, erro)
+    return _parcial_ou_volta(request)
+
+
+@require_POST
+@login_required
+def mover_bloco_na_semana(request, pk: int):
+    bloco = get_object_or_404(Bloco, pk=pk, usuario=request.user)
+    try:
+        services.mover_bloco(bloco, _quando(request.POST.get("dia", ""), request.POST.get("hora", "")))
+    except ValueError as erro:
+        return _erro(request, erro)
+    return _parcial_ou_volta(request)
+
+
+@require_POST
+@login_required
+def trocar_blocos_na_semana(request):
+    a = get_object_or_404(Bloco, pk=_id(request.POST.get("a")), usuario=request.user)
+    b = get_object_or_404(Bloco, pk=_id(request.POST.get("b")), usuario=request.user)
+    try:
+        services.trocar_blocos(a, b)
+    except ValueError as erro:
+        return _erro(request, erro)
+    return _parcial_ou_volta(request)
+
+
 urlpatterns = [
     path("semana/", semana, name="semana"),
     path("semana/propor/", propor_semana, name="propor_semana"),
     path("semana/mover/", mover_na_semana, name="mover_na_semana"),
     path("semana/aprovar/", aprovar_semana, name="aprovar_semana"),
+    path("semana/trocar/", trocar_na_semana, name="trocar_na_semana"),
+    path("semana/blocos/<int:pk>/mover/", mover_bloco_na_semana, name="mover_bloco_na_semana"),
+    path("semana/blocos/trocar/", trocar_blocos_na_semana, name="trocar_blocos_na_semana"),
 ]

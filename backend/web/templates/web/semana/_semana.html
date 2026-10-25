@@ -1,4 +1,4 @@
-<div id="semana" class="semana semana--{{ visao }}{% if proposta %} semana--proposta{% endif %}" data-mover="{% url 'web:mover_na_semana' %}" data-data="{{ referencia }}" data-visao="{{ visao }}">
+<div id="semana" class="semana semana--{{ visao }}{% if proposta %} semana--proposta{% endif %}" data-mover="{% url 'web:mover_na_semana' %}" data-trocar="{% url 'web:trocar_na_semana' %}" data-trocar-blocos="{% url 'web:trocar_blocos_na_semana' %}" data-data="{{ referencia }}" data-visao="{{ visao }}">
   <header class="semana__topo">
     <a class="voltar" href="{% url 'web:hoje' %}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
@@ -39,7 +39,7 @@
       {% for d in proposta.fim_de_semana %}<li class="dia dia--fim-de-semana">
         <div class="dia__topo">
           <span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>
-          <span class="dia__pct">Fim de semana</span>
+          <span class="dia__pct dia__pct--fim-de-semana">Fim de semana</span>
         </div>
         <ul class="dia__tarefas dia__rotinas" aria-label="Rotinas">
           {% for r in d.rotinas %}<li class="tarefa-semana tarefa-semana--rotina{% if r.concluida %} tarefa-semana--feita{% endif %}" style="--cor-area: {{ r.rotina.area.cor }}">{% include "web/semana/_rotina.html" with r=r %}</li>{% empty %}<li class="dia__vazio">Sem rotinas</li>{% endfor %}
@@ -53,10 +53,11 @@
       </ul>
     </aside>
   </div>
-  <p class="semana__dica">Use “Mover” em cada tarefa ou, no computador, arraste para outro dia. Um dia pode passar de 100%, mas o que não couber nos horários livres fica de fora ao aprovar.</p>
+  <p class="semana__dica">Use “Mover” em cada tarefa ou, no computador, arraste para outro dia (ou em cima de outra tarefa, para trocar as duas). Um dia pode passar de 100%, mas o que não couber nos horários livres fica de fora ao aprovar.</p>
   <div class="semana__acoes">
     <form method="post" action="{% url 'web:propor_semana' %}" hx-post="{% url 'web:propor_semana' %}" hx-target="#semana" hx-swap="outerHTML">
       {% csrf_token %}
+      <input type="hidden" name="visao" value="{{ visao }}">
       <button class="botao" type="submit">Gerar de novo</button>
     </form>
     <form method="post" action="{% url 'web:aprovar_semana' %}">
@@ -80,24 +81,31 @@
   </div>
 
   {% else %}
-  <ol class="semana__dias semana__dias--planejada" aria-label="Dias da semana" style="--colunas: {{ planejada|length }}">
-    {% for d in planejada %}<li class="dia{% if d.fim_de_semana %} dia--fim-de-semana{% endif %}">
-      <div class="dia__topo">
-        <span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>
-        {% if d.fim_de_semana and not d.capacidade %}<span class="dia__pct">Fim de semana</span>
-        {% else %}<span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.planejados }} de {{ d.capacidade }} blocos">{{ d.pct }}%</span>{% endif %}
-      </div>
-      <ul class="dia__tarefas">
-        {% for item in d.agenda %}{% if item.bloco %}<li class="tarefa-semana" style="--cor-area: {{ item.bloco.tarefa.area.cor }}">
-          <span class="tarefa-semana__hora">{{ item.bloco.inicio_planejado|time:"H:i" }}</span>
-          <span class="tarefa-semana__titulo">{{ item.bloco.tarefa.titulo }}</span>
-        </li>{% else %}<li class="tarefa-semana tarefa-semana--rotina{% if item.rotina.concluida %} tarefa-semana--feita{% endif %}" style="--cor-area: {{ item.rotina.rotina.area.cor }}">{% include "web/semana/_rotina.html" with r=item.rotina %}</li>{% endif %}{% empty %}<li class="dia__vazio">Sem blocos</li>{% endfor %}
-      </ul>
-    </li>{% endfor %}
-  </ol>
+  <div class="grade" style="--grade-min: {{ grade.minutos }}" data-grade-ini="{{ grade.ini }}">
+    <ol class="grade__horas" aria-hidden="true">
+      {% for h in grade.horas %}<li style="--ini: {{ h.ini }}">{{ h.rotulo }}</li>{% endfor %}
+    </ol>
+    <ol class="semana__dias semana__dias--planejada" aria-label="Dias da semana" style="--colunas: {{ planejada|length }}">
+      {% for d in planejada %}<li class="dia{% if d.fim_de_semana %} dia--fim-de-semana{% endif %}" data-dia="{{ d.iso }}">
+        <div class="dia__topo">
+          <span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>
+          {% if d.fim_de_semana and not d.capacidade %}<span class="dia__pct dia__pct--fim-de-semana">Fim de semana</span>
+          {% else %}<span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.planejados }} de {{ d.capacidade }} blocos">{{ d.pct }}%</span>{% endif %}
+        </div>
+        <ul class="dia__tarefas dia__agenda">
+          {% for item in d.com_horario %}{% if item.bloco %}<li class="tarefa-semana{% if item.movel %} tarefa-semana--movel{% endif %}" style="--cor-area: {{ item.bloco.tarefa.area.cor }}; --ini: {{ item.ini }}; --dur: {{ item.dur }}"{% if item.movel %} draggable="true" data-bloco="{{ item.bloco.pk }}" data-hora="{{ item.bloco.inicio_planejado|time:'H:i' }}"{% endif %}>{% include "web/semana/_bloco.html" with item=item d=d %}</li>{% else %}<li class="tarefa-semana tarefa-semana--rotina{% if item.rotina.concluida %} tarefa-semana--feita{% endif %}" style="--cor-area: {{ item.rotina.rotina.area.cor }}; --ini: {{ item.ini }}; --dur: {{ item.dur }}">{% include "web/semana/_rotina.html" with r=item.rotina %}</li>{% endif %}{% empty %}<li class="dia__vazio">Sem blocos</li>{% endfor %}
+        </ul>
+        {% if d.sem_horario %}<ul class="dia__tarefas dia__rotinas dia__sem-horario" aria-label="Rotinas sem horário">
+          {% for r in d.sem_horario %}<li class="tarefa-semana tarefa-semana--rotina{% if r.concluida %} tarefa-semana--feita{% endif %}" style="--cor-area: {{ r.rotina.area.cor }}">{% include "web/semana/_rotina.html" with r=r %}</li>{% endfor %}
+        </ul>{% endif %}
+      </li>{% endfor %}
+    </ol>
+  </div>
+  {% if moveis %}<p class="semana__dica">No computador, arraste um bloco para outro horário ou dia, ou solte em cima de outro bloco para trocar os dois. No celular, use “Mover”.</p>{% endif %}
   {% if pode_propor %}<div class="semana__acoes">
     <form method="post" action="{% url 'web:propor_semana' %}" hx-post="{% url 'web:propor_semana' %}" hx-target="#semana" hx-swap="outerHTML">
       {% csrf_token %}
+      <input type="hidden" name="visao" value="{{ visao }}">
       <button class="botao botao--primario" type="submit">Propor a semana</button>
     </form>
   </div>{% endif %}

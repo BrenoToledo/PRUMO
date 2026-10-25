@@ -1735,19 +1735,84 @@ def agenda_do_periodo(usuario, desde: date, ate: date) -> list[DiaDaSemana]:
     ]
 
 
+def _conferir_horario(bloco: Bloco, inicio: datetime, outros: set[int], extra: list[plan.Intervalo]) -> None:
+    """Recusa (`ValueError`) se `bloco` não pode começar em `inicio`: não planejado, no passado, fora da jornada ou
+    em cima de compromisso, rotina com horário ou bloco do dia (menos os de `outros`, que também estão mudando)."""
+    if bloco.status != Bloco.Status.PLANEJADO:
+        raise ValueError("só um bloco planejado pode mudar de horário")
+    if inicio < timezone.now():
+        raise ValueError("escolha um horário que ainda não passou")
+    dia = timezone.localtime(inicio).date()
+    blocos = _blocos_do_dia(bloco.usuario, dia).exclude(status=Bloco.Status.ADIADO).exclude(pk__in=outros)
+    ocupados = _compromissos(bloco.usuario, dia, dia).get(dia, []) + extra
+    ocupados += [(b.inicio_planejado, b.fim_real or b.fim_planejado) for b in blocos]
+    duracao = bloco.fim_planejado - bloco.inicio_planejado
+    tz = timezone.get_current_timezone()
+    motivo = plan.motivo_para_nao_encaixar(inicio, duracao, jornada_de(perfil_de(bloco.usuario)), ocupados, tz=tz)
+    if motivo:
+        raise ValueError(motivo)
+
+
+def _remarcar(bloco: Bloco, inicio: datetime) -> Bloco:
+    de, duracao = bloco.inicio_planejado, bloco.fim_planejado - bloco.inicio_planejado
+    bloco.inicio_planejado, bloco.fim_planejado = inicio, inicio + duracao
+    bloco.save(update_fields=["inicio_planejado", "fim_planejado"])
+    evento(bloco.tarefa, EventoTarefa.Tipo.PLANEJADA, bloco=bloco.pk, de=de.isoformat(), inicio=inicio.isoformat())
+    return bloco
+
+
+@transaction.atomic
 def mover_bloco(bloco: Bloco, inicio: datetime) -> Bloco:
     """Leva um bloco planejado para `inicio` (outro horário ou dia), mantendo a duração (#101)."""
-    raise NotImplementedError
+    _conferir_horario(bloco, inicio, {bloco.pk}, [])
+    return _remarcar(bloco, inicio)
 
 
+@transaction.atomic
 def trocar_blocos(a: Bloco, b: Bloco) -> tuple[Bloco, Bloco]:
-    """Troca os horários de dois blocos planejados (#101)."""
-    raise NotImplementedError
+    """Troca os horários de dois blocos planejados (#101); cada um mantém a sua duração."""
+    if a.usuario_id != b.usuario_id:
+        raise ValueError("os blocos precisam ser da mesma pessoa")
+    ini_a, ini_b = a.inicio_planejado, b.inicio_planejado
+    novo_b = (ini_a, ini_a + (b.fim_planejado - b.inicio_planejado))
+    _conferir_horario(b, ini_a, {a.pk, b.pk}, [])
+    _conferir_horario(a, ini_b, {a.pk, b.pk}, [novo_b])
+    return _remarcar(a, ini_b), _remarcar(b, ini_a)
 
 
 def trocar_na_proposta(sugestao: SugestaoIA, a: int, b: int, *, de_a: date | None, de_b: date | None) -> SugestaoIA:
-    """Troca de dia (ou com "não couberam") as tarefas `a` e `b` da proposta (#101)."""
-    raise NotImplementedError
+    """Troca de dia (ou com "não couberam", `None`) as tarefas `a` e `b` da proposta (#101). Junta se já houver."""
+    if sugestao.tipo != TIPO_SEMANA or sugestao.status != SugestaoIA.Status.PENDENTE:
+        raise ValueError("esta proposta já foi respondida")
+    atual = sugestao.conteudo["atual"]
+    dias = {d: list(alocadas) for d, alocadas in atual["dias"].items()}
+    fora = list(atual["nao_couberam"])
+
+    def lista(dia: date | None) -> list[dict]:
+        if dia is None:
+            return fora
+        if dia.isoformat() not in dias:
+            raise ValueError("escolha um dia desta semana")
+        return dias[dia.isoformat()]
+
+    origem_a, origem_b = lista(de_a), lista(de_b)
+    alocacao_a = next((x for x in origem_a if x["tarefa"] == a), None)
+    alocacao_b = next((x for x in origem_b if x["tarefa"] == b), None)
+    if alocacao_a is None or alocacao_b is None:
+        raise ValueError("a tarefa não está nesse dia")
+    if origem_a is origem_b:
+        return sugestao
+    origem_a.remove(alocacao_a)
+    origem_b.remove(alocacao_b)
+    for destino, alocacao in ((origem_b, alocacao_a), (origem_a, alocacao_b)):
+        junto = next((x for x in destino if x["tarefa"] == alocacao["tarefa"]), None)
+        if junto is None:
+            destino.append(dict(alocacao))
+        else:
+            destino[destino.index(junto)] = {"tarefa": junto["tarefa"], "blocos": junto["blocos"] + alocacao["blocos"]}
+    sugestao.conteudo = sugestao.conteudo | {"atual": {"dias": dias, "nao_couberam": fora}}
+    sugestao.save(update_fields=["conteudo"])
+    return sugestao
 
 
 # --------------------------------------------------------------------------- pessoas e follow-up (P16)

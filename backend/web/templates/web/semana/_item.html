@@ -7,6 +7,8 @@
     {% csrf_token %}
     <input type="hidden" name="tarefa" value="{{ item.tarefa.pk }}">
     <input type="hidden" name="de" value="{{ de }}">
+    <input type="hidden" name="data" value="{{ referencia }}">
+    <input type="hidden" name="visao" value="{{ visao }}">
     <label class="visualmente-oculto" for="para-{{ item.tarefa.pk }}-{{ de|default:'fora' }}">Mover “{{ item.tarefa.titulo }}” para</label>
     <select id="para-{{ item.tarefa.pk }}-{{ de|default:'fora' }}" name="para">
       {% for d in proposta.dias %}{% if d.iso != de %}<option value="{{ d.iso }}">{{ d.nome }} {{ d.dia|date:"j" }}</option>{% endif %}{% endfor %}

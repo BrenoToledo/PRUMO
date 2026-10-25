@@ -201,3 +201,147 @@ def test_mes_avisa_da_proposta_pendente(logado, usuario, perfil):
 
     assert "Tarefa da proposta" not in html
     assert "proposta pendente" in html
+
+
+# ---------------------------------------------------------------- arrastar (#101)
+QUA = date(2026, 10, 21)
+
+
+@freeze_time(SEG)
+def test_semana_planejada_tem_a_grade_de_horarios_para_arrastar(logado, usuario, perfil):
+    bloco = _bloco(usuario, QUA, time(9))
+    _rotina(usuario, horario=time(7))
+
+    html = logado.get(ROTA).content.decode()
+
+    assert f'data-bloco="{bloco.pk}"' in html
+    assert 'data-grade-ini="07:00"' in html  # a rotina das 07:00 abre a grade antes da jornada
+    assert "--ini: 120" in html  # 09:00 fica 120 min depois do início da grade
+    assert reverse("web:mover_bloco_na_semana", args=[bloco.pk]) in html
+    assert reverse("web:trocar_blocos_na_semana") in html
+
+
+@freeze_time(SEG)
+def test_ids_dos_formularios_nao_se_repetem(logado, usuario, perfil):
+    import re
+
+    _bloco(usuario, QUA, time(9))
+    _bloco(usuario, QUA, time(14), "Outro")
+
+    ids = re.findall(r'id="([^"]+)"', logado.get(ROTA).content.decode())
+
+    assert len(ids) == len(set(ids))
+
+
+@freeze_time(SEG)
+def test_mover_bloco_por_formulario(logado, usuario, perfil):
+    bloco = _bloco(usuario, QUA, time(9))
+
+    resposta = logado.post(
+        reverse("web:mover_bloco_na_semana", args=[bloco.pk]),
+        {"dia": "2026-10-22", "hora": "14:00", "data": "2026-10-19", "visao": "semana"},
+    )
+
+    assert resposta.status_code == 302
+    assert resposta["Location"] == f"{ROTA}?data=2026-10-19&visao=semana"
+    bloco.refresh_from_db()
+    assert timezone.localtime(bloco.inicio_planejado) == timezone.make_aware(datetime(2026, 10, 22, 14))
+
+
+@freeze_time(SEG)
+def test_mover_bloco_com_htmx_devolve_o_parcial(logado, usuario, perfil):
+    bloco = _bloco(usuario, QUA, time(9))
+
+    resposta = logado.post(
+        reverse("web:mover_bloco_na_semana", args=[bloco.pk]), {"dia": "2026-10-22", "hora": "14:00"}, **HTMX
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.content.decode().lstrip().startswith('<div id="semana"')
+
+
+@pytest.mark.parametrize(("dia", "hora"), [("2026-10-22", "16:00"), ("2026-10-22", "meio-dia"), ("", "10:00")])
+@freeze_time(SEG)
+def test_mover_bloco_invalido_volta_422_com_a_mensagem(logado, usuario, perfil, dia, hora):
+    bloco = _bloco(usuario, QUA, time(9))
+
+    resposta = logado.post(reverse("web:mover_bloco_na_semana", args=[bloco.pk]), {"dia": dia, "hora": hora}, **HTMX)
+
+    assert resposta.status_code == 422
+    assert 'role="alert"' in resposta.content.decode()
+
+
+@freeze_time(SEG)
+def test_mover_bloco_de_outra_pessoa_e_404(logado, outra, perfil):
+    services.perfil_de(outra)
+    bloco = _bloco(outra, QUA, time(9))
+
+    resposta = logado.post(
+        reverse("web:mover_bloco_na_semana", args=[bloco.pk]), {"dia": "2026-10-22", "hora": "14:00"}
+    )
+
+    assert resposta.status_code == 404
+
+
+@freeze_time(SEG)
+def test_trocar_blocos_por_formulario(logado, usuario, perfil):
+    a, b = _bloco(usuario, QUA, time(9)), _bloco(usuario, date(2026, 10, 23), time(14), "Outro")
+    ini_a, ini_b = a.inicio_planejado, b.inicio_planejado
+
+    resposta = logado.post(reverse("web:trocar_blocos_na_semana"), {"a": a.pk, "b": b.pk}, **HTMX)
+
+    assert resposta.status_code == 200
+    a.refresh_from_db()
+    b.refresh_from_db()
+    assert (a.inicio_planejado, b.inicio_planejado) == (ini_b, ini_a)
+
+
+@freeze_time(SEG)
+def test_trocar_com_bloco_de_outra_pessoa_e_404(logado, usuario, outra, perfil):
+    services.perfil_de(outra)
+    a, b = _bloco(usuario, QUA, time(9)), _bloco(outra, QUA, time(14), "Segredo")
+
+    assert logado.post(reverse("web:trocar_blocos_na_semana"), {"a": a.pk, "b": b.pk}).status_code == 404
+
+
+@freeze_time(SEG)
+def test_trocar_na_proposta_por_formulario(logado, usuario, perfil):
+    for n in range(3):
+        nova_tarefa(usuario, f"Tarefa {n}", blocos_estimados=4)
+    sugestao = services.propor_semana(usuario)
+    dias = sugestao.conteudo["atual"]["dias"]
+    seg, ter = dias["2026-10-19"][0]["tarefa"], dias["2026-10-20"][-1]["tarefa"]
+
+    resposta = logado.post(
+        reverse("web:trocar_na_semana"), {"a": seg, "de_a": "2026-10-19", "b": ter, "de_b": "2026-10-20"}, **HTMX
+    )
+
+    assert resposta.status_code == 200
+    sugestao.refresh_from_db()
+    assert ter in [a["tarefa"] for a in sugestao.conteudo["atual"]["dias"]["2026-10-19"]]
+
+
+@freeze_time(SEG)
+def test_trocar_na_proposta_sem_proposta_e_404(logado, perfil):
+    assert logado.post(reverse("web:trocar_na_semana"), {"a": "1", "b": "2"}).status_code == 404
+
+
+@freeze_time(SEG)
+def test_rotina_nao_arrasta(logado, usuario, perfil):
+    _rotina(usuario, horario=time(7))
+
+    html = logado.get(ROTA).content.decode()
+
+    assert 'class="tarefa-semana tarefa-semana--rotina"' in html
+    assert html.count('draggable="true"') == 0
+
+
+@freeze_time("2026-10-24 15:00")  # sábado: a proposta é da semana que vem
+def test_propor_no_fim_de_semana_mostra_a_semana_da_proposta(logado, usuario, perfil):
+    nova_tarefa(usuario, "Tarefa da proposta", blocos_estimados=2)
+    logado.get(ROTA, {"visao": "semana"})
+
+    html = logado.post(reverse("web:propor_semana"), {"visao": "semana"}, **HTMX).content.decode()
+
+    assert "Semana de 26 out a 1 nov" in html
+    assert "Tarefa da proposta" in html

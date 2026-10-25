@@ -263,6 +263,22 @@ def vizinhos(referencia: date, visao: str) -> tuple[date, date]:
     return segunda - timedelta(days=7), segunda + timedelta(days=7)
 
 
+def motivo_para_nao_encaixar(
+    inicio: datetime, duracao: timedelta, jornada: Jornada, ocupados: list[Intervalo], *, tz=None
+) -> str:
+    """Por que um bloco não pode ir para `inicio` (arrastar, #101); vazio se pode.
+
+    Ele precisa caber inteiro na jornada do dia e não pode encostar em compromisso, rotina ou outro bloco.
+    """
+    local = inicio.astimezone(tz) if tz is not None else inicio
+    ini, fim = _limites_da_jornada(local.date(), jornada, tz if tz is not None else inicio.tzinfo)
+    if inicio < ini or inicio + duracao > fim:
+        return f"o bloco precisa caber na sua jornada, das {jornada.inicio:%H:%M} às {jornada.fim:%H:%M}"
+    if any(a < inicio + duracao and b > inicio for a, b in ocupados):
+        return "esse horário já está ocupado"
+    return ""
+
+
 @dataclass
 class Pendente:
     tarefa_id: int

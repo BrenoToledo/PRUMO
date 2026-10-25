@@ -3,6 +3,7 @@
 .semana__topo { margin-bottom: var(--e4); }
 .semana__barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--e2); margin-top: var(--e2); }
 .semana__nav { display: flex; gap: var(--e2); }
+.semana__nav .botao { text-decoration: none; }
 .semana__visoes { display: inline-flex; padding: 2px; gap: 2px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo); }
 .semana__visao {
   padding: var(--e1) var(--e3); border-radius: var(--raio-campo); color: var(--texto-secundario); text-decoration: none;
@@ -61,6 +62,16 @@
 .semana__acoes .botao { width: 100%; }
 .semana__dias--planejada + .semana__acoes { grid-template-columns: 1fr; }
 
+/* Grade de horários (#101): no celular é uma lista pelo horário; no desktop, cada item fica na sua hora */
+.grade__horas { display: none; }
+.dia__sem-horario { margin-top: var(--e2); }
+.tarefa-semana--movel { cursor: grab; }
+.tarefa-semana.solta-aqui { outline: 2px solid var(--primaria); }
+.tarefa-semana__mover input {
+  min-height: 32px; padding: 0 var(--e2); font: inherit; color: var(--texto);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+}
+
 /* Fim de semana: só rotinas (a proposta não põe tarefa nele) */
 .dia--fim-de-semana { background: color-mix(in srgb, var(--borda) 25%, var(--superficie)); }
 
@@ -89,6 +100,37 @@
   .semana__corpo { display: grid; grid-template-columns: 1fr 260px; align-items: start; }
   .semana__dias { display: grid; grid-template-columns: repeat(var(--colunas, 5), minmax(0, 1fr)); gap: var(--e2); }
   .mes__dia { min-height: 110px; padding: var(--e2); }
+
+  /* Grade: 1 minuto = --px-min; o topo do dia tem altura fixa para as horas da esquerda alinharem */
+  .grade { --px-min: 1px; --topo-dia: 28px; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: var(--e2); }
+  .grade__horas {
+    display: block; position: relative; list-style: none; margin: calc(var(--e3) + 1px + var(--topo-dia) + var(--e2)) 0 0; padding: 0;
+    height: calc(var(--grade-min) * var(--px-min));
+  }
+  .grade__horas li {
+    position: absolute; right: 0; top: calc(var(--ini) * var(--px-min)); transform: translateY(-50%);
+    color: var(--texto-secundario); font-size: 11px; line-height: 1;
+  }
+  .grade .dia__topo { height: var(--topo-dia); margin-bottom: var(--e2); align-items: center; }
+  .grade .semana__dias .dia { min-height: 0; }
+  .semana__dias .dia__agenda {
+    position: relative; display: block; height: calc(var(--grade-min) * var(--px-min));
+    background: repeating-linear-gradient(to bottom, var(--borda) 0 1px, transparent 1px calc(60 * var(--px-min)));
+  }
+  .semana__dias .dia__agenda > .tarefa-semana {
+    position: absolute; left: 0; right: 0; top: calc(var(--ini) * var(--px-min));
+    height: calc(var(--dur) * var(--px-min)); min-height: 22px; overflow: hidden; align-content: flex-start;
+  }
+  .semana__dias .dia__agenda > .tarefa-semana--rotina { flex-wrap: nowrap; padding-block: 2px; white-space: nowrap; z-index: 1; }
+  .dia__agenda > .tarefa-semana--rotina .tarefa-semana__titulo { overflow: hidden; text-overflow: ellipsis; }
+  .dia__agenda > .tarefa-semana--rotina .tarefa-semana__blocos { display: none; }
+  .semana__dias .dia__agenda > .dia__vazio { position: absolute; top: var(--e2); left: 0; }
+  .grade .dia__pct--fim-de-semana, .grade .dia__sem-horario .tarefa-semana__blocos { display: none; }
+  /* Semana completa: 7 colunas; na proposta, "Não couberam" vai para baixo dos dias */
+  .semana--semana .semana__corpo { grid-template-columns: minmax(0, 1fr); }
+  .semana--semana .dia__pct--fim-de-semana, .semana--semana .tarefa-semana--rotina .tarefa-semana__blocos { display: none; }
+  .grade .tarefa-semana__mover { display: none; } /* no desktop, arrasta */
+  .dia.solta-aqui .dia__agenda { background-color: var(--primaria-suave); }
   .mes__itens { flex-direction: column; flex-wrap: nowrap; }
   .mes__item {
     width: auto; height: auto; border-radius: 4px; padding: 1px var(--e1); border-left: 3px solid var(--cor-area);
