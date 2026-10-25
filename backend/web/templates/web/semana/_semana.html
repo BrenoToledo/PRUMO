@@ -17,8 +17,8 @@
           <span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>
           <span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.blocos }} de {{ d.capacidade }} blocos">{{ d.pct }}%</span>
         </div>
-        {% if d.rotinas %}<ul class="dia__rotinas" aria-label="Rotinas">
-          {% for r in d.rotinas %}<li class="rotina-semana{% if r.concluida %} rotina-semana--feita{% endif %}" style="--cor-area: {{ r.rotina.area.cor }}">{% include "web/semana/_rotina.html" with r=r %}</li>{% endfor %}
+        {% if d.rotinas %}<ul class="dia__tarefas dia__rotinas" aria-label="Rotinas">
+          {% for r in d.rotinas %}<li class="tarefa-semana tarefa-semana--rotina{% if r.concluida %} tarefa-semana--feita{% endif %}" style="--cor-area: {{ r.rotina.area.cor }}">{% include "web/semana/_rotina.html" with r=r %}</li>{% endfor %}
         </ul>{% endif %}
         <ul class="dia__tarefas">
           {% for i in d.itens %}<li class="tarefa-semana" style="--cor-area: {{ i.tarefa.area.cor }}" draggable="true" data-tarefa="{{ i.tarefa.pk }}" data-de="{{ d.iso }}">{% include "web/semana/_item.html" with item=i de=d.iso %}</li>{% empty %}<li class="dia__vazio">Livre</li>{% endfor %}
@@ -55,7 +55,7 @@
         {% for item in d.agenda %}{% if item.bloco %}<li class="tarefa-semana" style="--cor-area: {{ item.bloco.tarefa.area.cor }}">
           <span class="tarefa-semana__hora">{{ item.bloco.inicio_planejado|time:"H:i" }}</span>
           <span class="tarefa-semana__titulo">{{ item.bloco.tarefa.titulo }}</span>
-        </li>{% else %}<li class="rotina-semana{% if item.rotina.concluida %} rotina-semana--feita{% endif %}" style="--cor-area: {{ item.rotina.rotina.area.cor }}">{% include "web/semana/_rotina.html" with r=item.rotina %}</li>{% endif %}{% empty %}<li class="dia__vazio">Sem blocos</li>{% endfor %}
+        </li>{% else %}<li class="tarefa-semana tarefa-semana--rotina{% if item.rotina.concluida %} tarefa-semana--feita{% endif %}" style="--cor-area: {{ item.rotina.rotina.area.cor }}">{% include "web/semana/_rotina.html" with r=item.rotina %}</li>{% endif %}{% empty %}<li class="dia__vazio">Sem blocos</li>{% endfor %}
       </ul>
     </li>{% endfor %}
   </ol>
