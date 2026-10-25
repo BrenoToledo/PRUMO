@@ -64,6 +64,14 @@ Base: `/api/`. Autenticação por sessão ou token. Para ferramentas (MCP, scrip
 | `POST /mensagens/{id}/enviar/` `{canal: whatsapp\|email\|teams, texto, lembrar?}` | **Não envia nada**: registra a resposta (aceita ou editada), a cobrança e, com `lembrar`, a próxima em 2 dias; devolve `{link}` para abrir o app. `400` com texto vazio, canal sem contato ou mensagem já respondida | M24 |
 | `GET /expectativas-em-risco/` | Entregas "depende de mim" em risco: `[{vinculo, tarefa, titulo, pessoa, pessoa_nome, prazo, folga}]` | D01 |
 
+## Revisão semanal guiada
+
+| Método e rota | O que faz | Tela |
+| --- | --- | --- |
+| `GET /revisao-semanal/` `?passo=N` | A revisão desta semana (criada se preciso): `{id, data, passo, concluida, passos: [{indice, chave, titulo}], atual}`. `atual` = `{indice, total, chave, titulo, vazio, perguntas: [{chave, texto, opcoes: [{valor, rotulo}], aceita_texto}], respondidas, concluida}`. Com `passo`, mostra e salva aquele passo. `400` fora de 1 a 5 | M26 |
+| `POST /revisao-semanal/responder/` `{chave, opcao, texto?}` | Aplica só o que o chip escolhido diz: pausar ou concluir o projeto, pausar a rotina, desligar a espera ("já recebi"), redigir a cobrança (sem enviar) ou mandar o texto para a caixa de entrada. Devolve `{chave, passo, pergunta, opcao, resposta, texto, efeito, alvo}`. `400` se a pergunta não está aberta, se a opção não é dela ou se a revisão já foi concluída | M26 |
+| `POST /revisao-semanal/concluir/` | Marca a revisão da semana como feita e devolve o mesmo formato do `GET` | M26 |
+
 ## Seus dados (LGPD)
 
 | Método e rota | O que faz | Tela |

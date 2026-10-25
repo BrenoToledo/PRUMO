@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 
 from . import pessoas as pes
 from . import prioridade as motor
+from . import revisao_semanal as rs
 from . import services
 from .models import Area, Bloco, ItemCaptura, Pessoa, Projeto, Rotina, SugestaoIA, Tarefa, TarefaPessoa
 from .serializers import (
@@ -582,3 +583,70 @@ def excluir_conta(request):
     except ValueError as erro:
         return Response({"senha": [str(erro)]}, status=status.HTTP_400_BAD_REQUEST)
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# --------------------------------------------------------------------------- revisão semanal guiada (P18)
+def _passo_revisao(passo) -> dict:
+    return {
+        "indice": passo["indice"],
+        "total": passo["total"],
+        "chave": passo["chave"],
+        "titulo": passo["titulo"],
+        "vazio": passo["vazio"],
+        "perguntas": [
+            {
+                "chave": p.chave,
+                "texto": p.texto,
+                "opcoes": [{"valor": valor, "rotulo": rotulo} for valor, rotulo in p.opcoes],
+                "aceita_texto": p.aceita_texto,
+            }
+            for p in passo["perguntas"]
+        ],
+        "respondidas": passo["respondidas"],
+        "concluida": passo["concluida"],
+    }
+
+
+def _revisao_semanal(revisao, passo: int | None = None) -> dict:
+    atual = services.passo_da_revisao(revisao, passo)
+    return {
+        "id": revisao.pk,
+        "data": revisao.data,
+        "passo": revisao.metricas.get("passo", 1),
+        "concluida": atual["concluida"],
+        "passos": [{"indice": n, "chave": p.chave, "titulo": p.titulo} for n, p in enumerate(rs.PASSOS, start=1)],
+        "atual": _passo_revisao(atual),
+    }
+
+
+@api_view(["GET"])
+def revisao_semanal(request):
+    revisao = services.revisao_semanal(request.user)
+    passo = request.query_params.get("passo")
+    try:
+        if passo is not None:
+            services.ir_para_passo(revisao, int(passo) if passo.isdigit() else 0)
+        return Response(_revisao_semanal(revisao))
+    except ValueError as exc:
+        return _erro(exc)
+
+
+@api_view(["POST"])
+def responder_revisao(request):
+    revisao = services.revisao_semanal(request.user)
+    try:
+        resposta = services.responder_revisao(
+            revisao,
+            str(request.data.get("chave", "")),
+            str(request.data.get("opcao", "")),
+            str(request.data.get("texto", "")),
+        )
+    except ValueError as exc:
+        return _erro(exc)
+    return Response(resposta)
+
+
+@api_view(["POST"])
+def concluir_revisao_semanal(request):
+    revisao = services.concluir_revisao_semanal(services.revisao_semanal(request.user))
+    return Response(_revisao_semanal(revisao))

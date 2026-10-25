@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
     from .models import Bloco, Pessoa, Projeto, Revisao, Rotina, SugestaoIA, Tarefa, TarefaPessoa
     from .pessoas import Pontualidade
+    from .revisao_semanal import Pergunta
 
 # --------------------------------------------------------------------------- formatos devolvidos pelos serviços
 
@@ -114,6 +115,32 @@ class ExpectativaEmRisco(TypedDict):
     pessoa: Pessoa
     prazo: date
     folga: float | None
+
+
+class RespostaRevisao(TypedDict):
+    """Uma resposta da revisão semanal (#91–#93), como fica em `Revisao.metricas["respostas"][chave]`."""
+
+    chave: str  # "entrada", "projeto:<id>", "vinculo:<id>" ou "rotina:<id>"
+    passo: int  # 1 a 5
+    pergunta: str  # o texto que o Prumo mostrou
+    opcao: str  # o valor do chip escolhido
+    resposta: str  # o rótulo do chip
+    texto: str  # a resposta escrita, se a pergunta aceita texto
+    efeito: str  # "" | "clarificar" (abrir a caixa de entrada) | "mensagem" (abrir a M24)
+    alvo: int | None  # com "mensagem", a SugestaoIA redigida; com "clarificar", o primeiro item pendente
+
+
+class PassoRevisao(TypedDict):
+    """`services.passo_da_revisao`: um passo da revisão semanal guiada (M26)."""
+
+    indice: int  # 1 a 5
+    total: int  # 5
+    chave: str  # entrada | projetos | aguardando | rotinas | semana
+    titulo: str
+    vazio: str  # o que mostrar se não há pergunta aberta nem respondida
+    perguntas: list[Pergunta]  # as abertas
+    respondidas: list[RespostaRevisao]  # as deste passo, na ordem em que foram respondidas
+    concluida: bool  # a revisão da semana já foi concluída
 
 
 class ItemPlanejadoVsReal(TypedDict):
@@ -342,6 +369,12 @@ SERVICOS: dict[str, str] = {
     "redigir_mensagem": "(vinculo: 'TarefaPessoa', *, novo: 'bool' = False) -> 'SugestaoIA'",
     "enviar_mensagem": "(sugestao: 'SugestaoIA', *, canal: 'str', texto: 'str', lembrar: 'bool' = False) -> 'str'",
     "expectativas_em_risco": "(usuario) -> 'list[ExpectativaEmRisco]'",
+    # Revisão semanal guiada (P18, #91–#93): perguntas em `nucleo/revisao_semanal.py`; só o chip escolhido muda algo
+    "revisao_semanal": "(usuario, dia: 'date | None' = None) -> 'Revisao'",
+    "passo_da_revisao": "(revisao: 'Revisao', passo: 'int | None' = None) -> 'PassoRevisao'",
+    "ir_para_passo": "(revisao: 'Revisao', passo: 'int') -> 'Revisao'",
+    "responder_revisao": "(revisao: 'Revisao', chave: 'str', opcao: 'str', texto: 'str' = '') -> 'RespostaRevisao'",
+    "concluir_revisao_semanal": "(revisao: 'Revisao') -> 'Revisao'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -465,6 +498,11 @@ CAMPOS_RESUMO_PESSOA = (
 # Mensagem de follow-up (P17): `POST /api/vinculos/{id}/mensagem/` e `GET /api/expectativas-em-risco/`
 CAMPOS_MENSAGEM = ("id", "vinculo", "pessoa", "motivo", "texto", "origem", "canais", "status")
 CAMPOS_EXPECTATIVA_EM_RISCO = ("vinculo", "tarefa", "titulo", "pessoa", "pessoa_nome", "prazo", "folga")
+# Revisão semanal guiada (P18): `GET /api/revisao-semanal/` e `POST /api/revisao-semanal/responder/`
+CAMPOS_REVISAO_SEMANAL = ("id", "data", "passo", "concluida", "passos", "atual")  # `atual` = CAMPOS_PASSO_REVISAO
+CAMPOS_PASSO_REVISAO = ("indice", "total", "chave", "titulo", "vazio", "perguntas", "respondidas", "concluida")
+CAMPOS_PERGUNTA_REVISAO = ("chave", "texto", "opcoes", "aceita_texto")  # opcoes: [{valor, rotulo}]
+CAMPOS_RESPOSTA_REVISAO = ("chave", "passo", "pergunta", "opcao", "resposta", "texto", "efeito", "alvo")
 
 # --------------------------------------------------------------------------- interface web: um módulo por etapa
 # Cada módulo em `web/telas/` pertence a uma etapa e já está ligado em `web/urls.py`. Uma etapa só edita o próprio
@@ -493,6 +531,7 @@ TELAS_WEB = (
     "rotinas",
     "semana",
     "pessoas",
+    "revisao_semanal",
 )
 
 # --------------------------------------------------------------------------- servidor MCP (P12, #29)

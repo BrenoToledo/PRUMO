@@ -1,0 +1,34 @@
+/* Revisão semanal guiada (M26): barra de 5 passos, perguntas do Prumo e respostas em chips. */
+.revisao-semanal { display: grid; gap: var(--e3); }
+.revisao-semanal__passos { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.revisao-semanal__passo { flex: 1; height: 4px; border-radius: 2px; background: var(--borda); }
+.revisao-semanal__passo--feito { background: var(--primaria); }
+.revisao-semanal__rotulo {
+  margin: 0; font-size: var(--micro-tam); font-weight: 600; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--texto-secundario);
+}
+.revisao-semanal__opcional { text-transform: none; font-weight: 400; letter-spacing: 0; }
+.revisao-semanal__aviso { margin: 0; color: var(--sucesso); }
+.revisao-semanal__troca { display: grid; gap: var(--e2); }
+.revisao-semanal__prumo { padding: var(--e3); border-radius: var(--raio-card); background: var(--primaria-suave); }
+.revisao-semanal__prumo p { margin: 0; }
+.revisao-semanal__quem {
+  display: flex; align-items: center; gap: 6px; margin-bottom: var(--e1) !important;
+  font-size: var(--micro-tam); font-weight: 600; color: var(--primaria);
+}
+.revisao-semanal__quem svg { width: 16px; height: 16px; }
+.revisao-semanal__resposta {
+  display: grid; gap: var(--e1); padding: var(--e3);
+  border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--superficie);
+}
+.revisao-semanal__resposta p { margin: 0; }
+.revisao-semanal .campo input { width: 100%; }
+.revisao-semanal__chips { display: flex; flex-wrap: wrap; gap: var(--e2); }
+.revisao-semanal__chip {
+  min-height: 36px; padding: 0 var(--e3); border: 1px solid var(--borda); border-radius: var(--raio-chip);
+  background: var(--superficie); font: inherit; color: var(--texto); cursor: pointer;
+}
+.revisao-semanal__chip:hover, .revisao-semanal__chip:focus-visible { border-color: var(--primaria); color: var(--primaria); }
+.revisao-semanal__acoes { display: flex; justify-content: space-between; gap: var(--e3); margin-top: var(--e3); }
+.revisao-semanal__acoes form { margin: 0; }
+.revisao-semanal__acoes .botao { text-decoration: none; }

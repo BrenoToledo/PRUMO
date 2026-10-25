@@ -1,0 +1,13 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Revisão semanal{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/revisao_semanal.css' %}">{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <p class="data">Semana de {{ revisao.data|date:"j \d\e F" }}</p>
+    <h1>Revisão semanal</h1>
+  </div>
+</header>
+{% include "web/revisao_semanal/_passo.html" %}
+{% endblock %}

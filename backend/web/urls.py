@@ -20,6 +20,7 @@ from .telas import (
     projetos,
     pwa,
     revisao,
+    revisao_semanal,
     rotinas,
     semana,
     tarefas,
@@ -56,3 +57,4 @@ urlpatterns += calendarios.urlpatterns
 urlpatterns += rotinas.urlpatterns
 urlpatterns += semana.urlpatterns
 urlpatterns += pessoas.urlpatterns
+urlpatterns += revisao_semanal.urlpatterns
