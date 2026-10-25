@@ -38,6 +38,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `claude/project-thread-mpmxzo` (P17 · Mensagens) | #87 | backend + interface | main (P1–P16) | `web/templates/web/pessoas/mensagem.html`, `teams.html`, `web/static/web/telas/mensagens.js`; em `web/telas/pessoas.py` as rotas da mensagem, `nucleo/tests/test_mensagens.py`, `web/tests/test_mensagens.py`; em `ia/tarefas.py` e `ia/provedores.py` só o pedido `mensagem`; em `plano` (e `hoje.css`) só o card "Expectativa em risco" do painel do desktop; migração `0010` |
 | `claude/project-thread-0nn6nm` (calendário: navegar, visões e arrastar) | #99, #100, #101 | backend + interface | main (P1–P17) | `web/telas/semana.py`, `web/templates/web/semana/`, `web/static/web/telas/semana.css`, `semana.js`, `nucleo/tests/test_calendario_visoes.py`, `web/tests/test_calendario_visoes.py`; em `planejamento.py` só `VISOES`, `dias_da_visao`, `vizinhos` e `motivo_para_nao_encaixar`; em `services.py` só `agenda_do_periodo` (que `semana_planejada` passa a usar), `mover_bloco`, `trocar_blocos` e `trocar_na_proposta` |
 | `claude/project-thread-mpmxzo` (P18 · Revisão semanal) | #91, #92, #93 | backend + interface | main (P1–P17 e calendário) | `nucleo/revisao_semanal.py`, `web/telas/revisao_semanal.py`, `web/templates/web/revisao_semanal/`, `web/static/web/telas/revisao_semanal.css`, `nucleo/tests/test_revisao_semanal*.py`, `web/tests/test_revisao_semanal.py`; em `revisao` só o link "Revisão semanal" da M25; sem migração (usa `Revisao` tipo `semanal`) |
+| `claude/project-thread-mpmxzo` (P19 · Notificações) | #104, #105, #106 | backend + interface | main (P1–P18) | `nucleo/notificacoes.py`, `nucleo/webpush.py`, `web/telas/notificacoes.py`, `web/templates/web/notificacoes/`, `web/static/web/telas/notificacoes.css`, `notificacoes.js`, `nucleo/tests/test_notificacoes*.py`, `nucleo/tests/test_webpush.py`, `web/tests/test_notificacoes.py`; em `pwa` só o `push` e o clique no `sw.js`; em `perfil` só o link "Notificações"; em `plano` só o sino no topo de Hoje; `config/settings.py` (VAPID e agenda do Celery), `docker-compose.yml` e `deploy/docker-compose.yml` (serviço `beat`), `.env.example` (VAPID), migração `0011` |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -114,6 +115,11 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:revisao_semanal` | `/revisao/semanal/` (`?passo=N` abre e salva o passo) | GET | revisao_semanal | `revisao_semanal`, `passo_da_revisao`, `ir_para_passo` |
 | `web:responder_revisao` | `/revisao/semanal/responder/` (`chave`, `opcao`, `texto`) | POST (HTMX: parcial `#revisao-semanal`; efeito `clarificar`/`mensagem` vira `HX-Redirect`) | revisao_semanal | `responder_revisao` |
 | `web:concluir_revisao_semanal` | `/revisao/semanal/concluir/` | POST (redireciona para `web:semana`) | revisao_semanal | `concluir_revisao_semanal` |
+| `web:notificacoes` | `/notificacoes/` | GET | notificacoes | `notificacoes_de`, `nao_lidas` |
+| `web:marcar_notificacoes_lidas` | `/notificacoes/lidas/` | POST | notificacoes | `marcar_lidas` |
+| `web:preferencias_notificacoes` | `/perfil/notificacoes/` | GET, POST | notificacoes | `preferencias_de_avisos`, `salvar_preferencias_de_avisos`, `push_disponivel`, `chave_publica_push` |
+| `web:inscrever_push` | `/notificacoes/push/` (JSON `{endpoint, keys: {p256dh, auth}}`) | POST (204; 400 se faltar campo) | notificacoes | `inscrever_push` |
+| `web:cancelar_push` | `/notificacoes/push/cancelar/` (JSON `{endpoint}`) | POST (204) | notificacoes | `cancelar_push` |
 | `web:service_worker` | `/sw.js` | GET (público) | pwa | — |
 
 Convenções das telas (as mesmas do P1): views com `require_GET`/`require_POST` e `login_required`; objetos buscados com `usuario=request.user` (404 se não for do usuário); resposta HTMX é um parcial, sem HTMX é redirect com mensagem; erro de validação volta com status 422.
@@ -381,6 +387,42 @@ Efeitos de cada chip em `responder_revisao`:
 - Caixa de entrada: `clarificar` dá efeito `clarificar`, com `alvo` = o primeiro item pendente.
 
 As opções que sobram (`seguir`, `depois`, `esperar`, `manter`) só registram a resposta.
+
+## Notificações (P19, Fase 1)
+
+Os avisos saem de regras puras em `nucleo/notificacoes.py`. A ordem de prioridade é esta:
+1. `inicio_bloco`: um bloco planejado que começa em até 5 minutos.
+2. `expectativa_em_risco`: uma vez por dia por vínculo.
+3. `revisao_diaria`: em dias úteis, depois do fim da jornada, se a revisão do dia não foi feita.
+4. `revisao_semanal`: de sexta, depois do fim da jornada, até domingo, se a revisão da semana não foi concluída.
+5. `caixa_entrada`: se há itens pendentes e já se passaram `revisao_entrada_dias` dias desde o último aviso da caixa (RF05).
+
+Cada aviso tem uma chave única por usuário (`Notificacao.chave`), então nunca se repete. Antes de gravar, `notificacoes.filtrar` aplica três regras:
+- Tira os tipos desligados na M34 (`Perfil.avisos`; o que falta conta como ligado).
+- Não gera nada durante um bloco em foco, se `nao_perturbe_foco` estiver ligado.
+- Corta no `limite_avisos_dia` (padrão 6, de 1 a 20), a partir dos menos importantes.
+
+O Web Push (`nucleo/webpush.py`) só usa `cryptography`:
+- Cifra a mensagem com aes128gcm (RFC 8291) e assina com VAPID ES256 (RFC 8292).
+- As chaves vêm de `PRUMO_VAPID_PUBLICA` e `PRUMO_VAPID_PRIVADA`, que `manage.py gerar_chaves_vapid` cria, mais o contato `PRUMO_VAPID_CONTATO`.
+- Sem as chaves, `push_disponivel()` é falso e só a central funciona.
+
+Quem gera os avisos:
+- `manage.py notificar` roda `notificar_todos`.
+- Com Celery, a tarefa `nucleo.fila.notificar` roda a cada minuto (`CELERY_BEAT_SCHEDULE`, serviço `beat` no docker-compose).
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `preferencias_de_avisos(usuario)` | `dict[str, bool]` | Todos os tipos de `notificacoes.TIPOS`, ligados por padrão |
+| `salvar_preferencias_de_avisos(usuario, *, avisos, nao_perturbe_foco, limite_avisos_dia)` | `Perfil` | `ValueError` se o limite sair de 1 a 20 |
+| `gerar_notificacoes(usuario, agora=None)` | `list[Notificacao]` | Grava os avisos novos que passaram pelo filtro e tenta o push de cada um. Uma falha no push não desfaz o aviso |
+| `notificar_todos(agora=None)` | `int` | Roda `gerar_notificacoes` para cada usuário ativo e devolve quantos avisos gravou |
+| `notificacoes_de(usuario, limite=50)` | `list[Notificacao]` | As mais novas primeiro |
+| `nao_lidas(usuario)` / `marcar_lidas(usuario)` | `int` | Conta as não lidas / marca todas como lidas agora e devolve quantas eram |
+| `push_disponivel()` / `chave_publica_push()` | `bool` / `str` | Se há chaves VAPID / a pública (base64url), ou `""` |
+| `inscrever_push(usuario, endpoint, p256dh, auth)` | `PushInscricao` | Cria ou atualiza pelo `endpoint`. `ValueError` se o endpoint não for https ou se faltar alguma chave |
+| `cancelar_push(usuario, endpoint)` | `None` | Apaga a inscrição do usuário com esse endpoint |
+| `enviar_push(notificacao)` | `int` | Quantos aparelhos aceitaram. Uma inscrição com resposta 404 ou 410 é apagada, e um erro de rede é só registrado no log |
 
 ## Mudar um contrato
 

@@ -152,3 +152,18 @@ def test_revisao_semanal_no_formato_do_contrato(api, usuario):
     assert set(resposta.json()) == set(contratos.CAMPOS_RESPOSTA_REVISAO)
     revisao.refresh_from_db()
     assert set(services.passo_da_revisao(revisao)["respondidas"][0]) == _chaves(contratos.RespostaRevisao)
+
+
+# ------------------------------------------------------------------ notificações (P19)
+@freeze_time(f"{SEG} 08:00")
+def test_notificacoes_na_api(api, usuario):
+    services.perfil_de(usuario)
+    services.capturar(usuario, "Ligar para o seguro")
+    services.gerar_notificacoes(usuario)
+
+    dados = api.get("/api/notificacoes/").json()
+    assert dados["nao_lidas"] == 1
+    assert set(dados["results"][0]) == set(contratos.CAMPOS_NOTIFICACAO)
+    assert api.post("/api/notificacoes/lidas/").json() == {"marcadas": 1}
+    perfil = api.get("/api/perfil/").json()
+    assert {"avisos", "nao_perturbe_foco", "limite_avisos_dia"} <= set(perfil)
