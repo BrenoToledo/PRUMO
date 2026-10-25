@@ -61,3 +61,32 @@ self.addEventListener("fetch", function (evento) {
 
   evento.respondWith(MODO === "rede" ? responderDaRede(pedido) : responderDoCache(evento, pedido));
 });
+
+// Web Push (#106): o servidor manda {titulo, texto, url, tag}; o clique abre (ou foca) a tela do aviso.
+self.addEventListener("push", function (evento) {
+  let aviso = {};
+  try {
+    aviso = evento.data ? evento.data.json() : {};
+  } catch (erro) {
+    aviso = { texto: evento.data.text() };
+  }
+  evento.waitUntil(
+    self.registration.showNotification(aviso.titulo || "Prumo", {
+      body: aviso.texto || "",
+      tag: aviso.tag,
+      icon: PREFIXO_ESTATICOS + "web/pwa/icone-192.png",
+      data: { url: aviso.url || "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", function (evento) {
+  evento.notification.close();
+  const destino = new URL(evento.notification.data?.url || "/", self.location.origin).href;
+  evento.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (janelas) {
+      const aberta = janelas.find(function (janela) { return janela.url === destino; });
+      return aberta ? aberta.focus() : self.clients.openWindow(destino);
+    }),
+  );
+});

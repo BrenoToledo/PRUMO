@@ -1,0 +1,62 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Notificações{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/perfil.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/notificacoes.css' %}">{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <a class="perfil__voltar" href="{% url 'web:perfil' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      Perfil
+    </a>
+    <h1>Notificações</h1>
+    <p class="cabecalho__sub">Poucas e no momento certo. O Prumo não quer ser mais uma distração.</p>
+  </div>
+</header>
+<form class="perfil" method="post" action="{% url 'web:preferencias_notificacoes' %}" novalidate>
+  {% csrf_token %}
+  {% if erro %}<p class="erro" role="alert">{{ erro }}</p>{% endif %}
+
+  <fieldset class="perfil__grupo">
+    <legend>O que avisar</legend>
+    <div class="perfil__opcoes">
+      {% for tipo in tipos %}<label class="opcao interruptor">
+        <span class="opcao__texto">{{ tipo.rotulo }}</span>
+        <input type="checkbox" role="switch" name="{{ tipo.chave }}"{% if tipo.ligado %} checked{% endif %}>
+      </label>{% endfor %}
+    </div>
+  </fieldset>
+
+  <fieldset class="perfil__grupo">
+    <legend>Silêncio</legend>
+    <div class="perfil__opcoes">
+      <label class="opcao interruptor">
+        <span class="opcao__texto">Não perturbe durante o foco<span class="opcao__dica">Nada chega enquanto um bloco está em andamento.</span></span>
+        <input type="checkbox" role="switch" name="nao_perturbe_foco"{% if nao_perturbe %} checked{% endif %}>
+      </label>
+    </div>
+    <div class="perfil__campo">
+      <label for="limite-avisos">Máximo de avisos por dia</label>
+      <input id="limite-avisos" type="number" name="limite_avisos_dia" min="1" max="{{ limite_max }}" value="{{ limite }}"{% if erro %} aria-invalid="true" aria-describedby="erro-limite"{% endif %}>
+      {% if erro %}<p id="erro-limite" class="perfil__erro">{{ erro }}</p>{% endif %}
+    </div>
+  </fieldset>
+
+  <button class="botao botao--primario perfil__salvar" type="submit">Salvar</button>
+</form>
+
+<section class="perfil__grupo notificacoes__aparelho" aria-labelledby="titulo-aparelho">
+  <h2 id="titulo-aparelho">Neste aparelho</h2>
+  {% if chave_push %}
+  <div id="push" data-chave-push="{{ chave_push }}" data-inscrever="{% url 'web:inscrever_push' %}" data-cancelar="{% url 'web:cancelar_push' %}">
+    <p id="push-estado" class="cabecalho__sub" aria-live="polite">Receba os avisos mesmo com o Prumo fechado.</p>
+    <button id="push-ativar" class="botao" type="button">Ativar neste aparelho</button>
+    <button id="push-desativar" class="botao botao--texto" type="button" hidden>Desativar neste aparelho</button>
+  </div>
+  {% else %}
+  <p class="cabecalho__sub">Notificações no aparelho ainda não estão configuradas neste servidor. Os avisos aparecem na central, pelo sino de Hoje.</p>
+  {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}{% if chave_push %}<script src="{% static 'web/telas/notificacoes.js' %}" defer></script>{% endif %}{% endblock %}

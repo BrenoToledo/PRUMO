@@ -26,11 +26,13 @@ from ia.config import Config as ConfigIA
 from ia.provedores import ErroIA, Provedor, Resposta
 
 from . import calendario as cal
+from . import notificacoes as nt
 from . import pessoas as pes
 from . import planejamento as plan
 from . import prioridade as motor
 from . import revisao_semanal as rs
 from . import rotinas as rot
+from . import webpush as wp
 from .contratos import (
     Aguardando,
     DetalhePessoa,
@@ -60,10 +62,12 @@ from .models import (
     EventoCalendario,
     EventoTarefa,
     ItemCaptura,
+    Notificacao,
     PedidoIA,
     Perfil,
     Pessoa,
     Projeto,
+    PushInscricao,
     Revisao,
     Rotina,
     SugestaoIA,
@@ -2280,3 +2284,178 @@ def concluir_revisao_semanal(revisao: Revisao) -> Revisao:
     revisao.metricas["concluida_em"] = timezone.now().isoformat()
     revisao.save(update_fields=["metricas"])
     return revisao
+
+
+# --------------------------------------------------------------------------- notificações (P19, #104–#106)
+def preferencias_de_avisos(usuario) -> dict[str, bool]:
+    return nt.preferencias(perfil_de(usuario).avisos)
+
+
+def salvar_preferencias_de_avisos(
+    usuario, *, avisos: dict[str, bool], nao_perturbe_foco: bool, limite_avisos_dia: int
+) -> Perfil:
+    if not 1 <= limite_avisos_dia <= nt.LIMITE_MAX:
+        raise ValueError(f"O máximo por dia vai de 1 a {nt.LIMITE_MAX}.")
+    perfil = perfil_de(usuario)
+    perfil.avisos = nt.preferencias(avisos)
+    perfil.nao_perturbe_foco = nao_perturbe_foco
+    perfil.limite_avisos_dia = limite_avisos_dia
+    perfil.save(update_fields=["avisos", "nao_perturbe_foco", "limite_avisos_dia"])
+    return perfil
+
+
+def _url_do_aviso(aviso: nt.Aviso) -> str:
+    from django.urls import reverse
+
+    if aviso.tipo == "expectativa_em_risco":
+        vinculo = TarefaPessoa.objects.filter(pk=aviso.alvo).first()
+        return reverse("web:tarefa", args=[vinculo.tarefa_id]) if vinculo else reverse("web:pessoas")
+    rotas = {
+        "inicio_bloco": "web:hoje",
+        "revisao_diaria": "web:revisao",
+        "revisao_semanal": "web:revisao_semanal",
+        "caixa_entrada": "web:entrada",
+    }
+    return reverse(rotas[aviso.tipo])
+
+
+def _avisos_candidatos(usuario, perfil: Perfil, agora: datetime) -> list[nt.Aviso]:
+    local = timezone.localtime(agora)
+    dia = local.date()
+    blocos = Bloco.objects.filter(
+        usuario=usuario,
+        status=Bloco.Status.PLANEJADO,
+        inicio_planejado__gte=agora,
+        inicio_planejado__lte=agora + nt.ANTECEDENCIA_BLOCO,
+    ).select_related("tarefa")
+    avisos = nt.avisos_de_bloco(
+        [nt.BlocoParaAviso(b.pk, b.tarefa.titulo, timezone.localtime(b.inicio_planejado)) for b in blocos], local
+    )
+    riscos = [
+        nt.RiscoParaAviso(vinculo=e["vinculo"].pk, titulo=e["tarefa"].titulo, pessoa=e["pessoa"].nome)
+        for e in expectativas_em_risco(usuario)
+    ]
+    avisos += nt.avisos_de_risco(riscos, dia)
+    feita = Revisao.objects.filter(usuario=usuario, tipo=Revisao.Tipo.DIARIA, data=dia).exists()
+    semanal = Revisao.objects.filter(usuario=usuario, tipo=Revisao.Tipo.SEMANAL, data=rs.segunda_da_semana(dia)).first()
+    concluida = bool(semanal and semanal.metricas.get("concluida_em"))
+    avisos += [
+        a
+        for a in (
+            nt.aviso_revisao_diaria(local, perfil.fim_trabalho, feita=feita),
+            nt.aviso_revisao_semanal(local, perfil.fim_trabalho, concluida=concluida),
+        )
+        if a
+    ]
+    ultimo = Notificacao.objects.filter(usuario=usuario, tipo="caixa_entrada").first()
+    caixa = nt.aviso_caixa(
+        caixa_de_entrada(usuario).count(),
+        hoje=dia,
+        ultimo=timezone.localtime(ultimo.criada_em).date() if ultimo else None,
+        cadencia=perfil.revisao_entrada_dias,
+    )
+    return avisos + ([caixa] if caixa else [])
+
+
+def gerar_notificacoes(usuario, agora: datetime | None = None) -> list[Notificacao]:
+    """Grava os avisos novos que passaram pelo filtro (M34) e tenta o push de cada um."""
+    agora = agora or timezone.now()
+    perfil = perfil_de(usuario)
+    ini, fim = _limites_do_dia(timezone.localtime(agora).date())
+    existentes = set(Notificacao.objects.filter(usuario=usuario).values_list("chave", flat=True))
+    novos = [a for a in _avisos_candidatos(usuario, perfil, agora) if a.chave not in existentes]
+    escolhidos = nt.filtrar(
+        novos,
+        ligados=nt.preferencias(perfil.avisos),
+        em_foco=bloco_em_foco(usuario) is not None,
+        nao_perturbe=perfil.nao_perturbe_foco,
+        ja_hoje=Notificacao.objects.filter(usuario=usuario, criada_em__gte=ini, criada_em__lt=fim).count(),
+        limite=perfil.limite_avisos_dia,
+    )
+    gravadas = [
+        Notificacao.objects.create(
+            usuario=usuario,
+            tipo=a.tipo,
+            chave=a.chave,
+            titulo=a.titulo,
+            texto=a.texto,
+            url=_url_do_aviso(a),
+            criada_em=agora,
+        )
+        for a in escolhidos
+    ]
+    for notificacao in gravadas:
+        enviar_push(notificacao)
+    return gravadas
+
+
+def notificar_todos(agora: datetime | None = None) -> int:
+    from django.contrib.auth import get_user_model
+
+    usuarios = get_user_model().objects.filter(is_active=True, perfil__isnull=False)
+    return sum(len(gerar_notificacoes(u, agora)) for u in usuarios)
+
+
+def notificacoes_de(usuario, limite: int = 50) -> list[Notificacao]:
+    return list(Notificacao.objects.filter(usuario=usuario)[:limite])
+
+
+def nao_lidas(usuario) -> int:
+    return Notificacao.objects.filter(usuario=usuario, lida_em__isnull=True).count()
+
+
+def marcar_lidas(usuario) -> int:
+    return Notificacao.objects.filter(usuario=usuario, lida_em__isnull=True).update(lida_em=timezone.now())
+
+
+def push_disponivel() -> bool:
+    return bool(settings.PRUMO_VAPID_PUBLICA and settings.PRUMO_VAPID_PRIVADA)
+
+
+def chave_publica_push() -> str:
+    return settings.PRUMO_VAPID_PUBLICA if push_disponivel() else ""
+
+
+def inscrever_push(usuario, endpoint: str, p256dh: str, auth: str) -> PushInscricao:
+    if not endpoint.startswith("https://") or not p256dh or not auth:
+        raise ValueError("Inscrição de push incompleta.")
+    inscricao, _ = PushInscricao.objects.update_or_create(
+        endpoint=endpoint, defaults={"usuario": usuario, "p256dh": p256dh, "auth": auth}
+    )
+    return inscricao
+
+
+def cancelar_push(usuario, endpoint: str) -> None:
+    PushInscricao.objects.filter(usuario=usuario, endpoint=endpoint).delete()
+
+
+PUSH_MORTO = (404, 410)
+
+
+def enviar_push(notificacao: Notificacao) -> int:
+    """Manda o aviso a cada aparelho inscrito; apaga as inscrições mortas. Erro de rede só vai para o log."""
+    if not push_disponivel():
+        return 0
+    conteudo = {
+        "titulo": notificacao.titulo,
+        "texto": notificacao.texto,
+        "url": notificacao.url,
+        "tag": notificacao.chave,
+    }
+    aceitos = 0
+    for inscricao in PushInscricao.objects.filter(usuario=notificacao.usuario):
+        try:
+            status = wp.enviar(
+                wp.Inscricao(inscricao.endpoint, inscricao.p256dh, inscricao.auth),
+                conteudo,
+                privada=settings.PRUMO_VAPID_PRIVADA,
+                contato=settings.PRUMO_VAPID_CONTATO,
+            )
+        except (OSError, ValueError):
+            logger.warning("push falhou para a inscrição %s", inscricao.pk, exc_info=True)
+            continue
+        if status in PUSH_MORTO:
+            inscricao.delete()
+        elif status < 300:  # noqa: PLR2004
+            aceitos += 1
+    return aceitos

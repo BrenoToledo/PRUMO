@@ -119,6 +119,13 @@ CELERY_TASK_IGNORE_RESULT = True
 CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TIMEZONE = TIME_ZONE
+# Notificações (#105): com o `celery -A config beat` rodando, os avisos são gerados a cada minuto.
+CELERY_BEAT_SCHEDULE = {"notificar": {"task": "nucleo.fila.notificar", "schedule": 60.0}}
+
+# Web Push (#106): chaves VAPID em base64url (`python manage.py gerar_chaves_vapid`). Sem elas, só a central.
+PRUMO_VAPID_PUBLICA = os.environ.get("PRUMO_VAPID_PUBLICA", "")
+PRUMO_VAPID_PRIVADA = os.environ.get("PRUMO_VAPID_PRIVADA", "")
+PRUMO_VAPID_CONTATO = os.environ.get("PRUMO_VAPID_CONTATO", "mailto:contato@prumo.app")
 
 # Logs no console (o `docker compose logs` mostra erros 500 em produção).
 LOGGING = {

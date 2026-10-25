@@ -47,6 +47,7 @@ def _contexto(usuario, **extra) -> dict:
         "intencao": services.intencao_do_dia(usuario),  # da revisão de ontem (#17)
         "prioridades": services.prioridades_da_semana(usuario),  # painel do desktop (#23)
         "expectativas": services.expectativas_em_risco(usuario)[:3],  # card do painel do desktop (#87)
+        "nao_lidas": services.nao_lidas(usuario),  # sino no topo (#105)
         **extra,
     }
 

@@ -40,3 +40,11 @@ kbd {
   background: color-mix(in srgb, var(--aviso) 8%, var(--fundo));
 }
 .painel-hoje__alerta form { margin-top: var(--e1); }
+
+/* Sino das notificações no topo (#105): o contador some quando não há nada novo. */
+.sino { position: relative; }
+.sino__contador {
+  position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 9px; background: var(--primaria); color: var(--texto-na-primaria);
+  font-size: 11px; line-height: 18px; font-weight: 600; text-align: center;
+}
