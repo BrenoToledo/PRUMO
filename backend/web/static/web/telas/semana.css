@@ -1,6 +1,7 @@
 /* Planejamento da semana (M28 no celular, D04 no desktop): dias com as tarefas e "Não couberam". */
 .semana { padding-bottom: var(--e12); }
 .semana__topo { margin-bottom: var(--e4); }
+.semana__nav { display: flex; gap: var(--e2); margin-top: var(--e2); }
 .semana__sub, .semana__dica { margin: var(--e2) 0 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
 .semana__dica { margin: var(--e3) 0; }
 .semana__corpo { display: flex; flex-direction: column; gap: var(--e3); }

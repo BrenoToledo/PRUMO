@@ -1,8 +1,9 @@
 """Planejamento da semana (P15, issues #79, #80, #81; telas M28, D04).
 
 Rotas do contrato:
-- GET `semana/` → `web:semana`: a proposta pendente (`services.proposta_da_semana`) ou, sem ela, os blocos da
-  semana (`services.semana_planejada`).
+- GET `semana/` → `web:semana` (`?data=AAAA-MM-DD`, #99): os blocos e as rotinas da semana que contém a data
+  (`services.agenda_do_periodo`); na semana da proposta pendente (`services.proposta_da_semana`), a proposta.
+  Com HTMX devolve o parcial `#semana` (anterior, Hoje e próxima trocam só ele).
 - POST `semana/propor/` → `web:propor_semana`, chama `services.propor_semana` ("Gerar de novo" também).
 - POST `semana/mover/` → `web:mover_na_semana` (`tarefa`, `de`, `para`; vazio = "não couberam"), chama
   `services.mover_na_proposta`. Com HTMX devolve o parcial `#semana`; o arrastar do desktop (`semana.js`) usa
@@ -16,10 +17,11 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.shortcuts import redirect, render
-from django.urls import path
+from django.urls import path, reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
+from nucleo import planejamento as plan
 from nucleo import services
 from nucleo.models import Tarefa
 
@@ -80,9 +82,22 @@ def _proposta(usuario, sugestao, rotinas: dict[str, list]) -> dict:
     return {"sugestao": sugestao, "dias": dias, "nao_couberam": itens(atual["nao_couberam"])}
 
 
-def _contexto(usuario, **extra) -> dict:
-    semana = services.semana_planejada(usuario)
-    dias = [d["dia"] for d in semana["dias"]]
+def _referencia(texto: str | None) -> date:
+    """A data pedida na URL ou no formulário; sem ela (ou inválida), a semana do planejamento (de hoje)."""
+    try:
+        return date.fromisoformat(texto or "")
+    except ValueError:
+        return services.dias_da_semana()[0]
+
+
+def _endereco(referencia: date | None = None) -> str:
+    return reverse(ROTA) + (f"?data={referencia.isoformat()}" if referencia else "")
+
+
+def _contexto(usuario, referencia: date | None = None, **extra) -> dict:
+    referencia = referencia or services.dias_da_semana()[0]
+    dias = plan.dias_da_visao(referencia, "uteis")
+    agenda = services.agenda_do_periodo(usuario, dias[0], dias[-1])
     planejada = [
         d
         | {
@@ -92,30 +107,48 @@ def _contexto(usuario, **extra) -> dict:
             "acima": d["planejados"] > d["capacidade"],
             "agenda": _agenda(d),
         }
-        for d in semana["dias"]
+        for d in agenda
     ]
-    rotinas = {d["dia"].isoformat(): d["rotinas"] for d in semana["dias"]}
-    proposta = _proposta(usuario, semana["proposta"], rotinas) if semana["proposta"] else None
-    return {"aba": "semana", "titulo": _titulo(dias), "planejada": planejada, "proposta": proposta, **extra}
+    sugestao = services.proposta_da_semana(usuario)
+    proposta = None
+    if sugestao is not None and date.fromisoformat(sugestao.conteudo["inicio"]) in dias:
+        proposta = _proposta(usuario, sugestao, {d["dia"].isoformat(): d["rotinas"] for d in agenda})
+    anterior, proxima = plan.vizinhos(referencia, "uteis")
+    return {
+        "aba": "semana",
+        "titulo": _titulo(dias),
+        "referencia": referencia.isoformat(),
+        "anterior": _endereco(anterior),
+        "proxima": _endereco(proxima),
+        "atual": _endereco(),
+        "pode_propor": services.dias_da_semana()[0] in dias,
+        "planejada": planejada,
+        "proposta": proposta,
+        **extra,
+    }
 
 
 def _parcial_ou_volta(request, **extra):
+    referencia = _referencia(request.POST.get("data"))
     if request.headers.get("HX-Request"):
-        return render(request, "web/semana/_semana.html", _contexto(request.user, **extra))
-    return redirect(ROTA)
+        return render(request, "web/semana/_semana.html", _contexto(request.user, referencia, **extra))
+    return redirect(_endereco(referencia))
 
 
 @require_GET
 @login_required
 def semana(request):
-    return render(request, "web/semana/semana.html", _contexto(request.user))
+    modelo = "web/semana/_semana.html" if request.headers.get("HX-Request") else "web/semana/semana.html"
+    return render(request, modelo, _contexto(request.user, _referencia(request.GET.get("data"))))
 
 
 @require_POST
 @login_required
 def propor_semana(request):
     services.propor_semana(request.user)
-    return _parcial_ou_volta(request)
+    if request.headers.get("HX-Request"):
+        return render(request, "web/semana/_semana.html", _contexto(request.user))
+    return redirect(ROTA)
 
 
 def _data(texto: str) -> date | None:

@@ -1707,34 +1707,32 @@ def _rotinas_da_semana(usuario, desde: date, ate: date) -> dict[date, list[Rotin
 def semana_planejada(usuario, dia: date | None = None) -> SemanaPlanejada:
     """Os blocos de cada dia da semana e a capacidade (M28 depois de aprovar), mais a proposta pendente."""
     dias = dias_da_semana(dia)
-    ini, _ = _limites_do_dia(dias[0])
-    _, fim = _limites_do_dia(dias[-1])
+    return {"dias": agenda_do_periodo(usuario, dias[0], dias[-1]), "proposta": proposta_da_semana(usuario)}
+
+
+def agenda_do_periodo(usuario, desde: date, ate: date) -> list[DiaDaSemana]:
+    """Blocos, capacidade e rotinas de cada dia de `desde` a `ate` (semana, dias úteis ou mês; #99, #100)."""
+    ini, _ = _limites_do_dia(desde)
+    _, fim = _limites_do_dia(ate)
     blocos = Bloco.objects.filter(usuario=usuario, inicio_planejado__gte=ini, inicio_planejado__lt=fim).exclude(
         status=Bloco.Status.ADIADO
     )
     por_dia: dict[date, list[Bloco]] = defaultdict(list)
     for b in blocos.select_related("tarefa", "tarefa__area"):
         por_dia[timezone.localtime(b.inicio_planejado).date()].append(b)
-    compromissos = _compromissos(usuario, dias[0], dias[-1])
-    rotinas = _rotinas_da_semana(usuario, dias[0], dias[-1])
-    return {
-        "dias": [
-            {
-                "dia": d,
-                "capacidade": _capacidade(usuario, d, compromissos.get(d, [])),
-                "planejados": len(por_dia[d]),
-                "blocos": por_dia[d],
-                "rotinas": rotinas[d],
-            }
-            for d in dias
-        ],
-        "proposta": proposta_da_semana(usuario),
-    }
-
-
-def agenda_do_periodo(usuario, desde: date, ate: date) -> list[DiaDaSemana]:
-    """Blocos, capacidade e rotinas de cada dia de `desde` a `ate` (semana, dias úteis ou mês; #99, #100)."""
-    raise NotImplementedError
+    compromissos = _compromissos(usuario, desde, ate)
+    rotinas = _rotinas_da_semana(usuario, desde, ate)
+    dias = [desde + timedelta(days=n) for n in range((ate - desde).days + 1)]
+    return [
+        {
+            "dia": d,
+            "capacidade": _capacidade(usuario, d, compromissos.get(d, [])),
+            "planejados": len(por_dia[d]),
+            "blocos": por_dia[d],
+            "rotinas": rotinas[d],
+        }
+        for d in dias
+    ]
 
 
 def mover_bloco(bloco: Bloco, inicio: datetime) -> Bloco:

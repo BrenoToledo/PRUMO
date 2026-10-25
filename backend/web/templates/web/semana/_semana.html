@@ -4,6 +4,11 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
       {{ titulo }}
     </a>
+    <nav class="semana__nav" aria-label="Navegar no calendário">
+      <a class="botao botao--pequeno" href="{{ anterior }}" hx-get="{{ anterior }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true" aria-label="Anterior">‹</a>
+      <a class="botao botao--pequeno" href="{{ atual }}" hx-get="{{ atual }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true">Hoje</a>
+      <a class="botao botao--pequeno" href="{{ proxima }}" hx-get="{{ proxima }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true" aria-label="Próxima">›</a>
+    </nav>
     {% if proposta %}<p class="semana__sub">Proposta do Prumo pelas prioridades, pela sua agenda e pelo seu pico de energia. Nada vira bloco até você aprovar.</p>
     {% else %}<p class="semana__sub">Blocos de foco e rotinas de cada dia.</p>{% endif %}
   </header>
@@ -59,11 +64,11 @@
       </ul>
     </li>{% endfor %}
   </ol>
-  <div class="semana__acoes">
+  {% if pode_propor %}<div class="semana__acoes">
     <form method="post" action="{% url 'web:propor_semana' %}" hx-post="{% url 'web:propor_semana' %}" hx-target="#semana" hx-swap="outerHTML">
       {% csrf_token %}
       <button class="botao botao--primario" type="submit">Propor a semana</button>
     </form>
-  </div>
+  </div>{% endif %}
   {% endif %}
 </div>
