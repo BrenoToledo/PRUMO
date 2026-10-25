@@ -47,6 +47,12 @@ class Perfil(models.Model):
     peso_importancia = models.FloatField(default=motor.PESO_IMPORTANCIA_PADRAO)
     peso_urgencia = models.FloatField(default=motor.PESO_URGENCIA_PADRAO)
     revisao_entrada_dias = models.PositiveSmallIntegerField(default=3)
+    # Notificações (M34, #104): tipo → ligado (o que falta conta como ligado), não perturbe no foco e máximo por dia
+    avisos = models.JSONField(default=dict, blank=True)
+    nao_perturbe_foco = models.BooleanField(default=True)
+    limite_avisos_dia = models.PositiveSmallIntegerField(
+        default=6, validators=[MinValueValidator(1), MaxValueValidator(20)]
+    )
     provedor_ia = models.CharField(max_length=10, choices=ProvedorIA.choices, default=ProvedorIA.PRUMO)
 
     def __str__(self):
@@ -477,3 +483,36 @@ class EventoCalendario(models.Model):
 
     def __str__(self):
         return f"{self.titulo} · {self.inicio:%d/%m %H:%M}"
+
+
+class Notificacao(models.Model):
+    """Um aviso da central (#105): gravado uma vez por chave e, se houver inscrição, enviado por Web Push (#106)."""
+
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="notificacoes")
+    tipo = models.CharField(max_length=24)
+    chave = models.CharField(max_length=80)
+    titulo = models.CharField(max_length=120)
+    texto = models.CharField(max_length=300)
+    url = models.CharField(max_length=200, blank=True)
+    criada_em = models.DateTimeField(default=timezone.now)
+    lida_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-criada_em", "-id"]
+        constraints = [models.UniqueConstraint(fields=["usuario", "chave"], name="um_aviso_por_chave")]
+
+    def __str__(self):
+        return f"{self.titulo} · {self.criada_em:%d/%m %H:%M}"
+
+
+class PushInscricao(models.Model):
+    """Um navegador que aceitou receber os avisos por Web Push (#106)."""
+
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="inscricoes_push")
+    endpoint = models.URLField(max_length=500, unique=True)
+    p256dh = models.CharField(max_length=120)
+    auth = models.CharField(max_length=40)
+    criada_em = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return self.endpoint[:60]

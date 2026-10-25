@@ -375,6 +375,20 @@ SERVICOS: dict[str, str] = {
     "ir_para_passo": "(revisao: 'Revisao', passo: 'int') -> 'Revisao'",
     "responder_revisao": "(revisao: 'Revisao', chave: 'str', opcao: 'str', texto: 'str' = '') -> 'RespostaRevisao'",
     "concluir_revisao_semanal": "(revisao: 'Revisao') -> 'Revisao'",
+    # Notificações (P19, #104–#106): regras puras em `nucleo/notificacoes.py`, Web Push em `nucleo/webpush.py`
+    "preferencias_de_avisos": "(usuario) -> 'dict[str, bool]'",
+    "salvar_preferencias_de_avisos": "(usuario, *, avisos: 'dict[str, bool]', nao_perturbe_foco: 'bool', "
+    "limite_avisos_dia: 'int') -> 'Perfil'",
+    "gerar_notificacoes": "(usuario, agora: 'datetime | None' = None) -> 'list[Notificacao]'",
+    "notificar_todos": "(agora: 'datetime | None' = None) -> 'int'",
+    "notificacoes_de": "(usuario, limite: 'int' = 50) -> 'list[Notificacao]'",
+    "nao_lidas": "(usuario) -> 'int'",
+    "marcar_lidas": "(usuario) -> 'int'",
+    "push_disponivel": "() -> 'bool'",
+    "chave_publica_push": "() -> 'str'",
+    "inscrever_push": "(usuario, endpoint: 'str', p256dh: 'str', auth: 'str') -> 'PushInscricao'",
+    "cancelar_push": "(usuario, endpoint: 'str') -> 'None'",
+    "enviar_push": "(notificacao: 'Notificacao') -> 'int'",
 }
 
 # --------------------------------------------------------------------------- campos da API REST (JSON)
@@ -502,6 +516,8 @@ CAMPOS_EXPECTATIVA_EM_RISCO = ("vinculo", "tarefa", "titulo", "pessoa", "pessoa_
 CAMPOS_REVISAO_SEMANAL = ("id", "data", "passo", "concluida", "passos", "atual")  # `atual` = CAMPOS_PASSO_REVISAO
 CAMPOS_PASSO_REVISAO = ("indice", "total", "chave", "titulo", "vazio", "perguntas", "respondidas", "concluida")
 CAMPOS_PERGUNTA_REVISAO = ("chave", "texto", "opcoes", "aceita_texto")  # opcoes: [{valor, rotulo}]
+# Notificações (P19): `GET /api/notificacoes/` devolve `{nao_lidas, results: [CAMPOS_NOTIFICACAO]}`
+CAMPOS_NOTIFICACAO = ("id", "tipo", "titulo", "texto", "url", "criada_em", "lida_em")
 CAMPOS_RESPOSTA_REVISAO = ("chave", "passo", "pergunta", "opcao", "resposta", "texto", "efeito", "alvo")
 
 # --------------------------------------------------------------------------- interface web: um módulo por etapa
@@ -532,6 +548,7 @@ TELAS_WEB = (
     "semana",
     "pessoas",
     "revisao_semanal",
+    "notificacoes",
 )
 
 # --------------------------------------------------------------------------- servidor MCP (P12, #29)
