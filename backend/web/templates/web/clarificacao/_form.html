@@ -48,13 +48,16 @@
 
   <fieldset class="clarificacao__campo clarificacao__pessoas">
     <legend class="clarificacao__rotulo">Pessoas <span class="clarificacao__opcional">(opcional)</span></legend>
-    {% for campo in form.campos_pessoas %}<div class="clarificacao__pessoa">
-      <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
-      <select id="{{ campo.id_for_label }}" name="{{ campo.html_name }}"{% if campo.errors %} aria-describedby="erro-{{ campo.html_name }}"{% endif %}>
-        {% for valor, rotulo in campo.field.choices %}<option value="{{ valor }}"{% if campo.value == valor %} selected{% endif %}>{{ rotulo }}</option>{% endfor %}
-      </select>
-      {% if campo.errors %}<p id="erro-{{ campo.html_name }}" class="erro" role="alert">{{ campo.errors|join:" " }}</p>{% endif %}
-    </div>{% empty %}<p class="clarificacao__opcional">Você ainda não tem pessoas. <a href="{% url 'web:nova_pessoa' %}">Cadastrar pessoa</a></p>{% endfor %}
+    <div id="pessoas-escolhidas" class="clarificacao__chips">
+      {% for campo in form.campos_pessoas %}{% include "web/clarificacao/_chip_pessoa.html" %}{% endfor %}
+    </div>
+    {% if form.tem_pessoas %}<div class="busca-pessoa">
+      <label class="visualmente-oculto" for="busca-pessoa">Buscar pessoa pelo nome</label>
+      <input id="busca-pessoa" name="busca" type="search" placeholder="Buscar pessoa pelo nome" autocomplete="off"
+             hx-get="{% url 'web:buscar_pessoa_clarificacao' item.pk %}" hx-trigger="input delay:250ms, search"
+             hx-include="#pessoas-escolhidas" hx-target="#resultado-pessoas" hx-swap="innerHTML">
+      <div id="resultado-pessoas" class="busca-pessoa__resultado" aria-live="polite"></div>
+    </div>{% else %}<p class="clarificacao__opcional">Você ainda não tem pessoas. <a href="{% url 'web:nova_pessoa' %}">Cadastrar pessoa</a></p>{% endif %}
   </fieldset>
 
   <div class="clarificacao__linha">

@@ -11,7 +11,9 @@ P10 (issue #25) acrescenta as 4 respostas de importância (opcionais, 0 a 4) e a
 - POST `entrada/<pk>/clarificar/ia/recusar/` → `web:recusar_clarificacao`, chama `services.recusar_sugestao`.
 Ao confirmar, `services.registrar_resposta` marca a sugestão como aceita ou editada e a liga à tarefa.
 
-Pessoas: um campo opcional `pessoa_<id>` por pessoa do usuário, com a relação (ou vazio para não ligar).
+Pessoas: o usuário busca pelo nome e cada pessoa escolhida vira um chip com a relação (`pessoa_<id>`) e um "remover".
+- GET `entrada/<pk>/clarificar/pessoas/?busca=` → `web:buscar_pessoa_clarificacao`: até 8 pessoas, sem as já escolhidas.
+- GET `entrada/<pk>/clarificar/pessoas/<pessoa>/` → `web:chip_pessoa_clarificacao`: o chip para pôr no formulário.
 """
 
 from django import forms
@@ -21,7 +23,7 @@ from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import path, reverse
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from nucleo import prioridade as motor
 from nucleo import services
@@ -32,12 +34,31 @@ TITULO_MAX = 200
 NOTAS = [(n, str(n)) for n in range(motor.NOTA_MAXIMA_RESPOSTA + 1)]
 PARCIAL = "web/clarificacao/_form.html"
 ROTA_CLARIFICAR = "web:clarificar"
+MAX_BUSCA_PESSOAS = 8
+PREFIXO_PESSOA = "pessoa_"
 RELACOES = [
-    ("", "—"),
     (TarefaPessoa.Relacao.DEPENDE_DE_MIM, "espera isto de mim"),
     (TarefaPessoa.Relacao.EU_DEPENDO, "eu espero isto dela"),
     (TarefaPessoa.Relacao.ENVOLVIDA, "só envolvida"),
 ]
+
+
+def ids_de_pessoas(dados) -> set[int]:
+    """Os ids dos chips que vieram no formulário (`pessoa_<id>`); só os do usuário viram campo."""
+    return {
+        int(chave.removeprefix(PREFIXO_PESSOA))
+        for chave in dados
+        if chave.startswith(PREFIXO_PESSOA) and chave.removeprefix(PREFIXO_PESSOA).isdigit()
+    }
+
+
+def campo_de_relacao(pessoa) -> forms.ChoiceField:
+    return forms.ChoiceField(
+        label=pessoa.nome,
+        choices=RELACOES,
+        required=False,
+        error_messages={"invalid_choice": "Escolha uma das relações da lista."},
+    )
 
 
 class ClarificacaoForm(forms.Form):
@@ -75,21 +96,17 @@ class ClarificacaoForm(forms.Form):
             self.fields[chave] = forms.TypedChoiceField(
                 label=pergunta, choices=NOTAS, coerce=int, required=False, empty_value=0
             )
-        self.pessoas = list(Pessoa.objects.filter(usuario=usuario).order_by("nome"))
+        self.tem_pessoas = Pessoa.objects.filter(usuario=usuario).exists()
+        self.pessoas = list(Pessoa.objects.filter(usuario=usuario, pk__in=ids_de_pessoas(self.data)).order_by("nome"))
         for pessoa in self.pessoas:
-            self.fields[f"pessoa_{pessoa.pk}"] = forms.ChoiceField(
-                label=pessoa.nome,
-                choices=RELACOES,
-                required=False,
-                error_messages={"invalid_choice": "Escolha uma das relações da lista."},
-            )
+            self.fields[f"{PREFIXO_PESSOA}{pessoa.pk}"] = campo_de_relacao(pessoa)
 
     def campos_pessoas(self):
-        return [self[f"pessoa_{pessoa.pk}"] for pessoa in self.pessoas]
+        return [self[f"{PREFIXO_PESSOA}{pessoa.pk}"] for pessoa in self.pessoas]
 
     def pessoas_escolhidas(self) -> list[tuple]:
-        """(pessoa, relação) de cada pessoa com relação escolhida; as em branco ficam de fora."""
-        escolhas = ((pessoa, self.cleaned_data[f"pessoa_{pessoa.pk}"]) for pessoa in self.pessoas)
+        """(pessoa, relação) de cada chip; uma relação em branco não liga a pessoa."""
+        escolhas = ((pessoa, self.cleaned_data[f"{PREFIXO_PESSOA}{pessoa.pk}"]) for pessoa in self.pessoas)
         return [(pessoa, relacao) for pessoa, relacao in escolhas if relacao]
 
     def perguntas(self):
@@ -234,8 +251,34 @@ def recusar(request, pk):
     return _pagina(request, item, _form_vazio(request, item))
 
 
+@require_GET
+@login_required
+def buscar_pessoa(request, pk):
+    item = _item_do_usuario(request, pk)
+    busca = request.GET.get("busca", "").strip()
+    pessoas = []
+    if busca:
+        ja = ids_de_pessoas(request.GET)
+        pessoas = [p for p in services.pessoas_de(request.user, busca) if p.pk not in ja][:MAX_BUSCA_PESSOAS]
+    contexto = {"item": item, "busca": busca, "pessoas": pessoas}
+    return render(request, "web/clarificacao/_busca_pessoa.html", contexto)
+
+
+@require_GET
+@login_required
+def chip_pessoa(request, pk, pessoa):
+    _item_do_usuario(request, pk)
+    pessoa = get_object_or_404(Pessoa, pk=pessoa, usuario=request.user)
+    campo = forms.Form()
+    campo.fields[f"{PREFIXO_PESSOA}{pessoa.pk}"] = campo_de_relacao(pessoa)
+    contexto = {"campo": campo[f"{PREFIXO_PESSOA}{pessoa.pk}"]}
+    return render(request, "web/clarificacao/_chip_pessoa.html", contexto)
+
+
 urlpatterns = [
     path("entrada/<int:pk>/clarificar/", clarificar, name="clarificar"),
     path("entrada/<int:pk>/clarificar/ia/", sugerir, name="sugerir_clarificacao"),
     path("entrada/<int:pk>/clarificar/ia/recusar/", recusar, name="recusar_clarificacao"),
+    path("entrada/<int:pk>/clarificar/pessoas/", buscar_pessoa, name="buscar_pessoa_clarificacao"),
+    path("entrada/<int:pk>/clarificar/pessoas/<int:pessoa>/", chip_pessoa, name="chip_pessoa_clarificacao"),
 ]

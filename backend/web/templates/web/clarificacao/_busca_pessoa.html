@@ -1,0 +1,5 @@
+{% if pessoas %}<div class="busca-pessoa__lista" role="group" aria-label="Pessoas encontradas">
+  {% for pessoa in pessoas %}<button class="busca-pessoa__opcao" type="button"
+          hx-get="{% url 'web:chip_pessoa_clarificacao' item.pk pessoa.pk %}" hx-target="#pessoas-escolhidas" hx-swap="beforeend"
+          data-escolher-pessoa>{{ pessoa.nome }}{% if pessoa.papel %} <span class="clarificacao__opcional">{{ pessoa.papel }}</span>{% endif %}</button>{% endfor %}
+</div>{% elif busca %}<p class="clarificacao__opcional">Ninguém com esse nome. <a href="{% url 'web:nova_pessoa' %}">Cadastrar pessoa</a></p>{% endif %}

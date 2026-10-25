@@ -1,0 +1,10 @@
+<div class="chip-pessoa">
+  <label class="chip-pessoa__nome" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+  <select id="{{ campo.id_for_label }}" name="{{ campo.html_name }}" aria-label="Relação com {{ campo.label }}"{% if campo.errors %} aria-describedby="erro-{{ campo.html_name }}"{% endif %}>
+    {% for valor, rotulo in campo.field.choices %}<option value="{{ valor }}"{% if campo.value == valor %} selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+  </select>
+  <button class="chip-pessoa__remover" type="button" data-remover-pessoa aria-label="Remover {{ campo.label }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+  {% if campo.errors %}<p id="erro-{{ campo.html_name }}" class="erro" role="alert">{{ campo.errors|join:" " }}</p>{% endif %}
+</div>

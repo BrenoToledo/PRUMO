@@ -50,7 +50,9 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | --- | --- | --- | --- | --- |
 | `web:hoje` | `/` | GET | plano | `plano_do_dia` |
 | `web:gerar_plano` | `/hoje/gerar/` | POST | plano | `gerar_plano_do_dia` |
-| `web:clarificar` | `/entrada/<pk>/clarificar/` | GET, POST (campos opcionais `pessoa_<id>` com a relação) | clarificacao | `clarificar` |
+| `web:clarificar` | `/entrada/<pk>/clarificar/` | GET, POST (campos opcionais `pessoa_<id>` com a relação, um por chip) | clarificacao | `clarificar` |
+| `web:buscar_pessoa_clarificacao` | `/entrada/<pk>/clarificar/pessoas/` (`busca`; os `pessoa_<id>` já escolhidos ficam de fora) | GET (HTMX: até 8 pessoas) | clarificacao | `pessoas_de` |
+| `web:chip_pessoa_clarificacao` | `/entrada/<pk>/clarificar/pessoas/<pessoa>/` | GET (HTMX: o chip com a relação e o remover) | clarificacao | — |
 | `web:foco` | `/foco/` (`?fim=1` fim do bloco, M11; `?sair=1` sair sem JS) | GET | foco | `bloco_em_foco` |
 | `web:iniciar_bloco` | `/blocos/<pk>/iniciar/` | POST | foco | `iniciar_bloco` |
 | `web:concluir_bloco` | `/blocos/<pk>/concluir/` | POST | foco | `concluir_bloco` |
