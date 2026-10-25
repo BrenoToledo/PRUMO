@@ -1,22 +1,29 @@
-<div id="semana" class="semana{% if proposta %} semana--proposta{% endif %}" data-mover="{% url 'web:mover_na_semana' %}">
+<div id="semana" class="semana semana--{{ visao }}{% if proposta %} semana--proposta{% endif %}" data-mover="{% url 'web:mover_na_semana' %}" data-data="{{ referencia }}" data-visao="{{ visao }}">
   <header class="semana__topo">
     <a class="voltar" href="{% url 'web:hoje' %}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
       {{ titulo }}
     </a>
+    <div class="semana__barra">
     <nav class="semana__nav" aria-label="Navegar no calendário">
       <a class="botao botao--pequeno" href="{{ anterior }}" hx-get="{{ anterior }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true" aria-label="Anterior">‹</a>
       <a class="botao botao--pequeno" href="{{ atual }}" hx-get="{{ atual }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true">Hoje</a>
       <a class="botao botao--pequeno" href="{{ proxima }}" hx-get="{{ proxima }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true" aria-label="Próxima">›</a>
     </nav>
+    <nav class="semana__visoes" aria-label="Visão do calendário">
+      {% for v in visoes %}<a class="semana__visao" href="{{ v.endereco }}" hx-get="{{ v.endereco }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true"{% if v.valor == visao %} aria-current="page"{% endif %}>{{ v.rotulo }}</a>{% endfor %}
+    </nav>
+    </div>
     {% if proposta %}<p class="semana__sub">Proposta do Prumo pelas prioridades, pela sua agenda e pelo seu pico de energia. Nada vira bloco até você aprovar.</p>
+    {% elif visao == "mes" %}<p class="semana__sub">Blocos de foco e rotinas de cada dia. Toque num dia para ver a semana dele.</p>
     {% else %}<p class="semana__sub">Blocos de foco e rotinas de cada dia.</p>{% endif %}
   </header>
   {% if erro %}<p class="erro" role="alert">{{ erro }}</p>{% endif %}
+  {% if proposta_no_mes %}<p class="semana__aviso">Há uma proposta pendente para a semana. <a href="{{ proposta_no_mes }}" hx-get="{{ proposta_no_mes }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true">Ver a proposta</a></p>{% endif %}
 
   {% if proposta %}
   <div class="semana__corpo">
-    <ol class="semana__dias" aria-label="Dias da semana">
+    <ol class="semana__dias" aria-label="Dias da semana" style="--colunas: {{ proposta.colunas }}">
       {% for d in proposta.dias %}<li class="dia" data-dia="{{ d.iso }}">
         <div class="dia__topo">
           <span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>
@@ -27,6 +34,15 @@
         </ul>{% endif %}
         <ul class="dia__tarefas">
           {% for i in d.itens %}<li class="tarefa-semana" style="--cor-area: {{ i.tarefa.area.cor }}" draggable="true" data-tarefa="{{ i.tarefa.pk }}" data-de="{{ d.iso }}">{% include "web/semana/_item.html" with item=i de=d.iso %}</li>{% empty %}<li class="dia__vazio">Livre</li>{% endfor %}
+        </ul>
+      </li>{% endfor %}
+      {% for d in proposta.fim_de_semana %}<li class="dia dia--fim-de-semana">
+        <div class="dia__topo">
+          <span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>
+          <span class="dia__pct">Fim de semana</span>
+        </div>
+        <ul class="dia__tarefas dia__rotinas" aria-label="Rotinas">
+          {% for r in d.rotinas %}<li class="tarefa-semana tarefa-semana--rotina{% if r.concluida %} tarefa-semana--feita{% endif %}" style="--cor-area: {{ r.rotina.area.cor }}">{% include "web/semana/_rotina.html" with r=r %}</li>{% empty %}<li class="dia__vazio">Sem rotinas</li>{% endfor %}
         </ul>
       </li>{% endfor %}
     </ol>
@@ -49,12 +65,27 @@
     </form>
   </div>
 
+  {% elif visao == "mes" %}
+  <div class="mes">
+    <ol class="mes__semana" aria-hidden="true">{% for n in dias_curtos %}<li>{{ n }}</li>{% endfor %}</ol>
+    <ol class="mes__dias" aria-label="Dias do mês">
+      {% for d in planejada %}<li class="mes__dia{% if d.fora %} mes__dia--fora{% endif %}{% if d.hoje %} mes__dia--hoje{% endif %}">
+        <a class="mes__numero" href="{{ d.endereco }}" hx-get="{{ d.endereco }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true" aria-label="{{ d.nome }} {{ d.dia|date:'j' }}: ver a semana">{{ d.dia|date:"j" }}</a>
+        {% if d.resumo %}<ul class="mes__itens">
+          {% for item in d.resumo %}{% if item.bloco %}<li class="mes__item" style="--cor-area: {{ item.bloco.tarefa.area.cor }}"><span class="mes__hora">{{ item.bloco.inicio_planejado|time:"H:i" }}</span> {{ item.bloco.tarefa.titulo }}</li>{% else %}<li class="mes__item mes__item--rotina" style="--cor-area: {{ item.rotina.rotina.area.cor }}">{% if item.rotina.horario %}<span class="mes__hora">{{ item.rotina.horario|time:"H:i" }}</span> {% endif %}{{ item.rotina.rotina.nome }}</li>{% endif %}{% endfor %}
+        </ul>{% endif %}
+        {% if d.mais %}<span class="mes__mais">+{{ d.mais }}</span>{% endif %}
+      </li>{% endfor %}
+    </ol>
+  </div>
+
   {% else %}
-  <ol class="semana__dias semana__dias--planejada" aria-label="Dias da semana">
-    {% for d in planejada %}<li class="dia">
+  <ol class="semana__dias semana__dias--planejada" aria-label="Dias da semana" style="--colunas: {{ planejada|length }}">
+    {% for d in planejada %}<li class="dia{% if d.fim_de_semana %} dia--fim-de-semana{% endif %}">
       <div class="dia__topo">
         <span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>
-        <span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.planejados }} de {{ d.capacidade }} blocos">{{ d.pct }}%</span>
+        {% if d.fim_de_semana and not d.capacidade %}<span class="dia__pct">Fim de semana</span>
+        {% else %}<span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.planejados }} de {{ d.capacidade }} blocos">{{ d.pct }}%</span>{% endif %}
       </div>
       <ul class="dia__tarefas">
         {% for item in d.agenda %}{% if item.bloco %}<li class="tarefa-semana" style="--cor-area: {{ item.bloco.tarefa.area.cor }}">

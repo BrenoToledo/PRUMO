@@ -103,3 +103,101 @@ def test_outra_semana_nao_mostra_blocos_de_outra_pessoa(logado, outra, perfil):
     _bloco(outra, date(2026, 10, 28), time(9), "Segredo da outra")
 
     assert "Segredo da outra" not in logado.get(ROTA, {"data": "2026-10-28"}).content.decode()
+
+
+# ---------------------------------------------------------------- visões (#100)
+@freeze_time(SEG)
+def test_alternador_de_visoes(logado, perfil):
+    html = logado.get(ROTA).content.decode()
+
+    for rotulo in ("Mês", "Semana", "Dias úteis"):
+        assert rotulo in html
+    assert "visao=mes" in html and "visao=semana" in html and "visao=uteis" in html
+    assert 'aria-current="page">Dias úteis<' in html
+
+
+@freeze_time(SEG)
+def test_semana_completa_mostra_sabado_e_domingo_com_as_rotinas(logado, usuario, perfil):
+    _rotina(usuario)
+
+    html = logado.get(ROTA, {"visao": "semana"}).content.decode()
+
+    assert "Semana de 19 a 25 out" in html
+    assert "Sáb" in html and "Dom" in html
+    assert html.count("Limpar a Areia da Natasha") == 2  # terça e sábado
+    assert "?data=2026-10-26&amp;visao=semana" in html
+
+
+@freeze_time(SEG)
+def test_dias_uteis_nao_mostram_o_fim_de_semana(logado, usuario, perfil):
+    _rotina(usuario, recorrencia="FREQ=WEEKLY;BYDAY=SA")
+
+    html = logado.get(ROTA, {"visao": "uteis"}).content.decode()
+
+    assert "Limpar a Areia da Natasha" not in html
+    assert "Sáb" not in html
+
+
+@freeze_time(SEG)
+def test_mes_mostra_a_grade_com_rotinas_e_blocos(logado, usuario, perfil):
+    _rotina(usuario, horario=time(7))
+    _bloco(usuario, date(2026, 10, 28), time(9), "Revisar o contrato")
+
+    html = logado.get(ROTA, {"visao": "mes"}).content.decode()
+
+    assert "Outubro de 2026" in html
+    assert "Revisar o contrato" in html
+    assert html.count("Limpar a Areia da Natasha") == 4  # a rotina começa hoje: terças 20 e 27, sábados 24 e 31
+    assert "?data=2026-10-28&amp;visao=semana" in html  # o dia abre a semana dele
+    assert "?data=2026-09-01&amp;visao=mes" in html and "?data=2026-11-01&amp;visao=mes" in html
+    assert "mes__dia--fora" in html  # 28 a 30 de setembro e 1º de novembro
+
+
+@freeze_time(SEG)
+def test_mes_resume_o_dia_com_mais_de_tres_itens(logado, usuario, perfil):
+    dia = date(2026, 10, 28)
+    for n, hora in enumerate((time(8), time(10), time(13), time(15))):
+        _bloco(usuario, dia, hora, f"Bloco {n}")
+
+    html = logado.get(ROTA, {"visao": "mes", "data": "2026-10-28"}).content.decode()
+
+    assert "Bloco 2" in html and "Bloco 3" not in html
+    assert "+1" in html
+
+
+@freeze_time(SEG)
+def test_a_visao_escolhida_fica_guardada(logado, perfil):
+    logado.get(ROTA, {"visao": "mes"})
+
+    assert "Outubro de 2026" in logado.get(ROTA).content.decode()
+
+
+@freeze_time(SEG)
+def test_visao_invalida_cai_em_dias_uteis(logado, perfil):
+    assert "Semana de 19 a 23 out" in logado.get(ROTA, {"visao": "ano"}).content.decode()
+
+
+@freeze_time(SEG)
+def test_proposta_na_semana_completa_mostra_o_fim_de_semana_sem_receber_tarefas(logado, usuario, perfil):
+    _rotina(usuario)
+    nova_tarefa(usuario, "Tarefa da proposta", blocos_estimados=2)
+    services.propor_semana(usuario)
+
+    html = logado.get(ROTA, {"visao": "semana"}).content.decode()
+
+    assert "Tarefa da proposta" in html
+    assert "Sáb" in html and "Dom" in html
+    assert html.count("Limpar a Areia da Natasha") == 2
+    assert 'data-dia="2026-10-24"' not in html  # sábado não recebe tarefa
+    assert 'data-dia="2026-10-23"' in html
+
+
+@freeze_time(SEG)
+def test_mes_avisa_da_proposta_pendente(logado, usuario, perfil):
+    nova_tarefa(usuario, "Tarefa da proposta", blocos_estimados=2)
+    services.propor_semana(usuario)
+
+    html = logado.get(ROTA, {"visao": "mes"}).content.decode()
+
+    assert "Tarefa da proposta" not in html
+    assert "proposta pendente" in html

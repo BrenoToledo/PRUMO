@@ -57,3 +57,23 @@ def test_semana_planejada_continua_de_hoje_ate_sexta(usuario):
     services.perfil_de(usuario)
 
     assert [d["dia"] for d in services.semana_planejada(usuario)["dias"]] == [date(2026, 10, d) for d in range(19, 24)]
+
+
+# ---------------------------------------------------------------- visões (#100)
+def test_semana_completa_vai_de_segunda_a_domingo():
+    assert plan.dias_da_visao(date(2026, 10, 22), "semana") == [date(2026, 10, d) for d in range(19, 26)]
+
+
+@pytest.mark.parametrize(
+    ("referencia", "primeiro", "ultimo", "semanas"),
+    [
+        (date(2026, 10, 15), date(2026, 9, 28), date(2026, 11, 1), 5),  # começa na quinta
+        (date(2027, 2, 10), date(2027, 2, 1), date(2027, 2, 28), 4),  # fevereiro de segunda a domingo
+        (date(2026, 11, 30), date(2026, 10, 26), date(2026, 12, 6), 6),  # começa no domingo
+    ],
+)
+def test_mes_cobre_o_mes_inteiro_de_segunda_a_domingo(referencia, primeiro, ultimo, semanas):
+    dias = plan.dias_da_visao(referencia, "mes")
+
+    assert (dias[0], dias[-1], len(dias)) == (primeiro, ultimo, semanas * 7)
+    assert dias[0].weekday() == 0 and dias[-1].weekday() == 6

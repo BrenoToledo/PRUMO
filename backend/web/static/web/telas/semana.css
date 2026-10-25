@@ -1,7 +1,15 @@
 /* Planejamento da semana (M28 no celular, D04 no desktop): dias com as tarefas e "Não couberam". */
 .semana { padding-bottom: var(--e12); }
 .semana__topo { margin-bottom: var(--e4); }
-.semana__nav { display: flex; gap: var(--e2); margin-top: var(--e2); }
+.semana__barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--e2); margin-top: var(--e2); }
+.semana__nav { display: flex; gap: var(--e2); }
+.semana__visoes { display: inline-flex; padding: 2px; gap: 2px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo); }
+.semana__visao {
+  padding: var(--e1) var(--e3); border-radius: var(--raio-campo); color: var(--texto-secundario); text-decoration: none;
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt);
+}
+.semana__visao[aria-current="page"] { background: var(--primaria-suave); color: var(--primaria); font-weight: var(--legenda-peso); }
+.semana__aviso { margin: 0 0 var(--e3); padding: var(--e2) var(--e3); border-radius: var(--raio-campo); background: var(--primaria-suave); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
 .semana__sub, .semana__dica { margin: var(--e2) 0 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
 .semana__dica { margin: var(--e3) 0; }
 .semana__corpo { display: flex; flex-direction: column; gap: var(--e3); }
@@ -53,11 +61,42 @@
 .semana__acoes .botao { width: 100%; }
 .semana__dias--planejada + .semana__acoes { grid-template-columns: 1fr; }
 
+/* Fim de semana: só rotinas (a proposta não põe tarefa nele) */
+.dia--fim-de-semana { background: color-mix(in srgb, var(--borda) 25%, var(--superficie)); }
+
+/* Mês (#100): grade de segunda a domingo; cada dia leva para a semana dele */
+.mes__semana, .mes__dias { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.mes__semana li { padding: var(--e1); color: var(--texto-secundario); font-size: var(--legenda-tam); text-align: center; }
+.mes__dia {
+  display: flex; flex-direction: column; gap: 2px; min-height: 56px; min-width: 0; padding: var(--e1);
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+}
+.mes__dia--fora { opacity: .5; }
+.mes__dia--hoje { border-color: var(--primaria); }
+.mes__numero { color: var(--texto); text-decoration: none; font-weight: var(--subtitulo-peso); font-size: var(--legenda-tam); }
+.mes__dia--hoje .mes__numero { color: var(--primaria); }
+.mes__itens { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px; }
+.mes__item {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--cor-area);
+  overflow: hidden; color: transparent; font-size: 0; /* no celular, só um ponto por item */
+}
+.mes__item--rotina { background: color-mix(in srgb, var(--cor-area) 50%, var(--superficie)); }
+.mes__mais { color: var(--texto-secundario); font-size: 11px; }
+
 /* Desktop (D04): dias em colunas e "Não couberam" na lateral */
 @media (min-width: 1024px) {
   .conteudo:has(> .semana) { max-width: 1200px; }
   .semana__corpo { display: grid; grid-template-columns: 1fr 260px; align-items: start; }
-  .semana__dias { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--e2); }
+  .semana__dias { display: grid; grid-template-columns: repeat(var(--colunas, 5), minmax(0, 1fr)); gap: var(--e2); }
+  .mes__dia { min-height: 110px; padding: var(--e2); }
+  .mes__itens { flex-direction: column; flex-wrap: nowrap; }
+  .mes__item {
+    width: auto; height: auto; border-radius: 4px; padding: 1px var(--e1); border-left: 3px solid var(--cor-area);
+    background: color-mix(in srgb, var(--cor-area) 14%, var(--superficie)); color: var(--texto);
+    font-size: 12px; line-height: 16px; white-space: nowrap; text-overflow: ellipsis;
+  }
+  .mes__item--rotina { background: color-mix(in srgb, var(--cor-area) 8%, var(--superficie)); }
+  .mes__hora { color: var(--texto-secundario); }
   .semana__dias .dia { min-height: 320px; padding: var(--e3); }
   .semana__dias .dia__tarefas { flex-direction: column; flex-wrap: nowrap; }
   .semana__dias .tarefa-semana { display: flex; }

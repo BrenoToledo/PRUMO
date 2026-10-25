@@ -1,8 +1,9 @@
 """Planejamento da semana (P15, issues #79, #80, #81; telas M28, D04).
 
 Rotas do contrato:
-- GET `semana/` → `web:semana` (`?data=AAAA-MM-DD`, #99): os blocos e as rotinas da semana que contém a data
-  (`services.agenda_do_periodo`); na semana da proposta pendente (`services.proposta_da_semana`), a proposta.
+- GET `semana/` → `web:semana` (`?data=AAAA-MM-DD`, #99; `?visao=uteis|semana|mes`, #100, guardada na sessão):
+  os blocos e as rotinas dos dias da visão (`services.agenda_do_periodo`); na semana da proposta pendente
+  (`services.proposta_da_semana`), a proposta (no mês, só o aviso).
   Com HTMX devolve o parcial `#semana` (anterior, Hoje e próxima trocam só ele).
 - POST `semana/propor/` → `web:propor_semana`, chama `services.propor_semana` ("Gerar de novo" também).
 - POST `semana/mover/` → `web:mover_na_semana` (`tarefa`, `de`, `para`; vazio = "não couberam"), chama
@@ -82,64 +83,116 @@ def _proposta(usuario, sugestao, rotinas: dict[str, list]) -> dict:
     return {"sugestao": sugestao, "dias": dias, "nao_couberam": itens(atual["nao_couberam"])}
 
 
-def _referencia(texto: str | None) -> date:
-    """A data pedida na URL ou no formulário; sem ela (ou inválida), a semana do planejamento (de hoje)."""
+VISAO_PADRAO = "uteis"
+MESES_LONGOS = (
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+)  # fmt: skip
+CHAVE_VISAO = "semana_visao"  # na sessão: a última visão escolhida (#100)
+ITENS_NO_MES = 3  # por dia na grade do mês; o resto vira "+N"
+
+
+def _visao(request, texto: str | None = None) -> str:
+    """A visão pedida (e guardada na sessão) ou a última escolhida; sem nenhuma, dias úteis."""
+    if texto in plan.VISOES:
+        request.session[CHAVE_VISAO] = texto
+        return texto
+    guardada = request.session.get(CHAVE_VISAO)
+    return guardada if guardada in plan.VISOES else VISAO_PADRAO
+
+
+def _referencia(texto: str | None, visao: str) -> date:
+    """A data pedida; sem ela (ou inválida), hoje. Nos dias úteis, no fim de semana, a semana do planejamento."""
     try:
         return date.fromisoformat(texto or "")
     except ValueError:
-        return services.dias_da_semana()[0]
+        return services.dias_da_semana()[0] if visao == "uteis" else services.hoje()
 
 
-def _endereco(referencia: date | None = None) -> str:
-    return reverse(ROTA) + (f"?data={referencia.isoformat()}" if referencia else "")
+def _endereco(visao: str, referencia: date | None = None) -> str:
+    data = f"data={referencia.isoformat()}&" if referencia else ""
+    return f"{reverse(ROTA)}?{data}visao={visao}"
 
 
-def _contexto(usuario, referencia: date | None = None, **extra) -> dict:
-    referencia = referencia or services.dias_da_semana()[0]
-    dias = plan.dias_da_visao(referencia, "uteis")
+def _dia(d: dict, referencia: date) -> dict:
+    agenda = _agenda(d)
+    return d | {
+        "nome": DIAS_CURTOS[d["dia"].weekday()],
+        "iso": d["dia"].isoformat(),
+        "pct": _pct(d["planejados"], d["capacidade"]),
+        "acima": d["planejados"] > d["capacidade"],
+        "fim_de_semana": d["dia"].weekday() >= 5,
+        "agenda": agenda,
+        "resumo": agenda[:ITENS_NO_MES],
+        "mais": max(0, len(agenda) - ITENS_NO_MES),
+        "fora": d["dia"].month != referencia.month,
+        "hoje": d["dia"] == services.hoje(),
+        "endereco": _endereco("semana", d["dia"]),
+    }
+
+
+def _contexto(request, referencia: date | None = None, visao: str | None = None, **extra) -> dict:
+    usuario = request.user
+    visao = visao or _visao(request)
+    referencia = referencia or _referencia(None, visao)
+    dias = plan.dias_da_visao(referencia, visao)
     agenda = services.agenda_do_periodo(usuario, dias[0], dias[-1])
-    planejada = [
-        d
-        | {
-            "nome": DIAS_CURTOS[d["dia"].weekday()],
-            "iso": d["dia"].isoformat(),
-            "pct": _pct(d["planejados"], d["capacidade"]),
-            "acima": d["planejados"] > d["capacidade"],
-            "agenda": _agenda(d),
-        }
-        for d in agenda
-    ]
+    planejada = [_dia(d, referencia) for d in agenda]
     sugestao = services.proposta_da_semana(usuario)
+    da_proposta = sugestao is not None and date.fromisoformat(sugestao.conteudo["inicio"]) in dias
     proposta = None
-    if sugestao is not None and date.fromisoformat(sugestao.conteudo["inicio"]) in dias:
+    if da_proposta and visao != "mes":
         proposta = _proposta(usuario, sugestao, {d["dia"].isoformat(): d["rotinas"] for d in agenda})
-    anterior, proxima = plan.vizinhos(referencia, "uteis")
+        proposta["fim_de_semana"] = [d for d in planejada if d["fim_de_semana"]]
+        proposta["colunas"] = len(proposta["dias"]) + len(proposta["fim_de_semana"])
+    anterior, proxima = plan.vizinhos(referencia, visao)
+    mes = visao == "mes"
     return {
         "aba": "semana",
-        "titulo": _titulo(dias),
+        "titulo": f"{MESES_LONGOS[referencia.month - 1]} de {referencia.year}" if mes else _titulo(dias),
+        "visao": visao,
+        "visoes": [
+            {"valor": v, "rotulo": r, "endereco": _endereco(v, referencia)}
+            for v, r in (("mes", "Mês"), ("semana", "Semana"), ("uteis", "Dias úteis"))
+        ],
         "referencia": referencia.isoformat(),
-        "anterior": _endereco(anterior),
-        "proxima": _endereco(proxima),
-        "atual": _endereco(),
-        "pode_propor": services.dias_da_semana()[0] in dias,
+        "anterior": _endereco(visao, anterior),
+        "proxima": _endereco(visao, proxima),
+        "atual": _endereco(visao),
+        "pode_propor": not mes and services.dias_da_semana()[0] in dias,
+        "proposta_no_mes": _endereco("uteis", services.dias_da_semana()[0]) if mes and da_proposta else "",
+        "dias_curtos": DIAS_CURTOS,
         "planejada": planejada,
         "proposta": proposta,
         **extra,
     }
 
 
+def _render(request, contexto: dict, status: int = 200):
+    modelo = "web/semana/_semana.html" if request.headers.get("HX-Request") else "web/semana/semana.html"
+    return render(request, modelo, contexto, status=status)
+
+
 def _parcial_ou_volta(request, **extra):
-    referencia = _referencia(request.POST.get("data"))
+    """Depois de uma ação: o parcial na mesma data e visão (HTMX) ou de volta para a tela."""
+    visao = _visao(request, request.POST.get("visao"))
+    referencia = _referencia(request.POST.get("data"), visao)
     if request.headers.get("HX-Request"):
-        return render(request, "web/semana/_semana.html", _contexto(request.user, referencia, **extra))
-    return redirect(_endereco(referencia))
+        return _render(request, _contexto(request, referencia, visao, **extra))
+    return redirect(_endereco(visao, referencia))
+
+
+def _erro(request, erro: ValueError):
+    visao = _visao(request, request.POST.get("visao"))
+    referencia = _referencia(request.POST.get("data"), visao)
+    return _render(request, _contexto(request, referencia, visao, erro=str(erro).capitalize()), status=422)
 
 
 @require_GET
 @login_required
 def semana(request):
-    modelo = "web/semana/_semana.html" if request.headers.get("HX-Request") else "web/semana/semana.html"
-    return render(request, modelo, _contexto(request.user, _referencia(request.GET.get("data"))))
+    visao = _visao(request, request.GET.get("visao"))
+    return _render(request, _contexto(request, _referencia(request.GET.get("data"), visao), visao))
 
 
 @require_POST
@@ -147,7 +200,7 @@ def semana(request):
 def propor_semana(request):
     services.propor_semana(request.user)
     if request.headers.get("HX-Request"):
-        return render(request, "web/semana/_semana.html", _contexto(request.user))
+        return _render(request, _contexto(request))
     return redirect(ROTA)
 
 
@@ -167,13 +220,7 @@ def mover_na_semana(request):
             sugestao, tarefa, de=_data(request.POST.get("de", "")), para=_data(request.POST.get("para", ""))
         )
     except ValueError as erro:
-        if request.headers.get("HX-Request"):
-            return render(
-                request, "web/semana/_semana.html", _contexto(request.user, erro=str(erro).capitalize()), status=422
-            )
-        return render(
-            request, "web/semana/semana.html", _contexto(request.user, erro=str(erro).capitalize()), status=422
-        )
+        return _erro(request, erro)
     return _parcial_ou_volta(request)
 
 
