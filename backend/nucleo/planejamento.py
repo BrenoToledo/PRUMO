@@ -230,6 +230,55 @@ def montar_semana(capacidades: dict[date, int], candidatas: list[Candidata], *, 
     return semana
 
 
+# --------------------------------------------------------------------------- calendário (#99, #100, #101)
+VISOES = ("uteis", "semana", "mes")  # dias úteis (seg a sex), semana completa (seg a dom) e mês
+
+
+def _segunda(dia: date) -> date:
+    return dia - timedelta(days=dia.weekday())
+
+
+def _primeiro_do_mes_seguinte(dia: date) -> date:
+    return (dia.replace(day=1) + timedelta(days=32)).replace(day=1)
+
+
+def dias_da_visao(referencia: date, visao: str) -> list[date]:
+    """Os dias que a visão mostra em volta de `referencia`: a semana dela (5 ou 7 dias) ou, no mês, a grade de
+    segunda a domingo que cobre o mês inteiro (5 ou 6 semanas)."""
+    if visao == "mes":
+        inicio = _segunda(referencia.replace(day=1))
+        ultimo = _primeiro_do_mes_seguinte(referencia) - timedelta(days=1)
+        fim = ultimo + timedelta(days=6 - ultimo.weekday())
+        return [inicio + timedelta(days=n) for n in range((fim - inicio).days + 1)]
+    inicio = _segunda(referencia)
+    return [inicio + timedelta(days=n) for n in range(5 if visao == "uteis" else 7)]
+
+
+def vizinhos(referencia: date, visao: str) -> tuple[date, date]:
+    """Para onde "anterior" e "próxima" levam: as segundas ao lado ou o primeiro dia dos meses ao lado."""
+    if visao == "mes":
+        primeiro = referencia.replace(day=1)
+        return (primeiro - timedelta(days=1)).replace(day=1), _primeiro_do_mes_seguinte(referencia)
+    segunda = _segunda(referencia)
+    return segunda - timedelta(days=7), segunda + timedelta(days=7)
+
+
+def motivo_para_nao_encaixar(
+    inicio: datetime, duracao: timedelta, jornada: Jornada, ocupados: list[Intervalo], *, tz=None
+) -> str:
+    """Por que um bloco não pode ir para `inicio` (arrastar, #101); vazio se pode.
+
+    Ele precisa caber inteiro na jornada do dia e não pode encostar em compromisso, rotina ou outro bloco.
+    """
+    local = inicio.astimezone(tz) if tz is not None else inicio
+    ini, fim = _limites_da_jornada(local.date(), jornada, tz if tz is not None else inicio.tzinfo)
+    if inicio < ini or inicio + duracao > fim:
+        return f"o bloco precisa caber na sua jornada, das {jornada.inicio:%H:%M} às {jornada.fim:%H:%M}"
+    if any(a < inicio + duracao and b > inicio for a, b in ocupados):
+        return "esse horário já está ocupado"
+    return ""
+
+
 @dataclass
 class Pendente:
     tarefa_id: int
