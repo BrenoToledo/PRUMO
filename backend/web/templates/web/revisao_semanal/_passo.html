@@ -1,0 +1,42 @@
+<div id="revisao-semanal" class="revisao-semanal">
+  <ol class="revisao-semanal__passos" aria-label="Passos da revisão">
+    {% for p in passos %}<li class="revisao-semanal__passo{% if p.indice <= passo.indice %} revisao-semanal__passo--feito{% endif %}"{% if p.indice == passo.indice %} aria-current="step"{% endif %}><span class="visualmente-oculto">{{ p.titulo }}</span></li>{% endfor %}
+  </ol>
+  <p class="revisao-semanal__rotulo">Passo {{ passo.indice }} de {{ passo.total }} · {{ passo.titulo }}</p>
+
+  {% if passo.concluida %}<p class="revisao-semanal__aviso" role="status">Revisão da semana concluída. Você ainda pode rever os passos.</p>{% endif %}
+  {% if erro %}<p class="erro" role="alert">{{ erro }}</p>{% endif %}
+
+  {% for r in passo.respondidas %}<section class="revisao-semanal__troca" aria-label="Pergunta respondida">
+    {% include "web/revisao_semanal/_prumo.html" with texto=r.pergunta %}
+    <div class="revisao-semanal__resposta">
+      <p class="revisao-semanal__rotulo">Você respondeu</p>
+      <p>{{ r.resposta }}{% if r.texto %}: {{ r.texto }}{% endif %}</p>
+    </div>
+  </section>{% endfor %}
+
+  {% for pergunta in passo.perguntas %}<form class="revisao-semanal__troca" method="post" action="{% url 'web:responder_revisao' %}"
+        hx-post="{% url 'web:responder_revisao' %}" hx-target="#revisao-semanal" hx-swap="outerHTML">
+    {% csrf_token %}
+    <input type="hidden" name="chave" value="{{ pergunta.chave }}">
+    {% include "web/revisao_semanal/_prumo.html" with texto=pergunta.texto %}
+    {% if pergunta.aceita_texto %}<div class="campo">
+      <label class="revisao-semanal__rotulo" for="texto-{{ forloop.counter }}">Sua resposta <span class="revisao-semanal__opcional">(opcional, vai para a caixa de entrada)</span></label>
+      <input id="texto-{{ forloop.counter }}" name="texto" type="text" maxlength="300" placeholder="Ex.: pedir o acesso ao servidor">
+    </div>{% endif %}
+    <div class="revisao-semanal__chips">
+      {% for valor, rotulo in pergunta.opcoes %}<button class="revisao-semanal__chip" type="submit" name="opcao" value="{{ valor }}">{{ rotulo }}</button>{% endfor %}
+    </div>
+  </form>{% endfor %}
+
+  {% if not passo.perguntas and not passo.respondidas %}{% include "web/revisao_semanal/_prumo.html" with texto=passo.vazio %}{% endif %}
+
+  <div class="revisao-semanal__acoes">
+    {% if passo.indice > 1 %}<a class="botao" href="{% url 'web:revisao_semanal' %}?passo={{ passo.indice|add:'-1' }}">Voltar</a>{% else %}<a class="botao" href="{% url 'web:revisao' %}">Voltar</a>{% endif %}
+    {% if passo.indice < passo.total %}<a class="botao botao--primario" href="{% url 'web:revisao_semanal' %}?passo={{ passo.indice|add:'1' }}">Continuar</a>
+    {% else %}<form method="post" action="{% url 'web:concluir_revisao_semanal' %}">
+      {% csrf_token %}
+      <button class="botao botao--primario" type="submit">Montar a semana</button>
+    </form>{% endif %}
+  </div>
+</div>

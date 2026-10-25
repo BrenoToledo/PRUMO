@@ -134,3 +134,21 @@ def test_campos_da_mensagem_e_da_expectativa_na_api(api, usuario, tarefa):
     assert set(api.post(f"/api/vinculos/{vinculo.pk}/mensagem/").json()) == set(contratos.CAMPOS_MENSAGEM)
     assert set(api.get("/api/expectativas-em-risco/").json()[0]) == set(contratos.CAMPOS_EXPECTATIVA_EM_RISCO)
     assert set(services.expectativas_em_risco(usuario)[0]) == _chaves(contratos.ExpectativaEmRisco)
+
+
+# ------------------------------------------------------------------ revisão semanal guiada (P18)
+@freeze_time(f"{SEG} 08:00")
+def test_revisao_semanal_no_formato_do_contrato(api, usuario):
+    services.perfil_de(usuario)
+    services.capturar(usuario, "Ligar para o seguro")
+    revisao = services.revisao_semanal(usuario)
+
+    assert set(services.passo_da_revisao(revisao)) == _chaves(contratos.PassoRevisao)
+    dados = api.get("/api/revisao-semanal/").json()
+    assert set(dados) == set(contratos.CAMPOS_REVISAO_SEMANAL)
+    assert set(dados["atual"]) == set(contratos.CAMPOS_PASSO_REVISAO)
+    assert set(dados["atual"]["perguntas"][0]) == set(contratos.CAMPOS_PERGUNTA_REVISAO)
+    resposta = api.post("/api/revisao-semanal/responder/", {"chave": "entrada", "opcao": "depois"}, format="json")
+    assert set(resposta.json()) == set(contratos.CAMPOS_RESPOSTA_REVISAO)
+    revisao.refresh_from_db()
+    assert set(services.passo_da_revisao(revisao)["respondidas"][0]) == _chaves(contratos.RespostaRevisao)

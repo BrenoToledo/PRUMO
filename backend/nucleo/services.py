@@ -29,6 +29,7 @@ from . import calendario as cal
 from . import pessoas as pes
 from . import planejamento as plan
 from . import prioridade as motor
+from . import revisao_semanal as rs
 from . import rotinas as rot
 from .contratos import (
     Aguardando,
@@ -39,9 +40,11 @@ from .contratos import (
     ExportacaoDados,
     ListaRapida,
     PainelPessoas,
+    PassoRevisao,
     PlanoDoDia,
     ProgressoProjeto,
     PropostaReplanejamento,
+    RespostaRevisao,
     ResumoRevisaoDiaria,
     RotinaNaSemana,
     SemanaPlanejada,
@@ -2095,3 +2098,185 @@ def expectativas_em_risco(usuario) -> list[ExpectativaEmRisco]:
                 {"vinculo": v, "tarefa": v.tarefa, "pessoa": v.pessoa, "prazo": e["prazo"], "folga": e["folga"]}
             )
     return itens
+
+
+# --------------------------------------------------------------------------- revisão semanal guiada (P18, #91–#93)
+def revisao_semanal(usuario, dia: date | None = None) -> Revisao:
+    """A revisão da semana de `dia` (data = a segunda-feira); criada no passo 1 se ainda não existir."""
+    segunda = rs.segunda_da_semana(dia or hoje())
+    revisao, _ = Revisao.objects.get_or_create(
+        usuario=usuario,
+        tipo=Revisao.Tipo.SEMANAL,
+        data=segunda,
+        defaults={"metricas": {"passo": 1, "respostas": {}, "concluida_em": None}},
+    )
+    return revisao
+
+
+def _validar_passo(passo: int) -> int:
+    if not 1 <= passo <= len(rs.PASSOS):
+        raise ValueError(f"A revisão tem passos de 1 a {len(rs.PASSOS)}.")
+    return passo
+
+
+def _respostas(revisao: Revisao) -> dict:
+    return revisao.metricas.setdefault("respostas", {})
+
+
+def _dias_sem_avanco(projeto: Projeto, tarefas: list[Tarefa], agora: datetime) -> int:
+    momentos = [t.criada_em for t in tarefas]
+    ultimo_evento = EventoTarefa.objects.filter(tarefa__projeto=projeto).order_by("-em").first()
+    if ultimo_evento:
+        momentos.append(ultimo_evento.em)
+    return (agora - max(momentos)).days if momentos else 0
+
+
+def _projetos_em_revisao(usuario) -> list[rs.ProjetoEmRevisao]:
+    agora = timezone.now()
+    resumo = []
+    for progresso in projetos_de(usuario):
+        projeto = progresso["projeto"]
+        if projeto.status != Projeto.Status.ATIVO:
+            continue
+        tarefas = [t for t in projeto.tarefas.all() if t.status != Tarefa.Status.CANCELADA]
+        resumo.append(
+            rs.ProjetoEmRevisao(
+                id=projeto.pk,
+                nome=projeto.nome,
+                tarefas_abertas=progresso["tarefas_abertas"],
+                folga=progresso["folga"],
+                fim=projeto.fim,
+                dias_sem_avanco=_dias_sem_avanco(projeto, tarefas, agora),
+            )
+        )
+    return resumo
+
+
+def _rotinas_em_revisao(usuario) -> list[rs.RotinaEmRevisao]:
+    dia = hoje()
+    desde = dia - timedelta(days=rs.JANELA_ROTINAS)
+    contagem = (
+        Tarefa.objects.filter(rotina__usuario=usuario, rotina__ativa=True, prazo__gte=desde, prazo__lt=dia)
+        .exclude(status=Tarefa.Status.CANCELADA)
+        .values("rotina", "rotina__nome")
+        .annotate(previstas=Count("id"), feitas=Count("id", filter=Q(status=Tarefa.Status.CONCLUIDA)))
+        .order_by("rotina__nome", "rotina")
+    )
+    return [
+        rs.RotinaEmRevisao(id=c["rotina"], nome=c["rotina__nome"], feitas=c["feitas"], previstas=c["previstas"])
+        for c in contagem
+    ]
+
+
+def _perguntas_da_entrada(usuario) -> list[rs.Pergunta]:
+    pergunta = rs.pergunta_entrada(caixa_de_entrada(usuario).count())
+    return [pergunta] if pergunta else []
+
+
+def _perguntas_do_aguardando(usuario) -> list[rs.Pergunta]:
+    itens = [
+        rs.EsperaEmRevisao(id=i["vinculo"].pk, titulo=i["tarefa"].titulo, pessoa=i["pessoa"].nome, dias=i["dias"])
+        for i in aguardando(usuario)
+        if i["cobrar_hoje"]
+    ]
+    return rs.perguntas_aguardando(itens)
+
+
+PERGUNTAS_POR_PASSO: dict[int, Callable[..., list[rs.Pergunta]]] = {
+    1: _perguntas_da_entrada,
+    2: lambda usuario: rs.perguntas_projetos(_projetos_em_revisao(usuario)),
+    3: _perguntas_do_aguardando,
+    4: lambda usuario: rs.perguntas_rotinas(_rotinas_em_revisao(usuario)),
+}
+
+
+def _perguntas_do_passo(usuario, passo: int) -> list[rs.Pergunta]:
+    gerar = PERGUNTAS_POR_PASSO.get(passo)
+    return gerar(usuario) if gerar else []
+
+
+def passo_da_revisao(revisao: Revisao, passo: int | None = None) -> PassoRevisao:
+    """Um passo da M26: as perguntas abertas (recalculadas agora, sem as já respondidas) e as respondidas."""
+    indice = _validar_passo(passo if passo is not None else revisao.metricas.get("passo", 1))
+    respostas = _respostas(revisao)
+    definicao = rs.PASSOS[indice - 1]
+    return {
+        "indice": indice,
+        "total": len(rs.PASSOS),
+        "chave": definicao.chave,
+        "titulo": definicao.titulo,
+        "vazio": definicao.vazio,
+        "perguntas": [p for p in _perguntas_do_passo(revisao.usuario, indice) if p.chave not in respostas],
+        "respondidas": [r for r in respostas.values() if r["passo"] == indice],
+        "concluida": bool(revisao.metricas.get("concluida_em")),
+    }
+
+
+def ir_para_passo(revisao: Revisao, passo: int) -> Revisao:
+    revisao.metricas["passo"] = _validar_passo(passo)
+    revisao.save(update_fields=["metricas"])
+    return revisao
+
+
+def _aplicar_resposta(revisao: Revisao, chave: str, opcao: str, texto: str) -> tuple[str, int | None]:
+    """Faz só o que o chip escolhido diz; devolve (efeito, alvo) para a tela."""
+    usuario = revisao.usuario
+    prefixo, _, ident = chave.partition(":")
+    if prefixo == "entrada":
+        primeiro = caixa_de_entrada(usuario).first() if opcao == rs.CLARIFICAR else None
+        return ("clarificar", primeiro.pk) if primeiro else ("", None)
+    if prefixo == "projeto":
+        projeto = Projeto.objects.get(pk=int(ident), usuario=usuario)
+        novo_status = {rs.PAUSAR: Projeto.Status.PAUSADO, rs.CONCLUIR: Projeto.Status.CONCLUIDO}.get(opcao)
+        if novo_status:
+            projeto.status = novo_status
+            projeto.save(update_fields=["status"])
+        if texto:
+            capturar(usuario, f"{projeto.nome}: {texto}")
+        return "", None
+    if prefixo == "vinculo":
+        vinculo = TarefaPessoa.objects.get(pk=int(ident), tarefa__usuario=usuario)
+        if opcao == rs.COBRAR:
+            return "mensagem", redigir_mensagem(vinculo).pk
+        if opcao == rs.RECEBI:
+            desvincular_pessoa(vinculo)
+        return "", None
+    if prefixo == "rotina" and opcao == rs.PAUSAR:
+        Rotina.objects.filter(pk=int(ident), usuario=usuario).update(ativa=False)
+    return "", None
+
+
+@transaction.atomic
+def responder_revisao(revisao: Revisao, chave: str, opcao: str, texto: str = "") -> RespostaRevisao:
+    """Responde uma pergunta aberta da revisão; `ValueError` (sem mudar nada) se não der."""
+    if revisao.metricas.get("concluida_em"):
+        raise ValueError("Esta revisão já foi concluída.")
+    passo = rs.passo_da_chave(chave)
+    respostas = _respostas(revisao)
+    abertas = {p.chave: p for p in _perguntas_do_passo(revisao.usuario, passo)}
+    if chave in respostas or chave not in abertas:
+        raise ValueError("Essa pergunta não está aberta na revisão.")
+    pergunta = abertas[chave]
+    rotulo = pergunta.rotulo(opcao)
+    texto = texto.strip() if pergunta.aceita_texto else ""
+    efeito, alvo = _aplicar_resposta(revisao, chave, opcao, texto)
+    resposta: RespostaRevisao = {
+        "chave": chave,
+        "passo": passo,
+        "pergunta": pergunta.texto,
+        "opcao": opcao,
+        "resposta": rotulo,
+        "texto": texto,
+        "efeito": efeito,
+        "alvo": alvo,
+    }
+    respostas[chave] = resposta
+    revisao.save(update_fields=["metricas"])
+    return resposta
+
+
+def concluir_revisao_semanal(revisao: Revisao) -> Revisao:
+    revisao.metricas["passo"] = len(rs.PASSOS)
+    revisao.metricas["concluida_em"] = timezone.now().isoformat()
+    revisao.save(update_fields=["metricas"])
+    return revisao
