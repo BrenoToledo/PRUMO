@@ -78,7 +78,7 @@ def test_semana_planejada_mostra_as_rotinas_com_horario(logado, usuario, tarefas
 
     assert html.count("Limpar a Areia da Natasha") == 2  # terça e quinta
     assert "06:00" in html
-    assert "rotina-semana" in html
+    assert 'class="tarefa-semana tarefa-semana--rotina"' in html
 
 
 @freeze_time(SEG)
@@ -89,7 +89,9 @@ def test_proposta_mostra_as_rotinas_sem_deixar_arrastar(logado, usuario, tarefas
     html = logado.get(reverse("web:semana")).content.decode()
 
     assert html.count("Limpar a Areia da Natasha") == 2
-    assert 'class="rotina-semana"' in html
+    # Mesmas classes dos cards de bloco: o card não depende de regra nova no semana.css (que pode vir de cache).
+    assert 'class="tarefa-semana tarefa-semana--rotina"' in html
+    assert '<ul class="dia__tarefas dia__rotinas"' in html
 
 
 @freeze_time(SEG)
@@ -99,7 +101,7 @@ def test_icone_da_rotina_tem_tamanho_mesmo_sem_o_css(logado, usuario, tarefas):
 
     html = logado.get(reverse("web:semana")).content.decode()
 
-    assert 'class="rotina-semana__icone" width="14" height="14"' in html
+    assert 'class="tarefa-semana__icone" width="14" height="14"' in html
 
 
 # ---------------------------------------------------------------- mover e aprovar (#80, #81)
