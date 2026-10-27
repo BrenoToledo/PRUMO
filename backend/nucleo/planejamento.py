@@ -263,6 +263,36 @@ def vizinhos(referencia: date, visao: str) -> tuple[date, date]:
     return segunda - timedelta(days=7), segunda + timedelta(days=7)
 
 
+def colunas_sobrepostas(intervalos: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Itens no mesmo horário lado a lado (#110): para cada `(ini, fim)`, na ordem recebida, `(coluna, colunas)`.
+    Os que se sobrepõem formam um grupo; cada um fica na primeira coluna livre e `colunas` é o total do grupo.
+    Encostar (um acaba quando o outro começa) não é sobrepor."""
+    resultado: list[list[int]] = [[0, 1] for _ in intervalos]
+    grupo: list[int] = []
+    fins: list[int] = []  # fim do último item de cada coluna do grupo
+    fim_do_grupo = None
+
+    def fechar():
+        for i in grupo:
+            resultado[i][1] = len(fins)
+
+    for i in sorted(range(len(intervalos)), key=lambda i: (intervalos[i][0], -intervalos[i][1])):
+        ini, fim = intervalos[i]
+        if fim_do_grupo is not None and ini >= fim_do_grupo:
+            fechar()
+            grupo, fins, fim_do_grupo = [], [], None
+        coluna = next((c for c, f in enumerate(fins) if f <= ini), len(fins))
+        if coluna == len(fins):
+            fins.append(fim)
+        else:
+            fins[coluna] = fim
+        resultado[i][0] = coluna
+        grupo.append(i)
+        fim_do_grupo = fim if fim_do_grupo is None else max(fim_do_grupo, fim)
+    fechar()
+    return [(c, n) for c, n in resultado]
+
+
 def motivo_para_nao_encaixar(
     inicio: datetime, duracao: timedelta, jornada: Jornada, ocupados: list[Intervalo], *, tz=None
 ) -> str:
