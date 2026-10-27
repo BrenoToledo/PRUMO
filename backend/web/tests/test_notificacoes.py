@@ -109,8 +109,10 @@ def test_salvar_preferencias(logado, usuario, perfil):
     assert resposta.status_code == 302
     perfil.refresh_from_db()
     ligados = services.preferencias_de_avisos(usuario)
-    assert ligados["inicio_bloco"] and ligados["revisao_diaria"]
-    assert not ligados["caixa_entrada"] and not ligados["expectativa_em_risco"]
+    assert ligados["inicio_bloco"]
+    assert ligados["revisao_diaria"]
+    assert not ligados["caixa_entrada"]
+    assert not ligados["expectativa_em_risco"]
     assert (perfil.nao_perturbe_foco, perfil.limite_avisos_dia) == (False, 3)
 
 

@@ -67,7 +67,7 @@ self.addEventListener("push", function (evento) {
   let aviso = {};
   try {
     aviso = evento.data ? evento.data.json() : {};
-  } catch (erro) {
+  } catch {
     aviso = { texto: evento.data.text() };
   }
   evento.waitUntil(

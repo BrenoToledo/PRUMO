@@ -92,7 +92,8 @@ class Inscricao:
 def enviar(inscricao: Inscricao, conteudo: dict, *, privada: str, contato: str) -> int:
     """Manda um aviso; devolve o status HTTP do serviço de push (201 = aceito; 404 e 410 = inscrição morta)."""
     corpo = cifrar(json.dumps(conteudo, ensure_ascii=False).encode(), inscricao.p256dh, inscricao.auth)
-    pedido = urllib.request.Request(  # noqa: S310 - o endpoint é https, vindo do navegador do usuário
+    # O endpoint é https (conferido em `services.inscrever_push`), vindo do navegador do usuário.
+    pedido = urllib.request.Request(  # noqa: S310
         inscricao.endpoint,
         data=corpo,
         method="POST",

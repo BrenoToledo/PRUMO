@@ -41,6 +41,8 @@
   }).then(function (inscricao) {
     if (inscricao) mostrar("Ativadas neste aparelho.", true);
     else if (Notification.permission === "denied") mostrar("As notificações estão bloqueadas nas configurações do navegador.", false);
+  }).catch(function () {
+    mostrar("Não deu para ver se este aparelho já recebe notificações.", false);
   });
 
   ativar.addEventListener("click", async function () {
@@ -57,8 +59,8 @@
       });
       await enviar(caixa.dataset.inscrever, inscricao.toJSON());
       mostrar("Ativadas neste aparelho.", true);
-    } catch (erro) {
-      mostrar("Não deu para ativar agora. " + erro.message, false);
+    } catch (error_) {
+      mostrar("Não deu para ativar agora. " + error_.message, false);
     } finally {
       ativar.disabled = false;
     }

@@ -31,7 +31,8 @@ def test_bloco_que_comeca_em_ate_5_minutos():
 
     assert aviso.tipo == "inicio_bloco"
     assert aviso.chave == "bloco:1"
-    assert "Escrever capítulo 3" in aviso.texto and "09:04" in aviso.texto
+    assert "Escrever capítulo 3" in aviso.texto
+    assert "09:04" in aviso.texto
     assert aviso.alvo == 1
 
 
@@ -76,7 +77,8 @@ def test_expectativa_em_risco_uma_vez_por_dia():
     (aviso,) = nt.avisos_de_risco(itens, date(2026, 10, 23))
 
     assert aviso.chave == "risco:7:2026-10-23"
-    assert "Relatório" in aviso.texto and "Gestor" in aviso.texto
+    assert "Relatório" in aviso.texto
+    assert "Gestor" in aviso.texto
 
 
 def _avisos():

@@ -27,6 +27,9 @@
 .interruptor input:checked { background: var(--primaria); }
 .interruptor input:checked::after { transform: translateX(18px); }
 .interruptor input:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .interruptor input, .interruptor input::after { transition: none; }
+}
 
 .notificacoes__aparelho { margin-top: var(--e6); }
 .notificacoes__aparelho h2 { margin: 0; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); }

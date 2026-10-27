@@ -80,7 +80,7 @@ def preferencias(request):
 def _corpo_json(request) -> dict:
     try:
         corpo = json.loads(request.body)
-    except (ValueError, UnicodeDecodeError):
+    except ValueError:  # inclui UnicodeDecodeError
         return {}
     return corpo if isinstance(corpo, dict) else {}
 

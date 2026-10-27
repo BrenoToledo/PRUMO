@@ -45,7 +45,8 @@ def test_chaves_vapid_em_base64url():
     privada, publica = wp.gerar_chaves()
 
     assert len(wp.de_b64url(privada)) == 32
-    assert len(wp.de_b64url(publica)) == 65 and wp.de_b64url(publica)[0] == 4
+    assert len(wp.de_b64url(publica)) == 65
+    assert wp.de_b64url(publica)[0] == 4
     assert "=" not in privada + publica
 
 

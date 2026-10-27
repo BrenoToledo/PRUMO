@@ -23,7 +23,7 @@
     <div class="perfil__opcoes">
       {% for tipo in tipos %}<label class="opcao interruptor">
         <span class="opcao__texto">{{ tipo.rotulo }}</span>
-        <input type="checkbox" role="switch" name="{{ tipo.chave }}"{% if tipo.ligado %} checked{% endif %}>
+        <input type="checkbox" name="{{ tipo.chave }}"{% if tipo.ligado %} checked{% endif %}>
       </label>{% endfor %}
     </div>
   </fieldset>
@@ -33,7 +33,7 @@
     <div class="perfil__opcoes">
       <label class="opcao interruptor">
         <span class="opcao__texto">Não perturbe durante o foco<span class="opcao__dica">Nada chega enquanto um bloco está em andamento.</span></span>
-        <input type="checkbox" role="switch" name="nao_perturbe_foco"{% if nao_perturbe %} checked{% endif %}>
+        <input type="checkbox" name="nao_perturbe_foco"{% if nao_perturbe %} checked{% endif %}>
       </label>
     </div>
     <div class="perfil__campo">
