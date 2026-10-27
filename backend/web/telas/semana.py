@@ -138,6 +138,7 @@ def _dia(d: dict, referencia: date) -> dict:
         "mais": max(0, len(agenda) - ITENS_NO_MES),
         "fora": d["dia"].month != referencia.month,
         "hoje": d["dia"] == services.hoje(),
+        "passado": d["dia"] < services.hoje(),
         "endereco": _endereco("semana", d["dia"]),
     }
 
@@ -148,7 +149,8 @@ def _minutos(hora: time) -> int:
 
 def _grade(usuario, planejada: list[dict]) -> dict:
     """A grade de horários das visões de semana (#101): da hora cheia antes do início da jornada (ou do primeiro
-    item) até a hora cheia depois do fim (ou do último). Cada item com horário ganha `ini` e `dur`, em minutos."""
+    item) até a hora cheia depois do fim (ou do último). Cada item com horário ganha `ini` e `dur`, em minutos,
+    `coluna` e `colunas` (#110) e `passou` (#109); `agora` é a linha da hora atual, se hoje estiver na grade."""
     jornada = services.jornada_de(services.perfil_de(usuario))
     inicios, fins = [_minutos(jornada.inicio)], [_minutos(jornada.fim) or 24 * 60]
     for d in planejada:
@@ -161,12 +163,19 @@ def _grade(usuario, planejada: list[dict]) -> dict:
             inicios.append(_minutos(item["hora"]))
             fins.append(min(24 * 60, _minutos(item["hora"]) + item["dur"]))
     ini, fim = min(inicios) // 60 * 60, min(24 * 60, -(-max(fins) // 60) * 60)
+    agora = _minutos(timezone.localtime().time())
     for d in planejada:
-        for item in d["com_horario"]:
+        itens = d["com_horario"]
+        colunas = plan.colunas_sobrepostas([(_minutos(i["hora"]), _minutos(i["hora"]) + i["dur"]) for i in itens])
+        for item, (coluna, total) in zip(itens, colunas, strict=True):
             item["ini"] = _minutos(item["hora"]) - ini
+            item["coluna"], item["colunas"] = coluna, total
+            item["passou"] = d["passado"] or (d["hoje"] and _minutos(item["hora"]) + item["dur"] <= agora)
+    hoje_na_grade = any(d["hoje"] for d in planejada) and ini <= agora <= fim
     return {
         "ini": f"{ini // 60:02d}:00",
         "minutos": fim - ini,
+        "agora": agora - ini if hoje_na_grade else None,
         "horas": [{"rotulo": f"{h // 60:02d}:00", "ini": h - ini} for h in range(ini, fim, 60)],
     }
 
