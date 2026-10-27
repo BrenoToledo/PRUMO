@@ -2,6 +2,7 @@
 // #semana pela resposta, via HTMX.
 // - Proposta: soltar uma tarefa em outro dia (ou em "Não couberam") move; em cima de outra tarefa, troca as duas.
 // - Semana planejada: soltar um bloco num horário da grade move (de 15 em 15 min); em cima de outro bloco, troca.
+// A linha do agora (#109) desce um minuto por minuto; some ao passar do fim da grade.
 (function () {
   "use strict";
   const PASSO_MIN = 15;
@@ -49,6 +50,16 @@
     const passo = Math.round((y / caixa.height) * total / PASSO_MIN) * PASSO_MIN;
     return hora(minutos(grade.dataset.gradeIni) + passo);
   }
+
+  setInterval(function () {
+    const linha = document.querySelector(".dia__agenda > .agora");
+    const grade = linha?.closest(".grade");
+    if (!linha || !grade) return;
+    const agora = Number(linha.style.getPropertyValue("--agora")) + 1;
+    const total = Number(grade.style.getPropertyValue("--grade-min")) || 0;
+    if (agora > total) linha.remove();
+    else linha.style.setProperty("--agora", agora);
+  }, 60000);
 
   document.addEventListener("dragstart", function (e) {
     const item = e.target.closest?.(".tarefa-semana[data-tarefa], .tarefa-semana[data-bloco]");

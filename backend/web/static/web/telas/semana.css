@@ -72,6 +72,16 @@
   background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
 }
 
+/* Agenda estilo Google (P20): passado esmaecido e hoje em destaque (#109); a linha do agora só existe na grade */
+.agora { display: none; }
+.tarefa-semana--passou { opacity: .55; }
+.dia--passado .dia__topo { opacity: .6; }
+.dia__nome { white-space: nowrap; }
+.dia--hoje .dia__data {
+  display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 4px; border-radius: 11px;
+  background: var(--primaria); color: var(--superficie); font-weight: var(--subtitulo-peso);
+}
+
 /* Fim de semana: só rotinas (a proposta não põe tarefa nele) */
 .dia--fim-de-semana { background: color-mix(in srgb, var(--borda) 25%, var(--superficie)); }
 
@@ -117,13 +127,36 @@
     position: relative; display: block; height: calc(var(--grade-min) * var(--px-min));
     background: repeating-linear-gradient(to bottom, var(--borda) 0 1px, transparent 1px calc(60 * var(--px-min)));
   }
+  /* Cada item: título em cima e hora embaixo (#108); os que se sobrepõem dividem a largura (#110) */
   .semana__dias .dia__agenda > .tarefa-semana {
-    position: absolute; left: 0; right: 0; top: calc(var(--ini) * var(--px-min));
-    height: calc(var(--dur) * var(--px-min)); min-height: 22px; overflow: hidden; align-content: flex-start;
+    position: absolute; top: calc(var(--ini) * var(--px-min)); height: calc(var(--dur) * var(--px-min) - 2px); min-height: 22px;
+    left: calc(100% * var(--coluna, 0) / var(--colunas, 1)); width: calc(100% / var(--colunas, 1) - 2px);
+    flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0; padding: 2px var(--e2); overflow: hidden;
+    font-size: 12px; line-height: 16px;
   }
-  .semana__dias .dia__agenda > .tarefa-semana--rotina { flex-wrap: nowrap; padding-block: 2px; white-space: nowrap; z-index: 1; }
-  .dia__agenda > .tarefa-semana--rotina .tarefa-semana__titulo { overflow: hidden; text-overflow: ellipsis; }
+  .dia__agenda > .tarefa-semana .tarefa-semana__titulo {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; flex: none; overflow: hidden;
+    color: var(--texto); font-weight: var(--subtitulo-peso);
+  }
+  .dia__agenda > .tarefa-semana--rotina { z-index: 1; }
   .dia__agenda > .tarefa-semana--rotina .tarefa-semana__blocos { display: none; }
+  /* Até 30 min: uma linha só, "Título, 08:00", cortada no fim */
+  .semana__dias .dia__agenda > .tarefa-semana--curta { display: block; white-space: nowrap; text-overflow: ellipsis; }
+  .dia__agenda > .tarefa-semana--curta .tarefa-semana__titulo { display: inline; }
+  /* De 31 a 59 min: "Título, 08:40" em até duas linhas */
+  .semana__dias .dia__agenda > .tarefa-semana--media { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .dia__agenda > .tarefa-semana--media .tarefa-semana__titulo { display: inline; }
+  .dia__agenda > .tarefa-semana--curta .tarefa-semana__hora::before,
+  .dia__agenda > .tarefa-semana--media .tarefa-semana__hora::before { content: ", "; }
+  /* Linha do agora (#109), por cima dos blocos */
+  .dia__agenda > .agora {
+    display: block; position: absolute; left: 0; right: 0; top: calc(var(--agora) * var(--px-min)); z-index: 3;
+    height: 2px; margin-top: -1px; background: var(--prioridade-critica); pointer-events: none;
+  }
+  .dia__agenda > .agora::before {
+    content: ""; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--prioridade-critica);
+  }
   .semana__dias .dia__agenda > .dia__vazio { position: absolute; top: var(--e2); left: 0; }
   .grade .dia__pct--fim-de-semana, .grade .dia__sem-horario .tarefa-semana__blocos { display: none; }
   /* Semana completa: 7 colunas; na proposta, "Não couberam" vai para baixo dos dias */
