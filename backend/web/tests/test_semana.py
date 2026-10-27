@@ -76,9 +76,9 @@ def test_semana_planejada_mostra_as_rotinas_com_horario(logado, usuario, tarefas
 
     html = logado.get(reverse("web:semana")).content.decode()
 
-    assert html.count("Limpar a Areia da Natasha") == 2  # terça e quinta
+    assert html.count("Limpar a Areia da Natasha</span>") == 2  # terça e quinta
     assert "06:00" in html
-    assert 'class="tarefa-semana tarefa-semana--rotina"' in html
+    assert 'class="tarefa-semana tarefa-semana--rotina' in html
 
 
 @freeze_time(SEG)

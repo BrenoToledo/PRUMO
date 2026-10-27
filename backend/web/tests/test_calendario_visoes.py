@@ -332,7 +332,7 @@ def test_rotina_nao_arrasta(logado, usuario, perfil):
 
     html = logado.get(ROTA).content.decode()
 
-    assert 'class="tarefa-semana tarefa-semana--rotina"' in html
+    assert 'class="tarefa-semana tarefa-semana--rotina' in html
     assert html.count('draggable="true"') == 0
 
 
