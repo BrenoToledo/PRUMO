@@ -382,6 +382,16 @@ Efeitos de cada chip em `responder_revisao`:
 
 As opções que sobram (`seguir`, `depois`, `esperar`, `manter`) só registram a resposta.
 
+## Agenda estilo Google (P20, Fase 1)
+
+Só interface, sem rota nova nem mudança no banco: a grade das visões Semana e Dias úteis (`web:semana`) passa a mostrar o título em cada bloco (#108), a linha do agora e o passado esmaecido (#109) e os itens que se sobrepõem lado a lado (#110).
+
+| Regra pura | Devolve | Regras |
+| --- | --- | --- |
+| `planejamento.colunas_sobrepostas(intervalos)` | `list[tuple[int, int]]` | Para cada `(ini, fim)` (minutos), na ordem recebida, `(coluna, colunas)`: itens que se sobrepõem formam um grupo; cada um fica na primeira coluna livre e `colunas` é o total do grupo. Encostar (um acaba quando o outro começa) não é sobrepor |
+
+Cada item com horário da grade ganha, além de `ini` e `dur`, `coluna`, `colunas` e `passou` (acabou antes de agora). Cada dia ganha `passado` (antes de hoje). A grade ganha `agora` (minutos desde o início da grade, ou `None` se hoje não está na visão ou a hora está fora dela); `semana.js` move a linha a cada minuto.
+
 ## Mudar um contrato
 
 Um contrato só muda num commit próprio na branch `contratos-api` (ou numa nova a partir do main) que altera, juntos, `nucleo/contratos.py`, este arquivo e, se for REST, `docs/api.md`. As branches que dependem dele fazem merge desse commit. Nunca mude uma assinatura ou um campo dentro de uma branch de etapa.
