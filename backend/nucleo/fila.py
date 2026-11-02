@@ -18,3 +18,9 @@ def sincronizar_calendario(calendario_id: int) -> None:
     calendario = Calendario.objects.filter(pk=calendario_id).first()
     if calendario is not None:  # removido enquanto esperava
         services.sincronizar_calendario(calendario)
+
+
+@shared_task(ignore_result=True)
+def notificar() -> None:
+    """Agendada a cada minuto pelo beat (#105): grava os avisos novos de todos e manda o push."""
+    services.notificar_todos()

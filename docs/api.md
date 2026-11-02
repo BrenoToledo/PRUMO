@@ -72,6 +72,15 @@ Base: `/api/`. Autenticação por sessão ou token. Para ferramentas (MCP, scrip
 | `POST /revisao-semanal/responder/` `{chave, opcao, texto?}` | Aplica só o que o chip escolhido diz: pausar ou concluir o projeto, pausar a rotina, desligar a espera ("já recebi"), redigir a cobrança (sem enviar) ou mandar o texto para a caixa de entrada. Devolve `{chave, passo, pergunta, opcao, resposta, texto, efeito, alvo}`. `400` se a pergunta não está aberta, se a opção não é dela ou se a revisão já foi concluída | M26 |
 | `POST /revisao-semanal/concluir/` | Marca a revisão da semana como feita e devolve o mesmo formato do `GET` | M26 |
 
+## Notificações
+
+| Método e rota | O que faz | Tela |
+| --- | --- | --- |
+| `GET /notificacoes/` | `{nao_lidas, results: [{id, tipo, titulo, texto, url, criada_em, lida_em}]}`, as 50 mais novas primeiro. Tipos: `inicio_bloco`, `expectativa_em_risco`, `revisao_diaria`, `revisao_semanal`, `caixa_entrada` | Central |
+| `POST /notificacoes/lidas/` | Marca todas como lidas e devolve `{marcadas}` | Central |
+
+As preferências da M34 ficam em `GET/PATCH /perfil/`: `avisos` (`{tipo: bool}`; um tipo que falta conta como ligado), `nao_perturbe_foco` e `limite_avisos_dia` (de 1 a 20).
+
 ## Seus dados (LGPD)
 
 | Método e rota | O que faz | Tela |

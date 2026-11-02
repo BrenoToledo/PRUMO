@@ -1,0 +1,38 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Notificações{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/notificacoes.css' %}">{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <a class="notificacoes__voltar" href="{% url 'web:hoje' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      Hoje
+    </a>
+    <h1>Notificações</h1>
+  </div>
+  <div class="cabecalho__acoes">
+    {% if nao_lidas %}<form method="post" action="{% url 'web:marcar_notificacoes_lidas' %}">
+      {% csrf_token %}
+      <button class="botao botao--texto" type="submit">Marcar todas como lidas</button>
+    </form>{% endif %}
+    <a class="botao botao--texto" href="{% url 'web:preferencias_notificacoes' %}">Preferências</a>
+  </div>
+</header>
+{% if notificacoes %}
+<ul class="notificacoes">
+  {% for n in notificacoes %}<li class="notificacao{% if not n.lida_em %} notificacao--nova{% endif %}">
+    <a class="notificacao__link" href="{{ n.url|default:'#' }}">
+      <span class="notificacao__titulo">{{ n.titulo }}{% if not n.lida_em %}<span class="visualmente-oculto"> (nova)</span>{% endif %}</span>
+      <span class="notificacao__texto">{{ n.texto }}</span>
+      <time class="notificacao__quando" datetime="{{ n.criada_em|date:'c' }}">{{ n.criada_em|date:"j/m · H:i" }}</time>
+    </a>
+  </li>{% endfor %}
+</ul>
+{% else %}
+<div class="vazio">
+  <p>Nenhuma notificação por enquanto.</p>
+  <p>O Prumo avisa só o essencial: início de bloco, prazos em risco, revisões e a caixa de entrada. Escolha o que quer receber nas <a href="{% url 'web:preferencias_notificacoes' %}">preferências</a>.</p>
+</div>
+{% endif %}
+{% endblock %}

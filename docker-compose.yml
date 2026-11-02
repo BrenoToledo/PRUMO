@@ -41,5 +41,18 @@ services:
       redis:
         condition: service_started
 
+  # Agenda da fila (#105): a cada minuto roda `nucleo.fila.notificar`. Sem Celery, use `manage.py notificar` no cron.
+  beat:
+    build: ./backend
+    env_file: .env
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+    command: celery -A config beat -l info --schedule /tmp/celerybeat-schedule
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
 volumes:
   pgdata:

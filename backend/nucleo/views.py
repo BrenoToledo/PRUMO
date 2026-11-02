@@ -650,3 +650,31 @@ def responder_revisao(request):
 def concluir_revisao_semanal(request):
     revisao = services.concluir_revisao_semanal(services.revisao_semanal(request.user))
     return Response(_revisao_semanal(revisao))
+
+
+# --------------------------------------------------------------------------- notificações (P19)
+@api_view(["GET"])
+def notificacoes(request):
+    itens = services.notificacoes_de(request.user)
+    return Response(
+        {
+            "nao_lidas": services.nao_lidas(request.user),
+            "results": [
+                {
+                    "id": n.pk,
+                    "tipo": n.tipo,
+                    "titulo": n.titulo,
+                    "texto": n.texto,
+                    "url": n.url,
+                    "criada_em": n.criada_em,
+                    "lida_em": n.lida_em,
+                }
+                for n in itens
+            ],
+        }
+    )
+
+
+@api_view(["POST"])
+def marcar_notificacoes_lidas(request):
+    return Response({"marcadas": services.marcar_lidas(request.user)})
