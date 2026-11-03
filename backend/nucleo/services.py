@@ -2505,3 +2505,60 @@ def buscar_tarefas(usuario, *, status="abertas", area=None, projeto=None, prazo=
     return consulta.select_related("area", "projeto").order_by(
         *ORDENS_LISTA_TAREFAS.get(ordem, ORDENS_LISTA_TAREFAS["prioridade"])
     )
+
+
+@transaction.atomic
+def marcar_bloco_feito(bloco: Bloco) -> Bloco:
+    """Marca um bloco planejado como feito direto pela agenda (pacote 21, bolinha de feito).
+
+    Não passa pelo foco e não conclui a tarefa: concluir a tarefa é pelo detalhe dela.
+    """
+    if bloco.status != Bloco.Status.PLANEJADO:
+        raise ValueError("só um bloco planejado pode ser marcado como feito")
+    bloco.status = Bloco.Status.CONCLUIDO
+    bloco.resultado = Bloco.Resultado.AVANCOU
+    bloco.inicio_real = bloco.inicio_planejado
+    bloco.fim_real = bloco.fim_planejado
+    bloco.save(update_fields=["status", "resultado", "inicio_real", "fim_real"])
+    tarefa = bloco.tarefa
+    tarefa.blocos_feitos += 1
+    tarefa.save(update_fields=["blocos_feitos"])
+    evento(tarefa, EventoTarefa.Tipo.BLOCO, bloco=bloco.pk, resultado=Bloco.Resultado.AVANCOU, origem="agenda")
+    if tarefa.status == Tarefa.Status.ABERTA:
+        recalcular_prioridade(tarefa)
+    return bloco
+
+
+@transaction.atomic
+def agendar_bloco(tarefa: Tarefa, inicio: datetime) -> Bloco:
+    """Cria um bloco planejado da tarefa em `inicio`, com a duração do perfil (pacote 21, criar no horário)."""
+    if tarefa.status != Tarefa.Status.ABERTA:
+        raise ValueError("só uma tarefa aberta pode ganhar horário")
+    duracao = timedelta(minutes=perfil_de(tarefa.usuario).duracao_bloco_min)
+    bloco = Bloco(
+        usuario=tarefa.usuario,
+        tarefa=tarefa,
+        inicio_planejado=inicio,
+        fim_planejado=inicio + duracao,
+        status=Bloco.Status.PLANEJADO,
+    )
+    _conferir_horario(bloco, inicio, set(), [])
+    bloco.save()
+    evento(tarefa, EventoTarefa.Tipo.PLANEJADA, bloco=bloco.pk, inicio=inicio.isoformat(), origem="agenda")
+    return bloco
+
+
+@transaction.atomic
+def criar_tarefa_no_horario(usuario, titulo: str, area: Area, inicio: datetime) -> Bloco:
+    """Cria a tarefa (esforço médio, 1 bloco) e o bloco dela em `inicio`; sem horário livre, nada fica no banco."""
+    tarefa = Tarefa.objects.create(
+        usuario=usuario,
+        area=area,
+        titulo=titulo[:200],
+        proxima_acao=titulo[:300],
+        esforco=Esforco.MEDIO,
+        blocos_estimados=1,
+    )
+    evento(tarefa, EventoTarefa.Tipo.CRIADA, origem="agenda")
+    recalcular_prioridade(tarefa)
+    return agendar_bloco(tarefa, inicio)

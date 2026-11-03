@@ -22,6 +22,35 @@
     globalThis.htmx.ajax("POST", url, { source: raiz, target: "#semana", swap: "outerHTML", values: valores });
   }
 
+  document.body.addEventListener("htmx:afterSwap", function (e) {
+    if (e.detail.target?.id !== "detalhe-bloco-conteudo") return;
+    const caixa = document.getElementById("detalhe-bloco");
+    if (caixa && !caixa.open) caixa.showModal();
+  });
+
+  function horaNoClique(dia, e) {
+    const agenda = dia.querySelector(".dia__agenda");
+    const grade = dia.closest(".grade");
+    if (!agenda || !grade) return null;
+    const caixa = agenda.getBoundingClientRect();
+    const total = Number(getComputedStyle(grade).getPropertyValue("--grade-min")) || 0;
+    if (!caixa.height || !total) return null;
+    const y = Math.min(Math.max(e.clientY - caixa.top, 0), caixa.height);
+    const passo = Math.floor((y / caixa.height) * total / PASSO_MIN) * PASSO_MIN;
+    return hora(minutos(grade.dataset.gradeIni) + passo);
+  }
+
+  document.addEventListener("click", function (e) {
+    const raiz = semana();
+    const dia = e.target.closest?.(".semana__dias--planejada .dia");
+    if (!raiz || !dia || !raiz.dataset.novo) return;
+    if (e.target.closest(".tarefa-semana, button, a, form, input, select, dialog")) return;
+    const quando = horaNoClique(dia, e);
+    if (!quando || !globalThis.htmx) return;
+    const url = raiz.dataset.novo + "?dia=" + dia.dataset.dia + "&hora=" + quando + "&data=" + raiz.dataset.data + "&visao=" + raiz.dataset.visao;
+    globalThis.htmx.ajax("GET", url, { target: "#detalhe-bloco-conteudo", swap: "innerHTML" });
+  });
+
   function limparDestaque(exceto) {
     document.querySelectorAll(".solta-aqui").forEach(function (el) {
       if (el !== exceto) el.classList.remove("solta-aqui");

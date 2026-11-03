@@ -8,7 +8,7 @@ from django.utils import timezone
 from freezegun import freeze_time
 
 from nucleo import services
-from nucleo.models import Bloco
+from nucleo.models import Area, Bloco
 from nucleo.tests.apoio import nova_tarefa
 
 QUA = "2026-10-21 13:30"  # 10:30 em São Paulo, quarta
@@ -40,7 +40,7 @@ def test_bloco_mostra_o_titulo_antes_da_hora(logado, usuario, perfil):
     html = logado.get(ROTA, {"data": "2026-10-22", "visao": "semana"}).content.decode()
 
     assert 'title="Revisar o contrato da Acme, 09:00"' in html
-    assert html.index('tarefa-semana__titulo">Revisar o contrato da Acme') < html.index('tarefa-semana__hora">09:00')
+    assert html.index(">Revisar o contrato da Acme<") < html.index('tarefa-semana__hora">09:00')
 
 
 @freeze_time(QUA)
@@ -103,3 +103,279 @@ def test_blocos_no_mesmo_horario_ficam_lado_a_lado(logado, usuario, perfil):
     assert [(i["coluna"], i["colunas"]) for i in itens] == [(0, 2), (1, 2), (0, 1)]
     html = resposta.content.decode()
     assert "--coluna: 1; --colunas: 2" in html
+
+
+# ---------------------------------------------------------------- bolinha de feito (pacote 21, 6C)
+HTMX = {"HTTP_HX_REQUEST": "true"}
+
+SEMANA_DO_BLOCO = "2026-11-03 11:00"  # terça, 08:00 em São Paulo
+
+
+def _bloco_na_semana(usuario, status=Bloco.Status.PLANEJADO):
+    tarefa = nova_tarefa(usuario, "Revisar capítulo", blocos_estimados=3)
+    return Bloco.objects.create(
+        usuario=usuario,
+        tarefa=tarefa,
+        inicio_planejado=timezone.make_aware(datetime(2026, 11, 4, 10, 0)),
+        fim_planejado=timezone.make_aware(datetime(2026, 11, 4, 11, 30)),
+        status=status,
+    )
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_bloco_planejado_tem_a_bolinha_de_feito(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert reverse("web:bloco_feito_na_semana", args=[bloco.pk]) in html
+    assert 'aria-label="Marcar “Revisar capítulo” como feito"' in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_marcar_feito_com_htmx_devolve_a_semana(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    resposta = logado.post(
+        reverse("web:bloco_feito_na_semana", args=[bloco.pk]), {"data": "2026-11-03", "visao": "uteis"}, **HTMX
+    )
+
+    assert resposta.status_code == 200
+    assert 'id="semana"' in resposta.content.decode()
+    bloco.refresh_from_db()
+    assert bloco.status == Bloco.Status.CONCLUIDO
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_marcar_feito_sem_htmx_volta_para_a_semana(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    resposta = logado.post(
+        reverse("web:bloco_feito_na_semana", args=[bloco.pk]), {"data": "2026-11-03", "visao": "uteis"}
+    )
+
+    assert resposta.status_code == 302
+    bloco.refresh_from_db()
+    assert bloco.status == Bloco.Status.CONCLUIDO
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_bloco_concluido_nao_tem_o_formulario(logado, usuario):
+    bloco = _bloco_na_semana(usuario, status=Bloco.Status.CONCLUIDO)
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert reverse("web:bloco_feito_na_semana", args=[bloco.pk]) not in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_bloco_de_outra_pessoa_da_404(logado, outra):
+    bloco = _bloco_na_semana(outra)
+
+    assert logado.post(reverse("web:bloco_feito_na_semana", args=[bloco.pk])).status_code == 404
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_feito_por_get_da_405(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    assert logado.get(reverse("web:bloco_feito_na_semana", args=[bloco.pk])).status_code == 405
+
+
+# ---------------------------------------------------------------- popup de detalhes (pacote 21, 6A)
+@freeze_time(SEMANA_DO_BLOCO)
+def test_detalhe_do_bloco_mostra_titulo_area_e_horario(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    html = logado.get(reverse("web:detalhe_bloco_na_semana", args=[bloco.pk])).content.decode()
+
+    assert "Revisar capítulo" in html
+    assert bloco.tarefa.area.nome in html
+    assert "10:00–11:30" in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_detalhe_de_bloco_de_outra_pessoa_da_404(logado, outra):
+    bloco = _bloco_na_semana(outra)
+
+    assert logado.get(reverse("web:detalhe_bloco_na_semana", args=[bloco.pk])).status_code == 404
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_detalhe_so_aceita_get(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    assert logado.post(reverse("web:detalhe_bloco_na_semana", args=[bloco.pk])).status_code == 405
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_grade_abre_o_detalhe_pelo_titulo_do_bloco(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert f'hx-get="{reverse("web:detalhe_bloco_na_semana", args=[bloco.pk])}"' in html
+    assert f'href="{reverse("web:tarefa", args=[bloco.tarefa.pk])}"' in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_dialogo_do_detalhe_aparece_uma_vez_so(logado, usuario):
+    _bloco_na_semana(usuario)
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert html.count('id="detalhe-bloco"') == 1
+
+
+# ---------------------------------------------------------------- criar no horário (pacote 21, 6D)
+AMANHA = "2026-11-04"
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_formulario_de_criar_vem_com_o_dia_e_a_hora(logado, usuario):
+    html = logado.get(reverse("web:novo_bloco_na_semana"), {"dia": AMANHA, "hora": "10:00"}).content.decode()
+
+    assert 'name="titulo"' in html
+    assert f'value="{AMANHA}"' in html
+    assert 'value="10:00"' in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_criar_com_tarefa_existente(logado, usuario):
+    tarefa = nova_tarefa(usuario, "Ler artigo", blocos_estimados=2)
+
+    resposta = logado.post(
+        reverse("web:novo_bloco_na_semana"),
+        {"dia": AMANHA, "hora": "10:00", "tarefa": tarefa.pk, "data": "2026-11-03", "visao": "uteis"},
+        **HTMX,
+    )
+
+    assert resposta.status_code == 200
+    assert 'id="semana"' in resposta.content.decode()
+    assert Bloco.objects.filter(tarefa=tarefa, status=Bloco.Status.PLANEJADO).exists()
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_criar_com_tarefa_nova(logado, usuario):
+    area = Area.objects.get(usuario=usuario, nome="Educação")
+
+    logado.post(
+        reverse("web:novo_bloco_na_semana"),
+        {
+            "dia": AMANHA,
+            "hora": "10:00",
+            "titulo": "Ligar para a escola",
+            "area": area.pk,
+            "data": "2026-11-03",
+            "visao": "uteis",
+        },
+        **HTMX,
+    )
+
+    assert Bloco.objects.filter(tarefa__titulo="Ligar para a escola", tarefa__usuario=usuario).exists()
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_criar_com_tarefa_de_outra_pessoa_da_404(logado, usuario, outra):
+    tarefa = nova_tarefa(outra, "Segredo")
+
+    resposta = logado.post(reverse("web:novo_bloco_na_semana"), {"dia": AMANHA, "hora": "10:00", "tarefa": tarefa.pk})
+
+    assert resposta.status_code == 404
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_criar_com_area_de_outra_pessoa_da_404(logado, usuario, outra):
+    area_alheia = Area.objects.get(usuario=outra, nome="Educação")
+
+    resposta = logado.post(
+        reverse("web:novo_bloco_na_semana"),
+        {"dia": AMANHA, "hora": "10:00", "titulo": "Ligar", "area": area_alheia.pk},
+    )
+
+    assert resposta.status_code == 404
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_horario_ocupado_volta_422(logado, usuario):
+    ocupado = _bloco_na_semana(usuario)
+    tarefa = nova_tarefa(usuario, "Ler artigo")
+
+    resposta = logado.post(
+        reverse("web:novo_bloco_na_semana"),
+        {"dia": AMANHA, "hora": "10:30", "tarefa": tarefa.pk},
+        **HTMX,
+    )
+
+    assert resposta.status_code == 422
+    assert ocupado.tarefa != tarefa
+
+
+# ---------------------------------------------------------------- filtro por área (pacote 21, 6B)
+def _bloco_em(usuario, area, titulo, hora):
+    tarefa = nova_tarefa(usuario, titulo, area=area, blocos_estimados=1)
+    inicio = timezone.make_aware(datetime(2026, 11, 4, hora, 0))
+    return Bloco.objects.create(
+        usuario=usuario,
+        tarefa=tarefa,
+        inicio_planejado=inicio,
+        fim_planejado=inicio + timedelta(minutes=90),
+        status=Bloco.Status.PLANEJADO,
+    )
+
+
+@pytest.fixture
+def duas_areas(usuario):
+    educacao = Area.objects.get(usuario=usuario, nome="Educação")
+    saude = Area.objects.get(usuario=usuario, nome="Saúde")
+    _bloco_em(usuario, educacao, "Aula de estudo", 10)
+    _bloco_em(usuario, saude, "Consulta de rotina", 14)
+    return educacao, saude
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_sem_filtro_mostra_as_duas_areas(logado, usuario, duas_areas):
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert "Aula de estudo" in html
+    assert "Consulta de rotina" in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_filtro_por_area_mostra_so_ela(logado, usuario, duas_areas):
+    educacao, _ = duas_areas
+
+    html = logado.get(reverse("web:semana"), {"area": educacao.pk}).content.decode()
+
+    assert "Aula de estudo" in html
+    assert "Consulta de rotina" not in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_filtro_fica_guardado_na_sessao(logado, usuario, duas_areas):
+    educacao, _ = duas_areas
+    logado.get(reverse("web:semana"), {"area": educacao.pk})
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert "Consulta de rotina" not in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_area_de_outra_pessoa_e_ignorada(logado, usuario, outra, duas_areas):
+    alheia = Area.objects.get(usuario=outra, nome="Educação")
+
+    html = logado.get(reverse("web:semana"), {"area": alheia.pk}).content.decode()
+
+    assert "Aula de estudo" in html
+    assert "Consulta de rotina" in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_todas_limpa_o_filtro(logado, usuario, duas_areas):
+    educacao, _ = duas_areas
+    logado.get(reverse("web:semana"), {"area": educacao.pk})
+
+    html = logado.get(reverse("web:semana"), {"area": ""}).content.decode()
+
+    assert "Consulta de rotina" in html

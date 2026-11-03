@@ -28,11 +28,11 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import path, reverse
 from django.utils import timezone
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from nucleo import planejamento as plan
 from nucleo import services
-from nucleo.models import Bloco, Tarefa
+from nucleo.models import Area, Bloco, Esforco, Tarefa
 
 ROTA = "web:semana"
 DIAS_CURTOS = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
@@ -109,6 +109,7 @@ MESES_LONGOS = (
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 )  # fmt: skip
 CHAVE_VISAO = "semana_visao"  # na sessão: a última visão escolhida (#100)
+CHAVE_AREAS = "semana_areas"  # na sessão: as áreas do filtro da agenda (pacote 21; vazio = todas)
 ITENS_NO_MES = 3  # por dia na grade do mês; o resto vira "+N"
 
 
@@ -119,6 +120,16 @@ def _visao(request, texto: str | None = None) -> str:
         return texto
     guardada = request.session.get(CHAVE_VISAO)
     return guardada if guardada in plan.VISOES else VISAO_PADRAO
+
+
+def _areas(request) -> list[int]:
+    """As áreas do filtro: as pedidas (só as da pessoa; vazio limpa) ou as guardadas na sessão."""
+    if "area" in request.GET:
+        pedidas = [int(v) for v in request.GET.getlist("area") if v.isdigit()]
+        validas = list(Area.objects.filter(usuario=request.user, pk__in=pedidas).values_list("pk", flat=True))
+        request.session[CHAVE_AREAS] = validas
+        return validas
+    return request.session.get(CHAVE_AREAS, [])
 
 
 def _referencia(texto: str | None, visao: str) -> date:
@@ -198,6 +209,11 @@ def _contexto(request, referencia: date | None = None, visao: str | None = None,
     referencia = referencia or _referencia(None, visao)
     dias = plan.dias_da_visao(referencia, visao)
     agenda = services.agenda_do_periodo(usuario, dias[0], dias[-1])
+    areas = _areas(request)
+    if areas:  # o filtro some com blocos e rotinas, mas não muda a capacidade nem o "N de M blocos"
+        for d in agenda:
+            d["blocos"] = [b for b in d["blocos"] if b.tarefa.area_id in areas]
+            d["rotinas"] = [r for r in d["rotinas"] if r["rotina"].area_id in areas]
     planejada = [_dia(d, referencia) for d in agenda]
     sugestao = services.proposta_da_semana(usuario)
     da_proposta = sugestao is not None and date.fromisoformat(sugestao.conteudo["inicio"]) in dias
@@ -230,6 +246,10 @@ def _contexto(request, referencia: date | None = None, visao: str | None = None,
         if visao in ("mes", "dia") and da_proposta
         else "",
         "folga_pct": round(services.perfil_de(usuario).folga_diaria * 100),
+        "areas_filtro": [
+            {"pk": a.pk, "nome": a.nome, "cor": a.cor, "marcada": not areas or a.pk in areas}
+            for a in Area.objects.filter(usuario=usuario).order_by("nome")
+        ],
         "dias_curtos": DIAS_CURTOS,
         "planejada": planejada,
         "grade": None if mes or proposta else _grade(usuario, planejada),
@@ -363,6 +383,61 @@ def mover_bloco_na_semana(request, pk: int):
     return _parcial_ou_volta(request)
 
 
+@require_http_methods(["GET", "POST"])
+@login_required
+def novo_bloco_na_semana(request):
+    if request.method == "GET":
+        abertas = Tarefa.objects.filter(usuario=request.user, status=Tarefa.Status.ABERTA).exclude(
+            esforco=Esforco.BAIXO
+        )
+        return render(
+            request,
+            "web/semana/_novo_bloco.html",
+            {
+                "dia": request.GET.get("dia", ""),
+                "hora": request.GET.get("hora", ""),
+                "data": request.GET.get("data", ""),
+                "visao": request.GET.get("visao", ""),
+                "tarefas": abertas.order_by("-prioridade", "titulo")[:50],
+                "areas": Area.objects.filter(usuario=request.user).order_by("nome"),
+            },
+        )
+    try:
+        inicio = _quando(request.POST.get("dia", ""), request.POST.get("hora", ""))
+        if request.POST.get("tarefa"):
+            tarefa = get_object_or_404(Tarefa, pk=_id(request.POST.get("tarefa")), usuario=request.user)
+            services.agendar_bloco(tarefa, inicio)
+        else:
+            area = get_object_or_404(Area, pk=_id(request.POST.get("area")), usuario=request.user)
+            titulo = request.POST.get("titulo", "").strip()
+            if not titulo:
+                raise ValueError("escreva o título da tarefa")
+            services.criar_tarefa_no_horario(request.user, titulo, area, inicio)
+    except ValueError as erro:
+        return _erro(request, erro)
+    return _parcial_ou_volta(request)
+
+
+@require_GET
+@login_required
+def detalhe_bloco_na_semana(request, pk: int):
+    bloco = get_object_or_404(Bloco.objects.select_related("tarefa", "tarefa__area"), pk=pk, usuario=request.user)
+    return render(
+        request, "web/semana/_detalhe_bloco.html", {"bloco": bloco, "referencia": request.GET.get("data", "")}
+    )
+
+
+@require_POST
+@login_required
+def bloco_feito_na_semana(request, pk: int):
+    bloco = get_object_or_404(Bloco, pk=pk, usuario=request.user)
+    try:
+        services.marcar_bloco_feito(bloco)
+    except ValueError as erro:
+        return _erro(request, erro)
+    return _parcial_ou_volta(request)
+
+
 @require_POST
 @login_required
 def trocar_blocos_na_semana(request):
@@ -383,5 +458,8 @@ urlpatterns = [
     path("semana/descartar/", descartar_semana, name="descartar_semana"),
     path("semana/trocar/", trocar_na_semana, name="trocar_na_semana"),
     path("semana/blocos/<int:pk>/mover/", mover_bloco_na_semana, name="mover_bloco_na_semana"),
+    path("semana/blocos/novo/", novo_bloco_na_semana, name="novo_bloco_na_semana"),
+    path("semana/blocos/<int:pk>/", detalhe_bloco_na_semana, name="detalhe_bloco_na_semana"),
+    path("semana/blocos/<int:pk>/feito/", bloco_feito_na_semana, name="bloco_feito_na_semana"),
     path("semana/blocos/trocar/", trocar_blocos_na_semana, name="trocar_blocos_na_semana"),
 ]

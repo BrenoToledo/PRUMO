@@ -1,0 +1,18 @@
+{# Popup do bloco na grade (pacote 21, 6A): o conteúdo vai para #detalhe-bloco-conteudo dentro do <dialog> de _semana.html. #}
+<article class="detalhe-bloco__corpo">
+  <h2 class="detalhe-bloco__titulo">{{ bloco.tarefa.titulo }}</h2>
+  <p class="detalhe-bloco__area"><span class="chip" style="--cor-area: {{ bloco.tarefa.area.cor }}">{{ bloco.tarefa.area.nome }}</span></p>
+  <p class="detalhe-bloco__quando">{{ bloco.inicio_planejado|date:"D j M" }}, {{ bloco.inicio_planejado|time:"H:i" }}–{{ bloco.fim_planejado|time:"H:i" }}</p>
+  <p class="detalhe-bloco__prioridade">Prioridade {{ bloco.tarefa.prioridade }}</p>
+  <p class="detalhe-bloco__acao">{{ bloco.tarefa.proxima_acao }}</p>
+  <div class="detalhe-bloco__acoes">
+    <a class="botao botao--pequeno" href="{% url 'web:tarefa' bloco.tarefa.pk %}">Abrir tarefa</a>
+    {% if bloco.status == "planejado" %}
+    <form method="post" action="{% url 'web:bloco_feito_na_semana' bloco.pk %}" hx-post="{% url 'web:bloco_feito_na_semana' bloco.pk %}" hx-target="#semana" hx-swap="outerHTML">
+      {% csrf_token %}
+      <input type="hidden" name="data" value="{{ referencia }}">
+      <button class="botao botao--pequeno" type="submit">Feito</button>
+    </form>
+    {% endif %}
+  </div>
+</article>

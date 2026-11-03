@@ -435,6 +435,24 @@ Só interface, sem rota nova nem mudança no banco: a grade das visões Semana e
 
 Cada item com horário da grade ganha, além de `ini` e `dur`, `coluna`, `colunas` e `passou` (acabou antes de agora). Cada dia ganha `passado` (antes de hoje). A grade ganha `agora` (minutos desde o início da grade, ou `None` se hoje não está na visão ou a hora está fora dela); `semana.js` move a linha a cada minuto.
 
+## Agenda estilo Google (P21, Fase 2)
+
+Telas: `web:semana` nas visões Semana e Dias úteis (a grade com horários). Mês e proposta não mudam.
+
+| Rota (nome) | Caminho | Método | Serviço |
+| --- | --- | --- | --- |
+| `web:detalhe_bloco_na_semana` | `/semana/blocos/<pk>/` | GET (HTMX: parcial `_detalhe_bloco.html`) | leitura |
+| `web:bloco_feito_na_semana` | `/semana/blocos/<pk>/feito/` | POST (HTMX: parcial `#semana`) | `marcar_bloco_feito` |
+| `web:novo_bloco_na_semana` | `/semana/blocos/novo/` (`dia`, `hora`, e `tarefa` ou `titulo` + `area`) | GET mostra o formulário; POST cria (HTMX: parcial `#semana`) | `agendar_bloco`, `criar_tarefa_no_horario` |
+| (filtro) `web:semana` | `?area=1&area=3` (vazio = todas; guardado na sessão em `semana_areas`) | GET | leitura |
+
+Serviços novos (`nucleo/services.py`):
+- `marcar_bloco_feito(bloco)`: só `PLANEJADO`; vira `CONCLUIDO` com `resultado=AVANCOU`, `blocos_feitos` +1 e evento `BLOCO` (`origem="agenda"`). Não conclui a tarefa.
+- `agendar_bloco(tarefa, inicio)`: tarefa `ABERTA`; valida o horário como o mover; grava evento `PLANEJADA` (`origem="agenda"`).
+- `criar_tarefa_no_horario(usuario, titulo, area, inicio)`: cria tarefa (esforço médio, 1 bloco), evento `CRIADA`, depois `agendar_bloco`; tudo numa transação.
+
+Regras: toda rota filtra pelo usuário autenticado; o filtro de área ignora áreas de outra pessoa; o popup e o formulário de criar ficam num único `<dialog id="detalhe-bloco">` em `_semana.html`.
+
 ## Mudar um contrato
 
 Um contrato só muda num commit próprio na branch `contratos-api` (ou numa nova a partir do main) que altera, juntos, `nucleo/contratos.py`, este arquivo e, se for REST, `docs/api.md`. As branches que dependem dele fazem merge desse commit. Nunca mude uma assinatura ou um campo dentro de uma branch de etapa.
