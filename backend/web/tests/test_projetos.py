@@ -117,7 +117,7 @@ def test_detalhe_com_tarefas_e_progresso(logado, tcc):
     assert "Escrever capítulo 3" in html
     assert "Formatar referências" in html
     tarefa = tcc.tarefas.get(titulo="Escrever capítulo 3")
-    assert f'href="{reverse("web:tarefa", args=[tarefa.pk])}"' in html
+    assert f'href="{reverse("web:tarefa", args=[tarefa.pk])}?voltar={reverse("web:projeto", args=[tcc.pk])}"' in html
 
 
 def test_detalhe_de_outra_pessoa_e_404(logado, outra):
