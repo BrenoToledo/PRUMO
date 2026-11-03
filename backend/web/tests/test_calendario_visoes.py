@@ -345,3 +345,65 @@ def test_propor_no_fim_de_semana_mostra_a_semana_da_proposta(logado, usuario, pe
 
     assert "Semana de 26 out a 1 nov" in html
     assert "Tarefa da proposta" in html
+
+
+# ---------------------------------------------------------------- visão Dia (backlog 8)
+@freeze_time("2026-10-27 15:00")
+def test_visao_dia_mostra_um_dia_e_o_titulo(logado, usuario):
+    html = logado.get(reverse("web:semana") + "?visao=dia").content.decode()
+
+    assert "Terça, 27 de outubro" in html
+    assert 'data-dia="2026-10-27"' in html
+    assert 'data-dia="2026-10-28"' not in html
+
+
+@freeze_time("2026-10-27 15:00")
+def test_visao_dia_anterior_e_proximo(logado, usuario):
+    html = logado.get(reverse("web:semana") + "?visao=dia").content.decode()
+
+    assert "data=2026-10-26&amp;visao=dia" in html or "data=2026-10-26&visao=dia" in html
+    assert "data=2026-10-28&amp;visao=dia" in html or "data=2026-10-28&visao=dia" in html
+
+
+@freeze_time("2026-10-27 15:00")
+def test_visao_dia_fica_guardada_na_sessao(logado, usuario):
+    logado.get(reverse("web:semana") + "?visao=dia")
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert "Terça, 27 de outubro" in html
+
+
+@freeze_time("2026-10-27 15:00")
+def test_botoes_de_visao_tem_dia(logado, usuario):
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    for rotulo in ("Mês", "Semana", "Dias úteis", "Dia"):
+        assert f">{rotulo}</a>" in html
+
+
+@freeze_time("2026-10-27 15:00")
+def test_nome_do_dia_na_semana_abre_a_visao_dia(logado, usuario):
+    html = logado.get(reverse("web:semana") + "?visao=semana").content.decode()
+
+    assert "data=2026-10-27&amp;visao=dia" in html or "data=2026-10-27&visao=dia" in html
+
+
+@freeze_time("2026-10-27 15:00")
+def test_visao_dia_sem_proposta_mas_com_aviso(logado, usuario):
+    services.perfil_de(usuario)
+    for n in range(5):
+        nova_tarefa(usuario, f"Tarefa {n}", blocos_estimados=4)
+    services.propor_semana(usuario)
+
+    html = logado.get(reverse("web:semana") + "?visao=dia").content.decode()
+
+    assert "semana--proposta" not in html
+    assert "Ver a proposta" in html
+
+
+@freeze_time("2026-10-27 15:00")
+def test_visao_invalida_continua_caindo_no_padrao(logado, usuario):
+    html = logado.get(reverse("web:semana") + "?visao=ano").content.decode()
+
+    assert 'class="semana semana--uteis' in html

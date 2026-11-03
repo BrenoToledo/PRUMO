@@ -93,7 +93,8 @@
     <ol class="semana__dias semana__dias--planejada" aria-label="Dias da semana" style="--colunas: {{ planejada|length }}">
       {% for d in planejada %}<li class="dia{% if d.fim_de_semana %} dia--fim-de-semana{% endif %}{% if d.hoje %} dia--hoje{% elif d.passado %} dia--passado{% endif %}" data-dia="{{ d.iso }}">
         <div class="dia__topo">
-          <span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>
+          {% if visao == "semana" or visao == "uteis" %}<a class="dia__nome" href="{{ d.endereco_dia }}" hx-get="{{ d.endereco_dia }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></a>
+          {% else %}<span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>{% endif %}
           {% if d.fim_de_semana and not d.capacidade %}<span class="dia__pct dia__pct--fim-de-semana">Fim de semana</span>
           {% else %}<span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.planejados }} de {{ d.capacidade }} blocos">{{ d.planejados }} de {{ d.capacidade }} blocos</span>{% endif %}
         </div>

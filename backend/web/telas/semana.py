@@ -36,7 +36,16 @@ from nucleo.models import Bloco, Tarefa
 
 ROTA = "web:semana"
 DIAS_CURTOS = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
+DIAS_LONGOS = ("Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo")
 MESES = ("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
+
+
+def _titulo_da_visao(visao: str, referencia: date, dias: list[date]) -> str:
+    if visao == "mes":
+        return f"{MESES_LONGOS[referencia.month - 1]} de {referencia.year}"
+    if visao == "dia":
+        return f"{DIAS_LONGOS[referencia.weekday()]}, {referencia.day} de {MESES_LONGOS[referencia.month - 1].lower()}"
+    return _titulo(dias)
 
 
 def _titulo(dias: list[date]) -> str:
@@ -130,6 +139,7 @@ def _dia(d: dict, referencia: date) -> dict:
     return d | {
         "nome": DIAS_CURTOS[d["dia"].weekday()],
         "iso": d["dia"].isoformat(),
+        "endereco_dia": _endereco("dia", d["dia"]),
         "pct": _pct(d["planejados"], d["capacidade"]),
         "acima": d["planejados"] > d["capacidade"],
         "fim_de_semana": d["dia"].weekday() >= 5,
@@ -192,21 +202,23 @@ def _contexto(request, referencia: date | None = None, visao: str | None = None,
     sugestao = services.proposta_da_semana(usuario)
     da_proposta = sugestao is not None and date.fromisoformat(sugestao.conteudo["inicio"]) in dias
     proposta = None
-    if da_proposta and visao != "mes":
+    if da_proposta and visao not in ("mes", "dia"):
         proposta = _proposta(usuario, sugestao, {d["dia"].isoformat(): d["rotinas"] for d in agenda})
         proposta["fim_de_semana"] = [d for d in planejada if d["fim_de_semana"]]
         proposta["colunas"] = len(proposta["dias"]) + len(proposta["fim_de_semana"])
     anterior, proxima = plan.vizinhos(referencia, visao)
     mes = visao == "mes"
-    fora = services.tarefas_fora_da_agenda(usuario) if not mes and services.dias_da_semana()[0] in dias else 0
+    dia_so = visao == "dia"
+    na_semana = services.dias_da_semana()[0] in dias
+    fora = services.tarefas_fora_da_agenda(usuario) if not mes and not dia_so and na_semana else 0
     moveis = [i["bloco"] for d in planejada for i in d["com_horario"] if i.get("movel")]
     return {
         "aba": "semana",
-        "titulo": f"{MESES_LONGOS[referencia.month - 1]} de {referencia.year}" if mes else _titulo(dias),
+        "titulo": _titulo_da_visao(visao, referencia, dias),
         "visao": visao,
         "visoes": [
             {"valor": v, "rotulo": r, "endereco": _endereco(v, referencia)}
-            for v, r in (("mes", "Mês"), ("semana", "Semana"), ("uteis", "Dias úteis"))
+            for v, r in (("mes", "Mês"), ("semana", "Semana"), ("uteis", "Dias úteis"), ("dia", "Dia"))
         ],
         "referencia": referencia.isoformat(),
         "anterior": _endereco(visao, anterior),
@@ -214,7 +226,9 @@ def _contexto(request, referencia: date | None = None, visao: str | None = None,
         "atual": _endereco(visao),
         "pode_propor": fora > 0,
         "fora_da_agenda": fora,
-        "proposta_no_mes": _endereco("uteis", services.dias_da_semana()[0]) if mes and da_proposta else "",
+        "proposta_no_mes": _endereco("uteis", services.dias_da_semana()[0])
+        if visao in ("mes", "dia") and da_proposta
+        else "",
         "folga_pct": round(services.perfil_de(usuario).folga_diaria * 100),
         "dias_curtos": DIAS_CURTOS,
         "planejada": planejada,
@@ -258,7 +272,7 @@ def propor_semana(request):
     sugestao = services.propor_semana(request.user)
     inicio = date.fromisoformat(sugestao.conteudo["inicio"])  # mostra a semana da proposta, em qualquer visão
     visao = _visao(request, request.POST.get("visao"))
-    visao = "uteis" if visao == "mes" else visao
+    visao = "uteis" if visao in ("mes", "dia") else visao
     if request.headers.get("HX-Request"):
         return _render(request, _contexto(request, inicio, visao))
     return redirect(_endereco(visao, inicio))

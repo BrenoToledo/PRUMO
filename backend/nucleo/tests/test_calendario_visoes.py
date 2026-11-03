@@ -239,3 +239,15 @@ def test_trocar_na_proposta_tarefa_que_nao_esta_no_dia_e_recusado(usuario):
 
     with pytest.raises(ValueError, match="não está"):
         services.trocar_na_proposta(sugestao, 1, 2, de_a=date(2026, 10, 19), de_b=date(2026, 10, 20))
+
+
+# ---------------------------------------------------------------- visão Dia (backlog 8)
+def test_dias_da_visao_dia_e_so_o_proprio_dia():
+    assert plan.dias_da_visao(date(2026, 10, 27), "dia") == [date(2026, 10, 27)]
+    assert plan.dias_da_visao(date(2026, 10, 24), "dia") == [date(2026, 10, 24)]  # sábado
+
+
+def test_vizinhos_do_dia_sao_ontem_e_amanha():
+    assert plan.vizinhos(date(2026, 10, 27), "dia") == (date(2026, 10, 26), date(2026, 10, 28))
+    assert plan.vizinhos(date(2026, 10, 31), "dia") == (date(2026, 10, 30), date(2026, 11, 1))
+    assert plan.vizinhos(date(2026, 12, 31), "dia") == (date(2026, 12, 30), date(2027, 1, 1))
