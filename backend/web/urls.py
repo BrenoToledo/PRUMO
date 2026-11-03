@@ -25,6 +25,7 @@ from .telas import (
     rotinas,
     semana,
     tarefas,
+    todas_tarefas,
     tokens,
 )
 
@@ -60,3 +61,4 @@ urlpatterns += semana.urlpatterns
 urlpatterns += pessoas.urlpatterns
 urlpatterns += revisao_semanal.urlpatterns
 urlpatterns += notificacoes.urlpatterns
+urlpatterns += todas_tarefas.urlpatterns
