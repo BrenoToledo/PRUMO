@@ -441,6 +441,28 @@ def bloco_em_foco(usuario) -> Bloco | None:
     )
 
 
+@transaction.atomic
+def iniciar_foco_agora(tarefa: Tarefa) -> Bloco:
+    """Foca numa tarefa que não está no plano (TC-12, parte A): cria um bloco que começa agora e o inicia.
+
+    A duração é a da tarefa (`minutos_estimados`) ou a do perfil. Recusa tarefa encerrada e
+    segundo bloco em foco; se a regra falhar, nada fica gravado (transação).
+    """
+    if tarefa.status != Tarefa.Status.ABERTA:
+        raise ValueError("só uma tarefa aberta pode ser focada")
+    if bloco_em_foco(tarefa.usuario) is not None:
+        raise ValueError("já há um bloco em foco")
+    minutos = tarefa.minutos_estimados or perfil_de(tarefa.usuario).duracao_bloco_min
+    agora = timezone.now()
+    bloco = Bloco.objects.create(
+        usuario=tarefa.usuario,
+        tarefa=tarefa,
+        inicio_planejado=agora,
+        fim_planejado=agora + timedelta(minutes=minutos),
+    )
+    return iniciar_bloco(bloco, minutos=minutos)
+
+
 # --------------------------------------------------------------------------- tarefas
 @transaction.atomic
 def concluir_tarefa(tarefa: Tarefa) -> Tarefa:
