@@ -35,7 +35,7 @@
   {% if tarefas %}
   <ul class="projeto__tarefas">
     {% for tarefa in tarefas %}<li>
-      <a class="projeto__tarefa{% if tarefa.status != 'aberta' %} projeto__tarefa--feita{% endif %}" href="{% url 'web:tarefa' tarefa.pk %}">
+      <a class="projeto__tarefa{% if tarefa.status != 'aberta' %} projeto__tarefa--feita{% endif %}" href="{% url 'web:tarefa' tarefa.pk %}?voltar={{ request.path|urlencode }}">
         <span class="projeto__tarefa-titulo">{{ tarefa.titulo }}</span>
         {% if tarefa.status == "aberta" %}<span class="chip chip--{{ tarefa.faixa }}">{{ tarefa.prioridade }}</span>{% else %}<span class="chip">{{ tarefa.get_status_display }}</span>{% endif %}
       </a>
