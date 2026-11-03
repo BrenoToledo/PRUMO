@@ -1,7 +1,7 @@
 /* Aba Tarefas: lista de todas as tarefas com filtros, busca e concluir pela bolinha. */
 .filtros { display: grid; gap: var(--e2); grid-template-columns: 1fr; margin: 0 0 var(--e4); }
 .filtros .campo { display: flex; flex-direction: column; gap: var(--e1); color: var(--texto-secundario); font-size: var(--legenda-tam); }
-.filtros input, .filtros select { min-height: 44px; padding: var(--e2) var(--e3); border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--superficie); color: var(--texto); font: inherit; }
+.filtros input, .filtros select { min-height: 44px; padding: var(--e2) var(--e3); border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--superficie); color: var(--texto); font-family: inherit; font-size: inherit; }
 .filtros .botao { justify-self: start; }
 @media (min-width: 720px) { .filtros { grid-template-columns: 2fr repeat(4, 1fr) auto; align-items: end; } }
 
