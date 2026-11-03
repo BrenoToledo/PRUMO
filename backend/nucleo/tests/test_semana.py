@@ -1,13 +1,13 @@
 """Planejamento da semana (#79, #80): proposta como SugestaoIA, ajustes e aprovação que cria os blocos."""
 
-from datetime import date, time
+from datetime import date, time, timedelta
 
 import pytest
 from django.utils import timezone
 from freezegun import freeze_time
 
 from nucleo import services
-from nucleo.models import Area, Bloco, EventoTarefa, SugestaoIA, Tarefa
+from nucleo.models import Area, Bloco, Esforco, EventoTarefa, SugestaoIA, Tarefa
 from nucleo.tests.apoio import nova_tarefa
 
 SEG = "2026-10-19 11:00"  # 08:00 em São Paulo, segunda
@@ -301,3 +301,52 @@ def test_rotinas_de_outra_pessoa_nao_aparecem(usuario, outra):
     _rotina(outra, recorrencia="FREQ=DAILY")
 
     assert all(not d["rotinas"] for d in services.semana_planejada(usuario)["dias"])
+
+
+# ---------------------------------------------------------------- revisar agenda: tarefas fora da agenda
+@freeze_time(SEG)
+def test_fora_da_agenda_conta_tarefas_sem_bloco(usuario, tarefas):
+    assert services.tarefas_fora_da_agenda(usuario) == 5
+
+
+@freeze_time(SEG)
+def test_fora_da_agenda_ignora_leves_rotinas_e_adiadas(usuario):
+    services.perfil_de(usuario)
+    nova_tarefa(usuario, "Leve", esforco=Esforco.BAIXO)
+    rotina = _rotina(usuario)
+    nova_tarefa(usuario, "Ocorrencia de rotina", rotina=rotina)
+    nova_tarefa(usuario, "Adiada", adiada_ate=date(2026, 10, 30))
+
+    assert services.tarefas_fora_da_agenda(usuario) == 0
+
+
+@freeze_time(SEG)
+def test_fora_da_agenda_ignora_tarefa_com_bloco_planejado_futuro(usuario):
+    services.perfil_de(usuario)
+    com_futuro = nova_tarefa(usuario, "Com bloco amanha")
+    com_passado = nova_tarefa(usuario, "So bloco passado")
+    Bloco.objects.create(
+        usuario=usuario,
+        tarefa=com_futuro,
+        inicio_planejado=timezone.now() + timedelta(days=1),
+        fim_planejado=timezone.now() + timedelta(days=1, minutes=30),
+        status=Bloco.Status.PLANEJADO,
+    )
+    Bloco.objects.create(
+        usuario=usuario,
+        tarefa=com_passado,
+        inicio_planejado=timezone.now() - timedelta(days=1),
+        fim_planejado=timezone.now() - timedelta(days=1, minutes=-30),
+        status=Bloco.Status.PLANEJADO,
+    )
+
+    assert services.tarefas_fora_da_agenda(usuario) == 1
+
+
+@freeze_time(SEG)
+def test_fora_da_agenda_e_do_usuario(usuario, outra):
+    services.perfil_de(usuario)
+    nova_tarefa(usuario, "Minha")
+    nova_tarefa(outra, "Dela")
+
+    assert services.tarefas_fora_da_agenda(usuario) == 1

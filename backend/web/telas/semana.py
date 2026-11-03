@@ -198,6 +198,7 @@ def _contexto(request, referencia: date | None = None, visao: str | None = None,
         proposta["colunas"] = len(proposta["dias"]) + len(proposta["fim_de_semana"])
     anterior, proxima = plan.vizinhos(referencia, visao)
     mes = visao == "mes"
+    fora = services.tarefas_fora_da_agenda(usuario) if not mes and services.dias_da_semana()[0] in dias else 0
     moveis = [i["bloco"] for d in planejada for i in d["com_horario"] if i.get("movel")]
     return {
         "aba": "semana",
@@ -211,7 +212,8 @@ def _contexto(request, referencia: date | None = None, visao: str | None = None,
         "anterior": _endereco(visao, anterior),
         "proxima": _endereco(visao, proxima),
         "atual": _endereco(visao),
-        "pode_propor": not mes and services.dias_da_semana()[0] in dias,
+        "pode_propor": fora > 0,
+        "fora_da_agenda": fora,
         "proposta_no_mes": _endereco("uteis", services.dias_da_semana()[0]) if mes and da_proposta else "",
         "dias_curtos": DIAS_CURTOS,
         "planejada": planejada,

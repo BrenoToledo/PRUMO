@@ -319,6 +319,7 @@ A proposta distribui os blocos restantes das tarefas abertas (esforço alto e m�
 | --- | --- | --- |
 | `dias_da_semana(dia=None)` | `list[date]` | Dias úteis de hoje até sexta; sábado e domingo levam à semana seguinte |
 | `propor_semana(usuario, dia=None)` | `SugestaoIA` | Nova proposta pendente; a pendente anterior fica recusada |
+| `tarefas_fora_da_agenda(usuario, dia=None)` | `int` | Quantas tarefas a proposta levaria e que não têm bloco planejado daqui para a frente (sem leves, rotinas nem adiadas). Com 0, o calendário não mostra o botão; com N, mostra "Revisar agenda (N)" |
 | `proposta_da_semana(usuario)` | `SugestaoIA \| None` | A pendente desta semana; a de semana passada não vale |
 | `mover_na_proposta(sugestao, tarefa, *, de, para)` | `SugestaoIA` | Move os blocos da tarefa entre dias (`None` = não couberam), juntando no destino. `ValueError` se a tarefa não está em `de`, se o dia não é da semana ou se a proposta já foi respondida |
 | `aprovar_semana(sugestao)` | `dict` | `{blocos, nao_couberam}`. Para cada dia (de hoje em diante) troca os blocos planejados e não iniciados pelos da proposta, com horário (`montar_plano_do_dia`: compromissos, pico de energia, hora atual). Tarefas fechadas no meio do caminho saem. A sugestão fica `aceita` ou `editada`, com `resposta` = versão final |
