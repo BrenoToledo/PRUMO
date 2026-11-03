@@ -8,7 +8,7 @@ from django.utils import timezone
 from freezegun import freeze_time
 
 from nucleo import services
-from nucleo.models import Bloco
+from nucleo.models import Area, Bloco
 from nucleo.tests.apoio import nova_tarefa
 
 QUA = "2026-10-21 13:30"  # 10:30 em São Paulo, quarta
@@ -225,3 +225,87 @@ def test_dialogo_do_detalhe_aparece_uma_vez_so(logado, usuario):
     html = logado.get(reverse("web:semana")).content.decode()
 
     assert html.count('id="detalhe-bloco"') == 1
+
+
+# ---------------------------------------------------------------- criar no horário (pacote 21, 6D)
+AMANHA = "2026-11-04"
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_formulario_de_criar_vem_com_o_dia_e_a_hora(logado, usuario):
+    html = logado.get(reverse("web:novo_bloco_na_semana"), {"dia": AMANHA, "hora": "10:00"}).content.decode()
+
+    assert 'name="titulo"' in html
+    assert f'value="{AMANHA}"' in html
+    assert 'value="10:00"' in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_criar_com_tarefa_existente(logado, usuario):
+    tarefa = nova_tarefa(usuario, "Ler artigo", blocos_estimados=2)
+
+    resposta = logado.post(
+        reverse("web:novo_bloco_na_semana"),
+        {"dia": AMANHA, "hora": "10:00", "tarefa": tarefa.pk, "data": "2026-11-03", "visao": "uteis"},
+        **HTMX,
+    )
+
+    assert resposta.status_code == 200
+    assert 'id="semana"' in resposta.content.decode()
+    assert Bloco.objects.filter(tarefa=tarefa, status=Bloco.Status.PLANEJADO).exists()
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_criar_com_tarefa_nova(logado, usuario):
+    area = Area.objects.get(usuario=usuario, nome="Educação")
+
+    logado.post(
+        reverse("web:novo_bloco_na_semana"),
+        {
+            "dia": AMANHA,
+            "hora": "10:00",
+            "titulo": "Ligar para a escola",
+            "area": area.pk,
+            "data": "2026-11-03",
+            "visao": "uteis",
+        },
+        **HTMX,
+    )
+
+    assert Bloco.objects.filter(tarefa__titulo="Ligar para a escola", tarefa__usuario=usuario).exists()
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_criar_com_tarefa_de_outra_pessoa_da_404(logado, usuario, outra):
+    tarefa = nova_tarefa(outra, "Segredo")
+
+    resposta = logado.post(reverse("web:novo_bloco_na_semana"), {"dia": AMANHA, "hora": "10:00", "tarefa": tarefa.pk})
+
+    assert resposta.status_code == 404
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_criar_com_area_de_outra_pessoa_da_404(logado, usuario, outra):
+    area_alheia = Area.objects.get(usuario=outra, nome="Educação")
+
+    resposta = logado.post(
+        reverse("web:novo_bloco_na_semana"),
+        {"dia": AMANHA, "hora": "10:00", "titulo": "Ligar", "area": area_alheia.pk},
+    )
+
+    assert resposta.status_code == 404
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_horario_ocupado_volta_422(logado, usuario):
+    ocupado = _bloco_na_semana(usuario)
+    tarefa = nova_tarefa(usuario, "Ler artigo")
+
+    resposta = logado.post(
+        reverse("web:novo_bloco_na_semana"),
+        {"dia": AMANHA, "hora": "10:30", "tarefa": tarefa.pk},
+        **HTMX,
+    )
+
+    assert resposta.status_code == 422
+    assert ocupado.tarefa != tarefa

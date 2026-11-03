@@ -2527,3 +2527,38 @@ def marcar_bloco_feito(bloco: Bloco) -> Bloco:
     if tarefa.status == Tarefa.Status.ABERTA:
         recalcular_prioridade(tarefa)
     return bloco
+
+
+@transaction.atomic
+def agendar_bloco(tarefa: Tarefa, inicio: datetime) -> Bloco:
+    """Cria um bloco planejado da tarefa em `inicio`, com a duração do perfil (pacote 21, criar no horário)."""
+    if tarefa.status != Tarefa.Status.ABERTA:
+        raise ValueError("só uma tarefa aberta pode ganhar horário")
+    duracao = timedelta(minutes=perfil_de(tarefa.usuario).duracao_bloco_min)
+    bloco = Bloco(
+        usuario=tarefa.usuario,
+        tarefa=tarefa,
+        inicio_planejado=inicio,
+        fim_planejado=inicio + duracao,
+        status=Bloco.Status.PLANEJADO,
+    )
+    _conferir_horario(bloco, inicio, set(), [])
+    bloco.save()
+    evento(tarefa, EventoTarefa.Tipo.PLANEJADA, bloco=bloco.pk, inicio=inicio.isoformat(), origem="agenda")
+    return bloco
+
+
+@transaction.atomic
+def criar_tarefa_no_horario(usuario, titulo: str, area: Area, inicio: datetime) -> Bloco:
+    """Cria a tarefa (esforço médio, 1 bloco) e o bloco dela em `inicio`; sem horário livre, nada fica no banco."""
+    tarefa = Tarefa.objects.create(
+        usuario=usuario,
+        area=area,
+        titulo=titulo[:200],
+        proxima_acao=titulo[:300],
+        esforco=Esforco.MEDIO,
+        blocos_estimados=1,
+    )
+    evento(tarefa, EventoTarefa.Tipo.CRIADA, origem="agenda")
+    recalcular_prioridade(tarefa)
+    return agendar_bloco(tarefa, inicio)

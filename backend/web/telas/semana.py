@@ -28,11 +28,11 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import path, reverse
 from django.utils import timezone
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from nucleo import planejamento as plan
 from nucleo import services
-from nucleo.models import Bloco, Tarefa
+from nucleo.models import Area, Bloco, Esforco, Tarefa
 
 ROTA = "web:semana"
 DIAS_CURTOS = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
@@ -363,6 +363,41 @@ def mover_bloco_na_semana(request, pk: int):
     return _parcial_ou_volta(request)
 
 
+@require_http_methods(["GET", "POST"])
+@login_required
+def novo_bloco_na_semana(request):
+    if request.method == "GET":
+        abertas = Tarefa.objects.filter(usuario=request.user, status=Tarefa.Status.ABERTA).exclude(
+            esforco=Esforco.BAIXO
+        )
+        return render(
+            request,
+            "web/semana/_novo_bloco.html",
+            {
+                "dia": request.GET.get("dia", ""),
+                "hora": request.GET.get("hora", ""),
+                "data": request.GET.get("data", ""),
+                "visao": request.GET.get("visao", ""),
+                "tarefas": abertas.order_by("-prioridade", "titulo")[:50],
+                "areas": Area.objects.filter(usuario=request.user).order_by("nome"),
+            },
+        )
+    try:
+        inicio = _quando(request.POST.get("dia", ""), request.POST.get("hora", ""))
+        if request.POST.get("tarefa"):
+            tarefa = get_object_or_404(Tarefa, pk=_id(request.POST.get("tarefa")), usuario=request.user)
+            services.agendar_bloco(tarefa, inicio)
+        else:
+            area = get_object_or_404(Area, pk=_id(request.POST.get("area")), usuario=request.user)
+            titulo = request.POST.get("titulo", "").strip()
+            if not titulo:
+                raise ValueError("escreva o título da tarefa")
+            services.criar_tarefa_no_horario(request.user, titulo, area, inicio)
+    except ValueError as erro:
+        return _erro(request, erro)
+    return _parcial_ou_volta(request)
+
+
 @require_GET
 @login_required
 def detalhe_bloco_na_semana(request, pk: int):
@@ -403,6 +438,7 @@ urlpatterns = [
     path("semana/descartar/", descartar_semana, name="descartar_semana"),
     path("semana/trocar/", trocar_na_semana, name="trocar_na_semana"),
     path("semana/blocos/<int:pk>/mover/", mover_bloco_na_semana, name="mover_bloco_na_semana"),
+    path("semana/blocos/novo/", novo_bloco_na_semana, name="novo_bloco_na_semana"),
     path("semana/blocos/<int:pk>/", detalhe_bloco_na_semana, name="detalhe_bloco_na_semana"),
     path("semana/blocos/<int:pk>/feito/", bloco_feito_na_semana, name="bloco_feito_na_semana"),
     path("semana/blocos/trocar/", trocar_blocos_na_semana, name="trocar_blocos_na_semana"),

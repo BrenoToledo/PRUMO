@@ -1,0 +1,35 @@
+{# Criar um bloco no horário (pacote 21, 6D): carregado no <dialog> de _semana.html; o POST volta para #semana. #}
+<article class="detalhe-bloco__corpo">
+  <h2 class="detalhe-bloco__titulo">Criar no horário</h2>
+  <form method="post" action="{% url 'web:novo_bloco_na_semana' %}" hx-post="{% url 'web:novo_bloco_na_semana' %}" hx-target="#semana" hx-swap="outerHTML">
+    {% csrf_token %}
+    <input type="hidden" name="data" value="{{ data }}">
+    <input type="hidden" name="visao" value="{{ visao }}">
+    <div class="campo">
+      <label for="novo-dia">Dia</label>
+      <input id="novo-dia" type="date" name="dia" value="{{ dia }}" required>
+    </div>
+    <div class="campo">
+      <label for="novo-hora">Hora</label>
+      <input id="novo-hora" type="time" name="hora" step="900" value="{{ hora }}" required>
+    </div>
+    <div class="campo">
+      <label for="novo-tarefa">Tarefa existente</label>
+      <select id="novo-tarefa" name="tarefa">
+        <option value="">Nova tarefa abaixo</option>
+        {% for t in tarefas %}<option value="{{ t.pk }}">{{ t.titulo }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="campo">
+      <label for="novo-titulo">Nova tarefa</label>
+      <input id="novo-titulo" type="text" name="titulo" maxlength="200">
+    </div>
+    <div class="campo">
+      <label for="novo-area">Área</label>
+      <select id="novo-area" name="area">
+        {% for a in areas %}<option value="{{ a.pk }}">{{ a.nome }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="detalhe-bloco__acoes"><button class="botao" type="submit">Criar bloco</button></div>
+  </form>
+</article>

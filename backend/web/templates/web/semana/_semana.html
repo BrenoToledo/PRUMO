@@ -1,4 +1,4 @@
-<div id="semana" class="semana semana--{{ visao }}{% if proposta %} semana--proposta{% endif %}" data-mover="{% url 'web:mover_na_semana' %}" data-trocar="{% url 'web:trocar_na_semana' %}" data-trocar-blocos="{% url 'web:trocar_blocos_na_semana' %}" data-data="{{ referencia }}" data-visao="{{ visao }}">
+<div id="semana" class="semana semana--{{ visao }}{% if proposta %} semana--proposta{% endif %}" data-novo="{% url 'web:novo_bloco_na_semana' %}" data-mover="{% url 'web:mover_na_semana' %}" data-trocar="{% url 'web:trocar_na_semana' %}" data-trocar-blocos="{% url 'web:trocar_blocos_na_semana' %}" data-data="{{ referencia }}" data-visao="{{ visao }}">
   <header class="semana__topo">
     <a class="voltar" href="{% url 'web:hoje' %}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
