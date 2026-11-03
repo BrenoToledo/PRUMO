@@ -222,3 +222,5 @@ a { color: var(--primaria); }
   .item__acoes { flex: none; max-width: 60%; }
   .sair-celular { display: none; }
 }
+.nav__tema { display: flex; align-items: center; gap: var(--e1); padding: var(--e2); font-size: var(--legenda-tam); color: var(--texto-secundario); }
+.nav__tema select { font-family: inherit; font-size: inherit; color: var(--texto); background: var(--superficie); border: 1px solid var(--borda); border-radius: 6px; padding: 2px 6px; }
