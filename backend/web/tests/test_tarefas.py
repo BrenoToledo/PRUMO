@@ -366,3 +366,50 @@ def test_editar_nao_aceita_area_nem_projeto_de_outra_pessoa(logado, tcc, outra):
 def test_detalhe_so_aceita_get_e_editar_so_post(logado, tcc):
     assert logado.post(reverse("web:tarefa", args=[tcc.pk])).status_code == 405
     assert logado.get(reverse("web:editar_tarefa", args=[tcc.pk])).status_code == 405
+
+
+# ---------------------------------------------------------------- "‹ Tarefa" volta para a tela de origem
+def _href_voltar(html: str) -> str:
+    inicio = html.index('class="voltar" href="') + len('class="voltar" href="')
+    return html[inicio : html.index('"', inicio)]
+
+
+def test_voltar_da_tarefa_aberta_do_projeto_leva_ao_projeto(logado, tcc):
+    origem = reverse("web:projeto", args=[tcc.projeto.pk])
+
+    resp = logado.get(reverse("web:tarefa", args=[tcc.pk]), {"voltar": origem})
+
+    assert _href_voltar(resp.content.decode()) == origem
+
+
+def test_voltar_sem_parametro_leva_a_hoje(logado, tcc):
+    resp = logado.get(reverse("web:tarefa", args=[tcc.pk]))
+
+    assert _href_voltar(resp.content.decode()) == reverse("web:hoje")
+
+
+@pytest.mark.parametrize("destino", ["https://exemplo.com/", "//exemplo.com/", "javascript:alert(1)"])
+def test_voltar_para_outro_site_e_ignorado(logado, tcc, destino):
+    resp = logado.get(reverse("web:tarefa", args=[tcc.pk]), {"voltar": destino})
+
+    assert _href_voltar(resp.content.decode()) == reverse("web:hoje")
+
+
+def test_projeto_linka_tarefa_com_voltar(logado, tcc):
+    origem = reverse("web:projeto", args=[tcc.projeto.pk])
+
+    resp = logado.get(origem)
+
+    assert f"?voltar={origem}" in resp.content.decode()
+
+
+def test_voltar_sobrevive_a_edicao_htmx(logado, tcc):
+    origem = reverse("web:projeto", args=[tcc.projeto.pk])
+    atual = f"http://testserver{reverse('web:tarefa', args=[tcc.pk])}?voltar={origem}"
+
+    resp = logado.post(
+        reverse("web:editar_tarefa", args=[tcc.pk]), _dados_edicao(tcc), **HTMX, HTTP_HX_CURRENT_URL=atual
+    )
+
+    assert resp.status_code == 200
+    assert _href_voltar(resp.content.decode()) == origem

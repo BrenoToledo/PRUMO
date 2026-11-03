@@ -24,6 +24,7 @@ As tarefas leves (#8) aparecem na tela Hoje pelo parcial `web/tarefas/_tarefas_l
 """
 
 from datetime import timedelta
+from urllib.parse import parse_qs, urlsplit
 
 from django import forms
 from django.contrib import messages
@@ -125,6 +126,22 @@ def _motivo_urgencia(av: motor.Avaliacao) -> str:
     return motivo[:1].upper() + motivo[1:]
 
 
+def _voltar_para(request) -> str:
+    """Para onde o "‹ Tarefa" leva: o `?voltar=` (se for deste site) ou Hoje.
+
+    Em pedidos HTMX o parâmetro não vem no GET; ele é lido da página atual (`HX-Current-URL`).
+    """
+    destino = request.GET.get("voltar", "")
+    if not destino:
+        atual = urlsplit(request.headers.get("HX-Current-URL", ""))
+        destino = parse_qs(atual.query).get("voltar", [""])[0]
+    if destino and url_has_allowed_host_and_scheme(
+        destino, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return destino
+    return reverse("web:hoje")
+
+
 def _contexto(request, tarefa, form=None, editando=False):
     av = services.avaliar_tarefa(tarefa)
     respostas = tarefa.respostas_importancia or {}
@@ -142,6 +159,7 @@ def _contexto(request, tarefa, form=None, editando=False):
         "form": form or TarefaForm(request.user, instance=tarefa),
         "editando": editando,
         "aqui": reverse(ROTA_TAREFA, args=[tarefa.pk]),
+        "voltar": _voltar_para(request),
         "hoje": services.hoje(),
         "amanha": services.hoje() + timedelta(days=1),
         "ia": tarefa.status == Tarefa.Status.ABERTA and services.ia_disponivel(request.user),
