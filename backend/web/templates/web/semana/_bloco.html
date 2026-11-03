@@ -1,5 +1,10 @@
 {# Conteúdo de um bloco na grade da semana, título antes da hora (#108); o item de lista (arrastável se planejado) fica em _semana.html. #}
-<span class="tarefa-semana__titulo">{{ item.bloco.tarefa.titulo }}</span><span class="tarefa-semana__hora">{{ item.bloco.inicio_planejado|time:"H:i" }}</span>
+{% if item.bloco.status == "planejado" %}<form class="tarefa-semana__feito-form" method="post" action="{% url 'web:bloco_feito_na_semana' item.bloco.pk %}" hx-post="{% url 'web:bloco_feito_na_semana' item.bloco.pk %}" hx-target="#semana" hx-swap="outerHTML">
+  {% csrf_token %}
+  <input type="hidden" name="data" value="{{ referencia }}">
+  <input type="hidden" name="visao" value="{{ visao }}">
+  <button class="tarefa-semana__feito" type="submit" aria-label="Marcar “{{ item.bloco.tarefa.titulo }}” como feito"></button>
+</form>{% elif item.bloco.status == "concluido" %}<span class="tarefa-semana__feito tarefa-semana__feito--ok" aria-hidden="true"></span>{% endif %}<span class="tarefa-semana__titulo">{{ item.bloco.tarefa.titulo }}</span><span class="tarefa-semana__hora">{{ item.bloco.inicio_planejado|time:"H:i" }}</span>
 {% if item.movel %}<details class="tarefa-semana__mover">
   <summary>Mover</summary>
   <form method="post" action="{% url 'web:mover_bloco_na_semana' item.bloco.pk %}" hx-post="{% url 'web:mover_bloco_na_semana' item.bloco.pk %}" hx-target="#semana" hx-swap="outerHTML">

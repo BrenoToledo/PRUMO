@@ -2505,3 +2505,25 @@ def buscar_tarefas(usuario, *, status="abertas", area=None, projeto=None, prazo=
     return consulta.select_related("area", "projeto").order_by(
         *ORDENS_LISTA_TAREFAS.get(ordem, ORDENS_LISTA_TAREFAS["prioridade"])
     )
+
+
+@transaction.atomic
+def marcar_bloco_feito(bloco: Bloco) -> Bloco:
+    """Marca um bloco planejado como feito direto pela agenda (pacote 21, bolinha de feito).
+
+    Não passa pelo foco e não conclui a tarefa: concluir a tarefa é pelo detalhe dela.
+    """
+    if bloco.status != Bloco.Status.PLANEJADO:
+        raise ValueError("só um bloco planejado pode ser marcado como feito")
+    bloco.status = Bloco.Status.CONCLUIDO
+    bloco.resultado = Bloco.Resultado.AVANCOU
+    bloco.inicio_real = bloco.inicio_planejado
+    bloco.fim_real = bloco.fim_planejado
+    bloco.save(update_fields=["status", "resultado", "inicio_real", "fim_real"])
+    tarefa = bloco.tarefa
+    tarefa.blocos_feitos += 1
+    tarefa.save(update_fields=["blocos_feitos"])
+    evento(tarefa, EventoTarefa.Tipo.BLOCO, bloco=bloco.pk, resultado=Bloco.Resultado.AVANCOU, origem="agenda")
+    if tarefa.status == Tarefa.Status.ABERTA:
+        recalcular_prioridade(tarefa)
+    return bloco

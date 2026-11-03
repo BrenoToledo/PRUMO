@@ -103,3 +103,80 @@ def test_blocos_no_mesmo_horario_ficam_lado_a_lado(logado, usuario, perfil):
     assert [(i["coluna"], i["colunas"]) for i in itens] == [(0, 2), (1, 2), (0, 1)]
     html = resposta.content.decode()
     assert "--coluna: 1; --colunas: 2" in html
+
+
+# ---------------------------------------------------------------- bolinha de feito (pacote 21, 6C)
+HTMX = {"HTTP_HX_REQUEST": "true"}
+
+SEMANA_DO_BLOCO = "2026-11-03 11:00"  # terça, 08:00 em São Paulo
+
+
+def _bloco_na_semana(usuario, status=Bloco.Status.PLANEJADO):
+    tarefa = nova_tarefa(usuario, "Revisar capítulo", blocos_estimados=3)
+    return Bloco.objects.create(
+        usuario=usuario,
+        tarefa=tarefa,
+        inicio_planejado=timezone.make_aware(datetime(2026, 11, 4, 10, 0)),
+        fim_planejado=timezone.make_aware(datetime(2026, 11, 4, 11, 30)),
+        status=status,
+    )
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_bloco_planejado_tem_a_bolinha_de_feito(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert reverse("web:bloco_feito_na_semana", args=[bloco.pk]) in html
+    assert 'aria-label="Marcar “Revisar capítulo” como feito"' in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_marcar_feito_com_htmx_devolve_a_semana(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    resposta = logado.post(
+        reverse("web:bloco_feito_na_semana", args=[bloco.pk]), {"data": "2026-11-03", "visao": "uteis"}, **HTMX
+    )
+
+    assert resposta.status_code == 200
+    assert 'id="semana"' in resposta.content.decode()
+    bloco.refresh_from_db()
+    assert bloco.status == Bloco.Status.CONCLUIDO
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_marcar_feito_sem_htmx_volta_para_a_semana(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    resposta = logado.post(
+        reverse("web:bloco_feito_na_semana", args=[bloco.pk]), {"data": "2026-11-03", "visao": "uteis"}
+    )
+
+    assert resposta.status_code == 302
+    bloco.refresh_from_db()
+    assert bloco.status == Bloco.Status.CONCLUIDO
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_bloco_concluido_nao_tem_o_formulario(logado, usuario):
+    bloco = _bloco_na_semana(usuario, status=Bloco.Status.CONCLUIDO)
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert reverse("web:bloco_feito_na_semana", args=[bloco.pk]) not in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_bloco_de_outra_pessoa_da_404(logado, outra):
+    bloco = _bloco_na_semana(outra)
+
+    assert logado.post(reverse("web:bloco_feito_na_semana", args=[bloco.pk])).status_code == 404
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_feito_por_get_da_405(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    assert logado.get(reverse("web:bloco_feito_na_semana", args=[bloco.pk])).status_code == 405

@@ -179,3 +179,6 @@
   .semana--proposta .tarefa-semana__mover { display: none; } /* no desktop, arrasta */
   .semana__acoes { max-width: 480px; margin-left: auto; }
 }
+.tarefa-semana__feito-form { display: inline; margin: 0; }
+.tarefa-semana__feito { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--cor-area, var(--primaria)); background: transparent; padding: 0; margin-right: var(--e1); vertical-align: middle; cursor: pointer; }
+.tarefa-semana__feito--ok { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--cor-area, var(--primaria)); margin-right: var(--e1); vertical-align: middle; }

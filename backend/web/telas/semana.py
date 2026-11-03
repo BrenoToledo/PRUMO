@@ -365,6 +365,17 @@ def mover_bloco_na_semana(request, pk: int):
 
 @require_POST
 @login_required
+def bloco_feito_na_semana(request, pk: int):
+    bloco = get_object_or_404(Bloco, pk=pk, usuario=request.user)
+    try:
+        services.marcar_bloco_feito(bloco)
+    except ValueError as erro:
+        return _erro(request, erro)
+    return _parcial_ou_volta(request)
+
+
+@require_POST
+@login_required
 def trocar_blocos_na_semana(request):
     a = get_object_or_404(Bloco, pk=_id(request.POST.get("a")), usuario=request.user)
     b = get_object_or_404(Bloco, pk=_id(request.POST.get("b")), usuario=request.user)
@@ -383,5 +394,6 @@ urlpatterns = [
     path("semana/descartar/", descartar_semana, name="descartar_semana"),
     path("semana/trocar/", trocar_na_semana, name="trocar_na_semana"),
     path("semana/blocos/<int:pk>/mover/", mover_bloco_na_semana, name="mover_bloco_na_semana"),
+    path("semana/blocos/<int:pk>/feito/", bloco_feito_na_semana, name="bloco_feito_na_semana"),
     path("semana/blocos/trocar/", trocar_blocos_na_semana, name="trocar_blocos_na_semana"),
 ]
