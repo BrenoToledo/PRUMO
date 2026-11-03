@@ -1,5 +1,7 @@
 {% extends "web/base.html" %}
+{% load static %}
 {% block titulo %}Tarefas{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/todas_tarefas.css' %}">{% endblock %}
 {% block conteudo %}
 <header class="cabecalho">
   <div>
@@ -53,7 +55,14 @@
 {% if tarefas %}
 <p class="contagem">{{ tarefas|length }} tarefa{{ tarefas|length|pluralize:"s" }}</p>
 <ul class="lista-tarefas">
-  {% for t in tarefas %}<li>
+  {% for t in tarefas %}<li class="lista-tarefas__linha">
+    {% if t.status == "aberta" %}
+    <form method="post" action="{% url 'web:concluir_tarefa' t.pk %}?{{ voltar }}" class="lista-tarefas__concluir">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ atual }}">
+      <button class="lista-tarefas__bolinha" type="submit" aria-label="Concluir {{ t.titulo }}"></button>
+    </form>
+    {% endif %}
     <a class="lista-tarefas__item" href="{% url 'web:tarefa' t.pk %}?{{ voltar }}">
       <span class="lista-tarefas__titulo">{{ t.titulo }}</span>
       <span class="lista-tarefas__proxima">{{ t.proxima_acao }}</span>

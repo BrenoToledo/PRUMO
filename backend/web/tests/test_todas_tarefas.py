@@ -9,7 +9,7 @@ import pytest
 from django.urls import reverse
 from freezegun import freeze_time
 
-from nucleo.models import Tarefa
+from nucleo.models import EventoTarefa, Tarefa
 from nucleo.tests.apoio import nova_tarefa, novo_projeto
 
 SEG_10H = "2026-10-19 13:00"
@@ -168,3 +168,20 @@ def test_link_da_tarefa_passa_voltar(logado, cenario):
 def test_nao_consulta_status_inexistente(logado):
     assert Tarefa.objects.count() == 0
     assert logado.get(reverse("web:todas_tarefas")).status_code == 200
+
+
+# ---------------------------------------------------------------- concluir pela lista
+def test_tarefa_aberta_tem_botao_concluir(logado, cenario):
+    html = logado.get(reverse("web:todas_tarefas")).content.decode()
+    assert f'action="{reverse("web:concluir_tarefa", args=[cenario["capitulo"].pk])}' in html
+
+
+def test_concluir_pela_lista_grava_evento_e_volta_para_a_lista(logado, usuario, cenario):
+    url_lista = reverse("web:todas_tarefas") + "?status=abertas"
+    pk = cenario["capitulo"].pk
+    r = logado.post(reverse("web:concluir_tarefa", args=[pk]) + "?voltar=" + url_lista, {"next": url_lista})
+    assert r.status_code == 302
+    assert r["Location"] == url_lista
+    cenario["capitulo"].refresh_from_db()
+    assert cenario["capitulo"].status == Tarefa.Status.CONCLUIDA
+    assert EventoTarefa.objects.filter(tarefa=cenario["capitulo"], tipo=EventoTarefa.Tipo.CONCLUIDA).exists()

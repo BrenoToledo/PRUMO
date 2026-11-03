@@ -55,7 +55,8 @@ def todas_tarefas(request):
     usuario = request.user
     filtros = _filtros(request, usuario)
     tarefas = list(services.buscar_tarefas(usuario, **filtros))
-    voltar = urlencode({"voltar": _voltar_atual(request)})
+    atual = _voltar_atual(request)
+    voltar = urlencode({"voltar": atual})
     contexto = {
         "aba": "tarefas",
         "tarefas": tarefas,
@@ -66,6 +67,7 @@ def todas_tarefas(request):
         "areas": Area.objects.filter(usuario=usuario).order_by("nome"),
         "projetos": Projeto.objects.filter(usuario=usuario).order_by("nome"),
         "voltar": voltar,
+        "atual": atual,
     }
     return render(request, "web/tarefas/lista.html", contexto)
 
