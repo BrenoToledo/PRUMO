@@ -2459,3 +2459,38 @@ def enviar_push(notificacao: Notificacao) -> int:
         elif status < 300:  # noqa: PLR2004
             aceitos += 1
     return aceitos
+
+
+STATUS_LISTA_TAREFAS = {
+    "abertas": [Tarefa.Status.ABERTA],
+    "feitas": [Tarefa.Status.CONCLUIDA],
+    "canceladas": [Tarefa.Status.CANCELADA],
+    "todas": [Tarefa.Status.ABERTA, Tarefa.Status.CONCLUIDA, Tarefa.Status.CANCELADA],
+}
+ORDENS_LISTA_TAREFAS = {
+    "prioridade": ("-prioridade", "-criada_em"),
+    "prazo": (F("prazo").asc(nulls_last=True), "-prioridade"),
+    "criacao": ("-criada_em",),
+}
+
+
+def buscar_tarefas(usuario, *, status="abertas", area=None, projeto=None, prazo="", q="", ordem="prioridade"):
+    """Tarefas do usuário para a aba Tarefas. Filtros inválidos são ignorados (voltam ao padrão)."""
+    consulta = Tarefa.objects.filter(
+        usuario=usuario, status__in=STATUS_LISTA_TAREFAS.get(status, [Tarefa.Status.ABERTA])
+    )
+    if area is not None:
+        consulta = consulta.filter(area=area)
+    if projeto == "sem":
+        consulta = consulta.filter(projeto__isnull=True)
+    elif projeto is not None:
+        consulta = consulta.filter(projeto=projeto)
+    if prazo == "com":
+        consulta = consulta.filter(prazo__isnull=False)
+    elif prazo == "sem":
+        consulta = consulta.filter(prazo__isnull=True)
+    if q:
+        consulta = consulta.filter(Q(titulo__icontains=q) | Q(proxima_acao__icontains=q))
+    return consulta.select_related("area", "projeto").order_by(
+        *ORDENS_LISTA_TAREFAS.get(ordem, ORDENS_LISTA_TAREFAS["prioridade"])
+    )
