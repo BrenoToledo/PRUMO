@@ -279,3 +279,27 @@ def test_botao_revisar_agenda_mostra_quantas(logado, usuario):
 
     assert "Revisar agenda (2)" in html
     assert reverse("web:propor_semana") in html
+
+
+# ---------------------------------------------------------------- folga diária na tela (backlog 1)
+@freeze_time(SEG)
+def test_dia_da_proposta_mostra_blocos_e_folga(logado, usuario, tarefas):
+    services.propor_semana(usuario)
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert "30% de cada dia fica livre para imprevistos" in html
+    assert "de 3 blocos" in html
+
+
+@freeze_time(SEG)
+def test_dia_cheio_nao_mostra_100_por_cento_sozinho(logado, usuario, tarefas):
+    sugestao = services.propor_semana(usuario)
+    cheio = sugestao.conteudo["atual"]["dias"]["2026-10-19"]
+    blocos = sum(a["blocos"] for a in cheio)
+    capacidade = sugestao.conteudo["capacidade"]["2026-10-19"]
+    assert blocos == capacidade  # o dia de segunda está cheio
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert f"{blocos} de {capacidade} blocos" in html
+    assert ">100%<" not in html

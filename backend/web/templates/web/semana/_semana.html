@@ -17,6 +17,7 @@
     {% if proposta %}<p class="semana__sub">Proposta do Prumo pelas prioridades, pela sua agenda e pelo seu pico de energia. Nada vira bloco até você aprovar.</p>
     {% elif visao == "mes" %}<p class="semana__sub">Blocos de foco e rotinas de cada dia. Toque num dia para ver a semana dele.</p>
     {% else %}<p class="semana__sub">Blocos de foco e rotinas de cada dia.</p>{% endif %}
+    {% if visao != "mes" %}<p class="semana__folga">{{ folga_pct }}% de cada dia fica livre para imprevistos.</p>{% endif %}
   </header>
   {% if erro %}<p class="erro" role="alert">{{ erro }}</p>{% endif %}
   {% if proposta_no_mes %}<p class="semana__aviso">Há uma proposta pendente para a semana. <a href="{{ proposta_no_mes }}" hx-get="{{ proposta_no_mes }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true">Ver a proposta</a></p>{% endif %}
@@ -27,7 +28,7 @@
       {% for d in proposta.dias %}<li class="dia" data-dia="{{ d.iso }}">
         <div class="dia__topo">
           <span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>
-          <span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.blocos }} de {{ d.capacidade }} blocos">{{ d.pct }}%</span>
+          <span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.blocos }} de {{ d.capacidade }} blocos">{{ d.blocos }} de {{ d.capacidade }} blocos</span>
         </div>
         {% if d.rotinas %}<ul class="dia__tarefas dia__rotinas" aria-label="Rotinas">
           {% for r in d.rotinas %}<li class="tarefa-semana tarefa-semana--rotina{% if r.concluida %} tarefa-semana--feita{% endif %}" style="--cor-area: {{ r.rotina.area.cor }}">{% include "web/semana/_rotina.html" with r=r %}</li>{% endfor %}
@@ -94,7 +95,7 @@
         <div class="dia__topo">
           <span class="dia__nome">{{ d.nome }} <span class="dia__data">{{ d.dia|date:"j" }}</span></span>
           {% if d.fim_de_semana and not d.capacidade %}<span class="dia__pct dia__pct--fim-de-semana">Fim de semana</span>
-          {% else %}<span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.planejados }} de {{ d.capacidade }} blocos">{{ d.pct }}%</span>{% endif %}
+          {% else %}<span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.planejados }} de {{ d.capacidade }} blocos">{{ d.planejados }} de {{ d.capacidade }} blocos</span>{% endif %}
         </div>
         <ul class="dia__tarefas dia__agenda">
           {% if d.hoje and grade.agora is not None %}<li class="agora" style="--agora: {{ grade.agora }}" aria-hidden="true"></li>{% endif %}

@@ -350,3 +350,33 @@ def test_fora_da_agenda_e_do_usuario(usuario, outra):
     nova_tarefa(outra, "Dela")
 
     assert services.tarefas_fora_da_agenda(usuario) == 1
+
+
+# ---------------------------------------------------------------- folga diária na proposta (backlog 1)
+@freeze_time("2026-10-25 12:00")
+def test_proposta_respeita_a_folga_diaria(usuario):
+    services.perfil_de(usuario)
+    for n in range(10):
+        nova_tarefa(usuario, f"Tarefa média {n}", blocos_estimados=4)
+    area = Area.objects.get(usuario=usuario, nome="Saúde")
+    services.criar_rotina(
+        usuario,
+        {
+            "area": area,
+            "nome": "Almoço leve",
+            "recorrencia": "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+            "horario_preferido": time(10),
+            "duracao_min": 60,
+        },
+    )
+
+    sugestao = services.propor_semana(usuario)
+    perfil = services.perfil_de(usuario)
+    jornada = services.jornada_de(perfil)
+    teto_min = (1 - perfil.folga_diaria) * jornada.minutos()
+    assert perfil.folga_diaria == pytest.approx(0.3)
+    dias = _dias(sugestao, "atual")
+    assert dias  # há dias na proposta
+    for dia, alocadas in dias.items():
+        minutos_de_foco = sum(a["blocos"] for a in alocadas) * perfil.duracao_bloco_min
+        assert minutos_de_foco <= teto_min, dia
