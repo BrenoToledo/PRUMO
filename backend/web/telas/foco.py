@@ -25,7 +25,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from nucleo import services
-from nucleo.models import Bloco, ItemCaptura
+from nucleo.models import Bloco, ItemCaptura, Tarefa
 
 ROTA_FOCO = "web:foco"
 ROTA_HOJE = "web:hoje"
@@ -185,6 +185,18 @@ def iniciar_bloco(request, pk):
 
 @require_POST
 @login_required
+def focar_tarefa(request, pk):
+    """Focar agora numa tarefa (TC-12, parte A): sem passar pelo plano do dia."""
+    tarefa = get_object_or_404(Tarefa, pk=pk, usuario=request.user)
+    try:
+        services.iniciar_foco_agora(tarefa)
+    except ValueError as erro:
+        return _ir_para(request, reverse("web:tarefa", kwargs={"pk": tarefa.pk}), str(erro), messages.ERROR)
+    return _ir_para(request, reverse(ROTA_FOCO))
+
+
+@require_POST
+@login_required
 def sair_do_bloco(request, pk):
     bloco = _bloco_do_usuario(request, pk, Bloco.Status.EM_FOCO)
     form = SairForm(request.POST)
@@ -244,6 +256,7 @@ def concluir_bloco(request, pk):
 
 urlpatterns = [
     path("foco/", foco, name="foco"),
+    path("tarefas/<int:pk>/focar/", focar_tarefa, name="focar_tarefa"),
     path("blocos/<int:pk>/iniciar/", iniciar_bloco, name="iniciar_bloco"),
     path("blocos/<int:pk>/concluir/", concluir_bloco, name="concluir_bloco"),
     path("blocos/<int:pk>/sair/", sair_do_bloco, name="sair_do_bloco"),

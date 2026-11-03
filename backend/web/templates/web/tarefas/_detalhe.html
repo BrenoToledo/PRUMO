@@ -142,6 +142,10 @@
         <button class="botao botao--texto-perigo" type="submit">Sim, cancelar tarefa</button>
       </form>
     </details>
+    <form method="post" action="{% url 'web:focar_tarefa' tarefa.pk %}">
+      {% csrf_token %}
+      <button class="botao" type="submit">Focar agora</button>
+    </form>
     <form class="detalhe__concluir" method="post" action="{% url 'web:concluir_tarefa' tarefa.pk %}">
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ aqui }}">
