@@ -105,7 +105,7 @@ Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **
 | `web:nova_rotina` | `/rotinas/nova/` | GET, POST | rotinas | `criar_rotina` |
 | `web:editar_rotina` | `/rotinas/<pk>/editar/` | GET, POST | rotinas | `atualizar_rotina` |
 | `web:excluir_rotina` | `/rotinas/<pk>/excluir/` | POST | rotinas | `excluir_rotina` |
-| `web:semana` | `/semana/` (`?data=AAAA-MM-DD`, padrão hoje; `?visao=uteis\|semana\|mes`, padrão a última escolhida, guardada na sessão) | GET (HTMX: parcial `#semana`) | semana | `semana_planejada`, `agenda_do_periodo` |
+| `web:semana` | `/semana/` (`?data=AAAA-MM-DD`, padrão hoje; `?visao=dia\|uteis\|semana\|mes`, padrão a última escolhida, guardada na sessão) | GET (HTMX: parcial `#semana`) | semana | `semana_planejada`, `agenda_do_periodo` |
 | `web:propor_semana` | `/semana/propor/` | POST (HTMX: parcial `#semana`) | semana | `propor_semana` |
 | `web:mover_na_semana` | `/semana/mover/` (`tarefa`, `de`, `para`; vazio = não couberam) | POST (HTMX: parcial `#semana`) | semana | `mover_na_proposta` |
 | `web:aprovar_semana` | `/semana/aprovar/` | POST | semana | `aprovar_semana` |

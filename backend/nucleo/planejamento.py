@@ -231,7 +231,7 @@ def montar_semana(capacidades: dict[date, int], candidatas: list[Candidata], *, 
 
 
 # --------------------------------------------------------------------------- calendário (#99, #100, #101)
-VISOES = ("uteis", "semana", "mes")  # dias úteis (seg a sex), semana completa (seg a dom) e mês
+VISOES = ("dia", "uteis", "semana", "mes")  # dias úteis (seg a sex), semana completa (seg a dom) e mês
 
 
 def _segunda(dia: date) -> date:
@@ -243,8 +243,10 @@ def _primeiro_do_mes_seguinte(dia: date) -> date:
 
 
 def dias_da_visao(referencia: date, visao: str) -> list[date]:
-    """Os dias que a visão mostra em volta de `referencia`: a semana dela (5 ou 7 dias) ou, no mês, a grade de
-    segunda a domingo que cobre o mês inteiro (5 ou 6 semanas)."""
+    """Os dias que a visão mostra em volta de `referencia`: só o próprio dia (visão Dia), a semana dela (5 ou 7
+    dias) ou, no mês, a grade de segunda a domingo que cobre o mês inteiro (5 ou 6 semanas)."""
+    if visao == "dia":
+        return [referencia]
     if visao == "mes":
         inicio = _segunda(referencia.replace(day=1))
         ultimo = _primeiro_do_mes_seguinte(referencia) - timedelta(days=1)
@@ -255,7 +257,9 @@ def dias_da_visao(referencia: date, visao: str) -> list[date]:
 
 
 def vizinhos(referencia: date, visao: str) -> tuple[date, date]:
-    """Para onde "anterior" e "próxima" levam: as segundas ao lado ou o primeiro dia dos meses ao lado."""
+    """Para onde "anterior" e "próxima" levam: o dia ou a semana ao lado, ou o primeiro dia dos meses ao lado."""
+    if visao == "dia":
+        return referencia - timedelta(days=1), referencia + timedelta(days=1)
     if visao == "mes":
         primeiro = referencia.replace(day=1)
         return (primeiro - timedelta(days=1)).replace(day=1), _primeiro_do_mes_seguinte(referencia)
