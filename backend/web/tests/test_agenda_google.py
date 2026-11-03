@@ -309,3 +309,73 @@ def test_horario_ocupado_volta_422(logado, usuario):
 
     assert resposta.status_code == 422
     assert ocupado.tarefa != tarefa
+
+
+# ---------------------------------------------------------------- filtro por área (pacote 21, 6B)
+def _bloco_em(usuario, area, titulo, hora):
+    tarefa = nova_tarefa(usuario, titulo, area=area, blocos_estimados=1)
+    inicio = timezone.make_aware(datetime(2026, 11, 4, hora, 0))
+    return Bloco.objects.create(
+        usuario=usuario,
+        tarefa=tarefa,
+        inicio_planejado=inicio,
+        fim_planejado=inicio + timedelta(minutes=90),
+        status=Bloco.Status.PLANEJADO,
+    )
+
+
+@pytest.fixture
+def duas_areas(usuario):
+    educacao = Area.objects.get(usuario=usuario, nome="Educação")
+    saude = Area.objects.get(usuario=usuario, nome="Saúde")
+    _bloco_em(usuario, educacao, "Aula de estudo", 10)
+    _bloco_em(usuario, saude, "Consulta de rotina", 14)
+    return educacao, saude
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_sem_filtro_mostra_as_duas_areas(logado, usuario, duas_areas):
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert "Aula de estudo" in html
+    assert "Consulta de rotina" in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_filtro_por_area_mostra_so_ela(logado, usuario, duas_areas):
+    educacao, _ = duas_areas
+
+    html = logado.get(reverse("web:semana"), {"area": educacao.pk}).content.decode()
+
+    assert "Aula de estudo" in html
+    assert "Consulta de rotina" not in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_filtro_fica_guardado_na_sessao(logado, usuario, duas_areas):
+    educacao, _ = duas_areas
+    logado.get(reverse("web:semana"), {"area": educacao.pk})
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert "Consulta de rotina" not in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_area_de_outra_pessoa_e_ignorada(logado, usuario, outra, duas_areas):
+    alheia = Area.objects.get(usuario=outra, nome="Educação")
+
+    html = logado.get(reverse("web:semana"), {"area": alheia.pk}).content.decode()
+
+    assert "Aula de estudo" in html
+    assert "Consulta de rotina" in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_todas_limpa_o_filtro(logado, usuario, duas_areas):
+    educacao, _ = duas_areas
+    logado.get(reverse("web:semana"), {"area": educacao.pk})
+
+    html = logado.get(reverse("web:semana"), {"area": ""}).content.decode()
+
+    assert "Consulta de rotina" in html

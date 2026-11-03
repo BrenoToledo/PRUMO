@@ -24,6 +24,13 @@
     <div id="detalhe-bloco-conteudo"></div>
     <form method="dialog" class="detalhe-bloco__fechar"><button class="botao botao--pequeno" type="submit">Fechar</button></form>
   </dialog>
+  {% if visao != "mes" and areas_filtro and not proposta %}<form class="semana__filtro" method="get" action="{{ atual }}" hx-get="{{ atual }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true" aria-label="Filtrar por área">
+    <input type="hidden" name="data" value="{{ referencia }}">
+    <input type="hidden" name="visao" value="{{ visao }}">
+    {% for a in areas_filtro %}<label class="semana__area"><input type="checkbox" name="area" value="{{ a.pk }}"{% if a.marcada %} checked{% endif %}> <span class="semana__area-cor" style="--cor-area: {{ a.cor }}" aria-hidden="true"></span>{{ a.nome }}</label>{% endfor %}
+    <button class="botao botao--pequeno" type="submit">Aplicar</button>
+    <a class="botao botao--pequeno" href="{{ atual }}&amp;area=" hx-get="{{ atual }}&amp;area=" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true">Todas</a>
+  </form>{% endif %}
   {% if proposta_no_mes %}<p class="semana__aviso">Há uma proposta pendente para a semana. <a href="{{ proposta_no_mes }}" hx-get="{{ proposta_no_mes }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true">Ver a proposta</a></p>{% endif %}
 
   {% if proposta %}

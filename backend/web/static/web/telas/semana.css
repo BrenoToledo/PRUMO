@@ -188,3 +188,6 @@
 .detalhe-bloco__acoes { display: flex; gap: var(--e2); flex-wrap: wrap; margin-top: var(--e3); }
 .detalhe-bloco__acoes form { margin: 0; }
 .detalhe-bloco__fechar { display: flex; justify-content: flex-end; margin-top: var(--e3); }
+.semana__filtro { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); margin: var(--e2) 0; }
+.semana__area { display: inline-flex; align-items: center; gap: var(--e1); font-size: var(--legenda-tam); color: var(--texto-secundario); }
+.semana__area-cor { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--cor-area, var(--primaria)); }

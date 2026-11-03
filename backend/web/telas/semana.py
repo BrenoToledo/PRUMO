@@ -109,6 +109,7 @@ MESES_LONGOS = (
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 )  # fmt: skip
 CHAVE_VISAO = "semana_visao"  # na sessão: a última visão escolhida (#100)
+CHAVE_AREAS = "semana_areas"  # na sessão: as áreas do filtro da agenda (pacote 21; vazio = todas)
 ITENS_NO_MES = 3  # por dia na grade do mês; o resto vira "+N"
 
 
@@ -119,6 +120,16 @@ def _visao(request, texto: str | None = None) -> str:
         return texto
     guardada = request.session.get(CHAVE_VISAO)
     return guardada if guardada in plan.VISOES else VISAO_PADRAO
+
+
+def _areas(request) -> list[int]:
+    """As áreas do filtro: as pedidas (só as da pessoa; vazio limpa) ou as guardadas na sessão."""
+    if "area" in request.GET:
+        pedidas = [int(v) for v in request.GET.getlist("area") if v.isdigit()]
+        validas = list(Area.objects.filter(usuario=request.user, pk__in=pedidas).values_list("pk", flat=True))
+        request.session[CHAVE_AREAS] = validas
+        return validas
+    return request.session.get(CHAVE_AREAS, [])
 
 
 def _referencia(texto: str | None, visao: str) -> date:
@@ -198,6 +209,11 @@ def _contexto(request, referencia: date | None = None, visao: str | None = None,
     referencia = referencia or _referencia(None, visao)
     dias = plan.dias_da_visao(referencia, visao)
     agenda = services.agenda_do_periodo(usuario, dias[0], dias[-1])
+    areas = _areas(request)
+    if areas:  # o filtro some com blocos e rotinas, mas não muda a capacidade nem o "N de M blocos"
+        for d in agenda:
+            d["blocos"] = [b for b in d["blocos"] if b.tarefa.area_id in areas]
+            d["rotinas"] = [r for r in d["rotinas"] if r["rotina"].area_id in areas]
     planejada = [_dia(d, referencia) for d in agenda]
     sugestao = services.proposta_da_semana(usuario)
     da_proposta = sugestao is not None and date.fromisoformat(sugestao.conteudo["inicio"]) in dias
@@ -230,6 +246,10 @@ def _contexto(request, referencia: date | None = None, visao: str | None = None,
         if visao in ("mes", "dia") and da_proposta
         else "",
         "folga_pct": round(services.perfil_de(usuario).folga_diaria * 100),
+        "areas_filtro": [
+            {"pk": a.pk, "nome": a.nome, "cor": a.cor, "marcada": not areas or a.pk in areas}
+            for a in Area.objects.filter(usuario=usuario).order_by("nome")
+        ],
         "dias_curtos": DIAS_CURTOS,
         "planejada": planejada,
         "grade": None if mes or proposta else _grade(usuario, planejada),
