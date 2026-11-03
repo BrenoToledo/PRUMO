@@ -363,6 +363,15 @@ def mover_bloco_na_semana(request, pk: int):
     return _parcial_ou_volta(request)
 
 
+@require_GET
+@login_required
+def detalhe_bloco_na_semana(request, pk: int):
+    bloco = get_object_or_404(Bloco.objects.select_related("tarefa", "tarefa__area"), pk=pk, usuario=request.user)
+    return render(
+        request, "web/semana/_detalhe_bloco.html", {"bloco": bloco, "referencia": request.GET.get("data", "")}
+    )
+
+
 @require_POST
 @login_required
 def bloco_feito_na_semana(request, pk: int):
@@ -394,6 +403,7 @@ urlpatterns = [
     path("semana/descartar/", descartar_semana, name="descartar_semana"),
     path("semana/trocar/", trocar_na_semana, name="trocar_na_semana"),
     path("semana/blocos/<int:pk>/mover/", mover_bloco_na_semana, name="mover_bloco_na_semana"),
+    path("semana/blocos/<int:pk>/", detalhe_bloco_na_semana, name="detalhe_bloco_na_semana"),
     path("semana/blocos/<int:pk>/feito/", bloco_feito_na_semana, name="bloco_feito_na_semana"),
     path("semana/blocos/trocar/", trocar_blocos_na_semana, name="trocar_blocos_na_semana"),
 ]

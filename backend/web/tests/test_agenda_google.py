@@ -40,7 +40,7 @@ def test_bloco_mostra_o_titulo_antes_da_hora(logado, usuario, perfil):
     html = logado.get(ROTA, {"data": "2026-10-22", "visao": "semana"}).content.decode()
 
     assert 'title="Revisar o contrato da Acme, 09:00"' in html
-    assert html.index('tarefa-semana__titulo">Revisar o contrato da Acme') < html.index('tarefa-semana__hora">09:00')
+    assert html.index(">Revisar o contrato da Acme<") < html.index('tarefa-semana__hora">09:00')
 
 
 @freeze_time(QUA)
@@ -180,3 +180,48 @@ def test_feito_por_get_da_405(logado, usuario):
     bloco = _bloco_na_semana(usuario)
 
     assert logado.get(reverse("web:bloco_feito_na_semana", args=[bloco.pk])).status_code == 405
+
+
+# ---------------------------------------------------------------- popup de detalhes (pacote 21, 6A)
+@freeze_time(SEMANA_DO_BLOCO)
+def test_detalhe_do_bloco_mostra_titulo_area_e_horario(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    html = logado.get(reverse("web:detalhe_bloco_na_semana", args=[bloco.pk])).content.decode()
+
+    assert "Revisar capítulo" in html
+    assert bloco.tarefa.area.nome in html
+    assert "10:00–11:30" in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_detalhe_de_bloco_de_outra_pessoa_da_404(logado, outra):
+    bloco = _bloco_na_semana(outra)
+
+    assert logado.get(reverse("web:detalhe_bloco_na_semana", args=[bloco.pk])).status_code == 404
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_detalhe_so_aceita_get(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    assert logado.post(reverse("web:detalhe_bloco_na_semana", args=[bloco.pk])).status_code == 405
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_grade_abre_o_detalhe_pelo_titulo_do_bloco(logado, usuario):
+    bloco = _bloco_na_semana(usuario)
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert f'hx-get="{reverse("web:detalhe_bloco_na_semana", args=[bloco.pk])}"' in html
+    assert f'href="{reverse("web:tarefa", args=[bloco.tarefa.pk])}"' in html
+
+
+@freeze_time(SEMANA_DO_BLOCO)
+def test_dialogo_do_detalhe_aparece_uma_vez_so(logado, usuario):
+    _bloco_na_semana(usuario)
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert html.count('id="detalhe-bloco"') == 1

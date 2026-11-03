@@ -20,6 +20,10 @@
     {% if visao != "mes" %}<p class="semana__folga">{{ folga_pct }}% de cada dia fica livre para imprevistos.</p>{% endif %}
   </header>
   {% if erro %}<p class="erro" role="alert">{{ erro }}</p>{% endif %}
+  <dialog id="detalhe-bloco" class="detalhe-bloco" aria-label="Detalhes do bloco">
+    <div id="detalhe-bloco-conteudo"></div>
+    <form method="dialog" class="detalhe-bloco__fechar"><button class="botao botao--pequeno" type="submit">Fechar</button></form>
+  </dialog>
   {% if proposta_no_mes %}<p class="semana__aviso">Há uma proposta pendente para a semana. <a href="{{ proposta_no_mes }}" hx-get="{{ proposta_no_mes }}" hx-target="#semana" hx-swap="outerHTML" hx-push-url="true">Ver a proposta</a></p>{% endif %}
 
   {% if proposta %}

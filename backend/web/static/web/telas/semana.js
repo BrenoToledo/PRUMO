@@ -22,6 +22,12 @@
     globalThis.htmx.ajax("POST", url, { source: raiz, target: "#semana", swap: "outerHTML", values: valores });
   }
 
+  document.body.addEventListener("htmx:afterSwap", function (e) {
+    if (e.detail.target?.id !== "detalhe-bloco-conteudo") return;
+    const caixa = document.getElementById("detalhe-bloco");
+    if (caixa && !caixa.open) caixa.showModal();
+  });
+
   function limparDestaque(exceto) {
     document.querySelectorAll(".solta-aqui").forEach(function (el) {
       if (el !== exceto) el.classList.remove("solta-aqui");
