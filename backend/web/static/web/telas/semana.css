@@ -11,7 +11,7 @@
 }
 .semana__visao[aria-current="page"] { background: var(--primaria-suave); color: var(--primaria); font-weight: var(--legenda-peso); }
 .semana__aviso { margin: 0 0 var(--e3); padding: var(--e2) var(--e3); border-radius: var(--raio-campo); background: var(--primaria-suave); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
-.semana__sub, .semana__dica { margin: var(--e2) 0 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.semana__sub, .semana__dica, .semana__folga { margin: var(--e2) 0 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
 .semana__dica { margin: var(--e3) 0; }
 .semana__corpo { display: flex; flex-direction: column; gap: var(--e3); }
 .semana__dias { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e3); }
