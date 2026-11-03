@@ -20,6 +20,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count, F, Q, QuerySet, Sum
 from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_datetime, parse_time
 
 from ia import tarefas as ia_tarefas
 from ia.config import Config as ConfigIA
@@ -921,6 +922,134 @@ def exportar_dados(usuario) -> ExportacaoDados:
 
 def contagem_dos_dados(usuario) -> dict[str, int]:
     return {chave: consulta.count() for chave, consulta in _consultas_dos_dados(usuario).items()}
+
+
+# --------------------------------------------------------------------------- importar (reverso de #66)
+
+# ordem em que as listas são recriadas: quem é referenciado vem antes
+LISTAS_IMPORTAVEIS = (
+    ("areas", Area),
+    ("projetos", Projeto),
+    ("rotinas", Rotina),
+    ("pessoas", Pessoa),
+    ("capturas", ItemCaptura),
+    ("tarefas", Tarefa),
+    ("blocos", Bloco),
+    ("revisoes", Revisao),
+    ("sugestoes_ia", SugestaoIA),
+    ("chamadas_ia", ChamadaIA),
+)
+
+
+def _validar_importacao(dados) -> None:
+    if not isinstance(dados, dict):
+        raise ValueError("O arquivo não é uma exportação do PRUMO.")
+    if dados.get("versao") != VERSAO_EXPORTACAO:
+        raise ValueError(
+            f"A versão da exportação não é suportada: {dados.get('versao')!r}. Esta versão lê a {VERSAO_EXPORTACAO}."
+        )
+    faltando = [chave for chave, _ in LISTAS_IMPORTAVEIS if not isinstance(dados.get(chave), list)]
+    if faltando:
+        raise ValueError("Faltam dados no arquivo: " + ", ".join(faltando) + ".")
+    if not isinstance(dados.get("perfil"), dict):
+        raise ValueError("Faltam dados no arquivo: perfil.")
+
+
+def _valor_importado(campo, valor):
+    if valor is None:
+        return None
+    tipo = campo.get_internal_type()
+    if tipo in ("DateTimeField", "DateField", "TimeField"):
+        lido = {
+            "DateTimeField": parse_datetime,
+            "DateField": parse_date,
+            "TimeField": parse_time,
+        }[tipo](valor)
+        if lido is None:
+            raise ValueError(f"Data inválida em {campo.name}: {valor!r}.")
+        return lido
+    return valor
+
+
+def _id_novo(mapas, modelo, id_antigo, quem: str):
+    if id_antigo not in mapas.get(modelo, {}):
+        raise ValueError(f"{quem} aponta para {modelo._meta.verbose_name} inexistente (id {id_antigo}).")
+    return mapas[modelo][id_antigo]
+
+
+def _campos_importados(modelo, registro, mapas, adiar=()) -> dict:
+    valores = {}
+    for campo in modelo._meta.concrete_fields:
+        if campo.primary_key or campo.name not in registro or campo.name in adiar:
+            continue
+        valor = registro[campo.name]
+        if campo.is_relation:
+            valores[campo.attname] = (
+                None if valor is None else _id_novo(mapas, campo.related_model, valor, modelo._meta.verbose_name)
+            )
+        else:
+            valores[campo.name] = _valor_importado(campo, valor)
+    return valores
+
+
+def _criar_importado(modelo, valores: dict, usuario=None):
+    if usuario is not None:
+        valores["usuario"] = usuario
+    obj = modelo(**valores)
+    obj.save()
+    # update() não passa por auto_now/auto_now_add: preserva as datas originais
+    modelo.objects.filter(pk=obj.pk).update(**{k: v for k, v in valores.items() if k != "usuario"})
+    return obj
+
+
+def importar_dados(usuario, dados: dict) -> dict[str, int]:
+    """Recria no usuário tudo o que estava num arquivo de `exportar_dados` (versão 1).
+
+    Tudo ou nada: qualquer erro desfaz a importação. Áreas de mesmo nome são reaproveitadas (as padrão do
+    cadastro). Quem já tem tarefas, capturas, projetos ou blocos não recebe importação, para não duplicar.
+    Devolve quantos registros de cada lista estavam no arquivo.
+    """
+    _validar_importacao(dados)
+    if any(modelo.objects.filter(usuario=usuario).exists() for modelo in (Tarefa, ItemCaptura, Projeto, Bloco)):
+        raise ValueError(f"O usuário {usuario.username} já tem dados; nada foi importado.")
+
+    mapas: dict = {modelo: {} for _, modelo in LISTAS_IMPORTAVEIS}
+    with transaction.atomic():
+        perfil = perfil_de(usuario)
+        campos_perfil = {campo.name: campo for campo in perfil._meta.concrete_fields}
+        for nome, valor in dados["perfil"].items():
+            if nome in campos_perfil and nome not in ("id", "usuario"):
+                setattr(perfil, nome, _valor_importado(campos_perfil[nome], valor))
+        perfil.save()
+
+        for chave, modelo in LISTAS_IMPORTAVEIS:
+            adiar = ("tarefa_pai",) if modelo is Tarefa else ()
+            for registro in dados[chave]:
+                if modelo is Area:
+                    existente = Area.objects.filter(usuario=usuario, nome=registro.get("nome")).first()
+                    if existente:
+                        mapas[Area][registro["id"]] = existente.pk
+                        continue
+                obj = _criar_importado(modelo, _campos_importados(modelo, registro, mapas, adiar), usuario)
+                mapas[modelo][registro["id"]] = obj.pk
+
+        for registro in dados["tarefas"]:
+            nova = mapas[Tarefa][registro["id"]]
+            if registro.get("tarefa_pai") is not None:
+                pai = _id_novo(mapas, Tarefa, registro["tarefa_pai"], "Tarefa")
+                Tarefa.objects.filter(pk=nova).update(tarefa_pai_id=pai)
+            for vinculo in registro.get("vinculos", []):
+                TarefaPessoa.objects.create(
+                    tarefa_id=nova,
+                    pessoa_id=_id_novo(mapas, Pessoa, vinculo["pessoa"], "Vínculo"),
+                    relacao=vinculo["relacao"],
+                )
+            for evento in registro.get("eventos", []):
+                valores = _campos_importados(EventoTarefa, evento, mapas)
+                valores["tarefa_id"] = nova
+                _criar_importado(EventoTarefa, valores)
+
+    return {chave: len(dados[chave]) for chave, _ in LISTAS_IMPORTAVEIS}
 
 
 def excluir_conta(usuario, senha: str) -> None:

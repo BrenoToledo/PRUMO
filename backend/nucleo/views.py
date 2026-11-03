@@ -585,6 +585,15 @@ def excluir_conta(request):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@api_view(["POST"])
+def importar(request):
+    try:
+        resumo = services.importar_dados(request.user, request.data)
+    except ValueError as erro:
+        return Response({"erro": str(erro)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"importados": resumo}, status=status.HTTP_201_CREATED)
+
+
 # --------------------------------------------------------------------------- revisão semanal guiada (P18)
 def _passo_revisao(passo) -> dict:
     return {
