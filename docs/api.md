@@ -86,6 +86,7 @@ As preferências da M34 ficam em `GET/PATCH /perfil/`: `avisos` (`{tipo: bool}`;
 | Método e rota | O que faz | Tela |
 | --- | --- | --- |
 | `GET /exportar/` | Tudo o que é do usuário em JSON (perfil, áreas, projetos, rotinas, pessoas, capturas, tarefas com vínculos e eventos, blocos, revisões, sugestões e chamadas de IA), como anexo `prumo-dados-AAAA-MM-DD.json`. Sem senha nem hash de token | M33 |
+| `POST /importar/` | Recria no usuário autenticado o que está num `prumo-dados-AAAA-MM-DD.json` (versão 1), com o JSON como corpo. Tudo ou nada: `201` com `{"importados": {chave: quantidade}}`; arquivo inválido, versão diferente ou usuário que já tem dados: `400` com `{"erro": "…"}` e nada é gravado. Áreas de mesmo nome são reaproveitadas | M33 |
 | `DELETE /conta/` | Exclui a conta e todos os dados do usuário. Corpo `{"senha": "…"}` com a senha atual: `204`; sem senha ou senha errada, `400` e nada é apagado | M33 |
 
 Os campos de cada resposta estão fixados em `backend/nucleo/contratos.py` e testados em `nucleo/tests/test_contratos.py`; ver [contratos.md](contratos.md).
