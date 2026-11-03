@@ -60,6 +60,7 @@
 
 .semana__acoes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); margin-top: var(--e4); }
 .semana__acoes .botao { width: 100%; }
+.semana__acoes--proposta { grid-template-columns: repeat(3, 1fr); }
 .semana__dias--planejada + .semana__acoes { grid-template-columns: 1fr; }
 
 /* Grade de horários (#101): no celular é uma lista pelo horário; no desktop, cada item fica na sua hora */

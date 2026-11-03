@@ -46,15 +46,19 @@
         </ul>
       </li>{% endfor %}
     </ol>
-    <aside class="nao-couberam" data-dia="" aria-labelledby="titulo-nao-couberam">
+    {% if proposta.nao_couberam %}<aside class="nao-couberam" data-dia="" aria-labelledby="titulo-nao-couberam">
       <h2 id="titulo-nao-couberam" class="nao-couberam__titulo">Não couberam ({{ proposta.nao_couberam|length }})</h2>
       <ul class="dia__tarefas">
-        {% for i in proposta.nao_couberam %}<li class="tarefa-semana" style="--cor-area: {{ i.tarefa.area.cor }}" draggable="true" data-tarefa="{{ i.tarefa.pk }}" data-de="">{% include "web/semana/_item.html" with item=i de="" %}</li>{% empty %}<li class="dia__vazio">Tudo coube na semana.</li>{% endfor %}
+        {% for i in proposta.nao_couberam %}<li class="tarefa-semana" style="--cor-area: {{ i.tarefa.area.cor }}" draggable="true" data-tarefa="{{ i.tarefa.pk }}" data-de="">{% include "web/semana/_item.html" with item=i de="" %}</li>{% endfor %}
       </ul>
-    </aside>
+    </aside>{% endif %}
   </div>
   <p class="semana__dica">Use “Mover” em cada tarefa ou, no computador, arraste para outro dia (ou em cima de outra tarefa, para trocar as duas). Um dia pode passar de 100%, mas o que não couber nos horários livres fica de fora ao aprovar.</p>
-  <div class="semana__acoes">
+  <div class="semana__acoes semana__acoes--proposta">
+    <form method="post" action="{% url 'web:descartar_semana' %}">
+      {% csrf_token %}
+      <button class="botao" type="submit">Cancelar</button>
+    </form>
     <form method="post" action="{% url 'web:propor_semana' %}" hx-post="{% url 'web:propor_semana' %}" hx-target="#semana" hx-swap="outerHTML">
       {% csrf_token %}
       <input type="hidden" name="visao" value="{{ visao }}">

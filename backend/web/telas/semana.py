@@ -10,6 +10,8 @@ Rotas do contrato:
   `services.mover_na_proposta`. Com HTMX devolve o parcial `#semana`; o arrastar do desktop (`semana.js`) usa
   esta mesma rota.
 - POST `semana/aprovar/` → `web:aprovar_semana`, chama `services.aprovar_semana`.
+- POST `semana/descartar/` → `web:descartar_semana` ("Cancelar" da proposta), chama `services.recusar_sugestao`
+  na proposta pendente: nada vira bloco e a Semana volta ao planejado. Sem proposta pendente, só volta.
 - POST `semana/trocar/` → `web:trocar_na_semana` (`a`, `de_a`, `b`, `de_b`), chama `services.trocar_na_proposta`:
   soltar uma tarefa da proposta em cima de outra troca as duas de dia (#101).
 - POST `semana/blocos/<pk>/mover/` → `web:mover_bloco_na_semana` (`dia`, `hora`), chama `services.mover_bloco`, e
@@ -295,6 +297,15 @@ def aprovar_semana(request):
     return redirect(ROTA)
 
 
+@require_POST
+@login_required
+def descartar_semana(request):
+    sugestao = services.proposta_da_semana(request.user)
+    if sugestao is not None:
+        services.recusar_sugestao(sugestao)
+    return redirect(ROTA)
+
+
 def _id(texto: str | None) -> int:
     try:
         return int(texto or "")
@@ -352,6 +363,7 @@ urlpatterns = [
     path("semana/propor/", propor_semana, name="propor_semana"),
     path("semana/mover/", mover_na_semana, name="mover_na_semana"),
     path("semana/aprovar/", aprovar_semana, name="aprovar_semana"),
+    path("semana/descartar/", descartar_semana, name="descartar_semana"),
     path("semana/trocar/", trocar_na_semana, name="trocar_na_semana"),
     path("semana/blocos/<int:pk>/mover/", mover_bloco_na_semana, name="mover_bloco_na_semana"),
     path("semana/blocos/trocar/", trocar_blocos_na_semana, name="trocar_blocos_na_semana"),

@@ -207,3 +207,53 @@ def test_api_semana_traz_as_rotinas(api, usuario, tarefas):
 @freeze_time(SEG)
 def test_api_sem_proposta_e_404(api, tarefas):
     assert api.post("/api/semana/aprovar/").status_code == 404
+
+
+# ---------------------------------------------------- cancelar e "não couberam" (backlog 4)
+@freeze_time(SEG)
+def test_proposta_tem_cancelar_ao_lado_de_aprovar(logado, tarefas):
+    html = logado.post(reverse("web:propor_semana"), follow=True).content.decode()
+
+    assert reverse("web:descartar_semana") in html
+    assert "Cancelar" in html
+
+
+@freeze_time(SEG)
+def test_cancelar_descarta_a_proposta_sem_aplicar_nada(logado, tarefas):
+    logado.post(reverse("web:propor_semana"))
+
+    resposta = logado.post(reverse("web:descartar_semana"), follow=True)
+
+    assert resposta.redirect_chain[-1][0] == reverse("web:semana")
+    assert not SugestaoIA.objects.filter(tipo="semana", status="pendente").exists()
+    assert SugestaoIA.objects.filter(tipo="semana", status="recusada").exists()
+    assert not Bloco.objects.exists()
+    html = resposta.content.decode()
+    assert reverse("web:propor_semana") in html
+    assert reverse("web:aprovar_semana") not in html
+
+
+@freeze_time(SEG)
+def test_cancelar_sem_proposta_pendente_nao_quebra(logado, tarefas):
+    resposta = logado.post(reverse("web:descartar_semana"))
+
+    assert resposta.status_code == 302
+    assert resposta["Location"] == reverse("web:semana")
+
+
+@freeze_time(SEG)
+def test_nao_couberam_so_aparece_quando_sobra_tarefa(logado, usuario):
+    services.perfil_de(usuario)
+    nova_tarefa(usuario, "Única", blocos_estimados=4)
+
+    html = logado.post(reverse("web:propor_semana"), follow=True).content.decode()
+
+    assert "titulo-nao-couberam" not in html
+    assert "Tudo coube" not in html
+
+
+@freeze_time(SEG)
+def test_nao_couberam_aparece_quando_sobra_tarefa(logado, tarefas):
+    html = logado.post(reverse("web:propor_semana"), follow=True).content.decode()
+
+    assert 'id="titulo-nao-couberam"' in html
