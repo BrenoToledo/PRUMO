@@ -257,3 +257,25 @@ def test_nao_couberam_aparece_quando_sobra_tarefa(logado, tarefas):
     html = logado.post(reverse("web:propor_semana"), follow=True).content.decode()
 
     assert 'id="titulo-nao-couberam"' in html
+
+
+@freeze_time(SEG)
+def test_sem_tarefa_fora_da_agenda_nao_mostra_o_botao(logado, usuario):
+    services.perfil_de(usuario)
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert reverse("web:propor_semana") not in html
+    assert "Revisar agenda" not in html
+
+
+@freeze_time(SEG)
+def test_botao_revisar_agenda_mostra_quantas(logado, usuario):
+    services.perfil_de(usuario)
+    nova_tarefa(usuario, "Uma")
+    nova_tarefa(usuario, "Duas")
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert "Revisar agenda (2)" in html
+    assert reverse("web:propor_semana") in html

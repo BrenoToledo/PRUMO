@@ -111,7 +111,7 @@
     <form method="post" action="{% url 'web:propor_semana' %}" hx-post="{% url 'web:propor_semana' %}" hx-target="#semana" hx-swap="outerHTML">
       {% csrf_token %}
       <input type="hidden" name="visao" value="{{ visao }}">
-      <button class="botao botao--primario" type="submit">Propor a semana</button>
+      <button class="botao botao--primario" type="submit" title="{{ fora_da_agenda }} tarefa{{ fora_da_agenda|pluralize }} classificada{{ fora_da_agenda|pluralize }} ainda fora da agenda">Revisar agenda ({{ fora_da_agenda }})</button>
     </form>
   </div>{% endif %}
   {% endif %}

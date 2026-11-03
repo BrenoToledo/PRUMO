@@ -1572,6 +1572,17 @@ def dias_da_semana(dia: date | None = None) -> list[date]:
     return [dia + timedelta(days=n) for n in range(5 - dia.weekday())]
 
 
+def tarefas_fora_da_agenda(usuario, dia: date | None = None) -> int:
+    """Quantas tarefas a proposta da semana levaria e que não têm bloco planejado daqui para a frente."""
+    dias = dias_da_semana(dia)
+    agora = timezone.now()
+    com_bloco_futuro = Bloco.objects.filter(status=Bloco.Status.PLANEJADO, inicio_planejado__gte=agora).values(
+        "tarefa_id"
+    )
+    abertas = _abertas_no_dia(usuario, dias[-1]).exclude(esforco=Esforco.BAIXO).exclude(id__in=com_bloco_futuro)
+    return sum(1 for t in abertas if t.blocos_restantes > 0)
+
+
 def _capacidade_livre(usuario, dia: date, compromissos: list[plan.Intervalo]) -> int:
     """Blocos que ainda cabem no dia, como `montar_plano_do_dia` conta: depois de agora e do que já foi feito."""
     if dia.weekday() not in DIAS_UTEIS:
