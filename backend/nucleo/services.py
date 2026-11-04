@@ -2834,3 +2834,70 @@ def fatura_da_compra(cartao, data_compra):
     mes = mes_da_fatura(data_compra, dia_fechamento=cartao.dia_fechamento)
     fatura, _ = Fatura.objects.get_or_create(cartao=cartao, mes_referencia=mes)
     return fatura
+
+
+def criar_lancamento(
+    cartao,
+    descricao,
+    valor_centavos,
+    data_compra,
+    n_parcelas,
+    por,
+    divisao=None,
+    visibilidade=None,
+):
+    """Lança uma compra (à vista ou parcelada). Só o titular da conta lança.
+
+    Cada parcela vai para a fatura do mês correspondente. A divisão, se houver, é gravada
+    no lançamento (`divisao_aplicada`) e não muda depois.
+    """
+    from .cartoes import dividir_em_partes, mes_da_fatura, somar_meses
+    from .models import AcessoConta, Fatura, Lancamento
+
+    if papel_na_conta(por, cartao.conta) != AcessoConta.Papel.TITULAR:
+        raise PermissaoNegada("Só o titular da conta lança compras nela.")
+    if valor_centavos <= 0:
+        raise ErroDeNegocio("O valor precisa ser positivo.")
+    if n_parcelas < 1:
+        raise ErroDeNegocio("Número de parcelas inválido.")
+
+    partes = dividir_em_partes(valor_centavos, n_parcelas)
+    mes_primeira = mes_da_fatura(data_compra, dia_fechamento=cartao.dia_fechamento)
+    divisao_gravada = {}
+    if divisao:
+        for usuario, valor in zip(divisao, dividir_em_partes(valor_centavos, len(divisao)), strict=True):
+            divisao_gravada[str(usuario.pk)] = valor
+
+    criados = []
+    for i, valor_parcela in enumerate(partes):
+        fatura, _ = Fatura.objects.get_or_create(cartao=cartao, mes_referencia=somar_meses(mes_primeira, i))
+        criados.append(
+            Lancamento.objects.create(
+                fatura=fatura,
+                criado_por=por,
+                descricao=descricao,
+                valor_centavos=valor_parcela,
+                data_compra=data_compra,
+                parcela_numero=i + 1,
+                total_parcelas=n_parcelas,
+                visibilidade=visibilidade or Lancamento.Visibilidade.COMPARTILHADO,
+                divisao_aplicada=divisao_gravada,
+            )
+        )
+    return criados
+
+
+def lancamentos_visiveis(usuario, household):
+    """Lançamentos do household que o usuário pode ver: compartilhados das contas que ele acessa, e os próprios."""
+    from django.db.models import Q
+
+    from .models import Lancamento
+
+    contas_com_acesso = Q(fatura__cartao__conta__acessos__membro__usuario=usuario)
+    privados_do_usuario = Q(visibilidade=Lancamento.Visibilidade.PRIVADO, criado_por=usuario)
+    publicos = Q(visibilidade=Lancamento.Visibilidade.COMPARTILHADO)
+    return (
+        Lancamento.objects.filter(fatura__cartao__conta__household=household)
+        .filter(contas_com_acesso & (publicos | privados_do_usuario))
+        .distinct()
+    )
