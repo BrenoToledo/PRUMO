@@ -2713,3 +2713,37 @@ def criar_tarefa_no_horario(usuario, titulo: str, area: Area, inicio: datetime) 
     evento(tarefa, EventoTarefa.Tipo.CRIADA, origem="agenda")
     recalcular_prioridade(tarefa)
     return agendar_bloco(tarefa, inicio)
+
+
+class PermissaoNegada(Exception):
+    """Usuário não pode executar a ação no household."""
+
+
+def criar_household(usuario, nome):
+    """Cria um household e torna `usuario` administrador."""
+    from .models import Household, MembroHousehold
+
+    household = Household.objects.create(nome=nome)
+    MembroHousehold.objects.create(household=household, usuario=usuario, papel=MembroHousehold.Papel.ADMIN)
+    return household
+
+
+def adicionar_membro(household, usuario, papel, por=None):
+    """Adiciona um membro. Quando `por` é informado, ele precisa ser administrador."""
+    from .models import MembroHousehold
+
+    if (
+        por is not None
+        and not MembroHousehold.objects.filter(
+            household=household, usuario=por, papel=MembroHousehold.Papel.ADMIN
+        ).exists()
+    ):
+        raise PermissaoNegada("Só administradores convidam membros.")
+    return MembroHousehold.objects.create(household=household, usuario=usuario, papel=papel)
+
+
+def households_do_usuario(usuario):
+    """Households dos quais o usuário é membro."""
+    from .models import Household
+
+    return list(Household.objects.filter(membros__usuario=usuario).distinct())
