@@ -2713,3 +2713,124 @@ def criar_tarefa_no_horario(usuario, titulo: str, area: Area, inicio: datetime) 
     evento(tarefa, EventoTarefa.Tipo.CRIADA, origem="agenda")
     recalcular_prioridade(tarefa)
     return agendar_bloco(tarefa, inicio)
+
+
+class PermissaoNegada(Exception):
+    """Usuário não pode executar a ação no household."""
+
+
+def criar_household(usuario, nome):
+    """Cria um household e torna `usuario` administrador."""
+    from .models import Household, MembroHousehold
+
+    household = Household.objects.create(nome=nome)
+    MembroHousehold.objects.create(household=household, usuario=usuario, papel=MembroHousehold.Papel.ADMIN)
+    return household
+
+
+def adicionar_membro(household, usuario, papel, por=None):
+    """Adiciona um membro. Quando `por` é informado, ele precisa ser administrador."""
+    from .models import MembroHousehold
+
+    if (
+        por is not None
+        and not MembroHousehold.objects.filter(
+            household=household, usuario=por, papel=MembroHousehold.Papel.ADMIN
+        ).exists()
+    ):
+        raise PermissaoNegada("Só administradores convidam membros.")
+    return MembroHousehold.objects.create(household=household, usuario=usuario, papel=papel)
+
+
+def households_do_usuario(usuario):
+    """Households dos quais o usuário é membro."""
+    from .models import Household
+
+    return list(Household.objects.filter(membros__usuario=usuario).distinct())
+
+
+class ErroDeNegocio(Exception):
+    """Regra de negócio violada (ex.: conta conjunta com um membro só)."""
+
+
+def _membro_do_household(household, usuario):
+    from .models import MembroHousehold
+
+    return MembroHousehold.objects.filter(household=household, usuario=usuario).first()
+
+
+def criar_conta(household, nome, propriedade, titular=None, membros=None):
+    """Cria conta individual (com `titular`) ou conjunta (com pelo menos dois `membros`)."""
+    from .models import AcessoConta, Conta
+
+    if propriedade == Conta.Propriedade.INDIVIDUAL:
+        usuarios = [titular]
+    else:
+        usuarios = list(membros or [])
+        if len(usuarios) < 2:
+            raise ErroDeNegocio("Conta conjunta precisa de pelo menos dois membros.")
+
+    membros_vinculados = []
+    for usuario in usuarios:
+        membro = _membro_do_household(household, usuario)
+        if membro is None:
+            raise ErroDeNegocio("Usuário não pertence ao household.")
+        membros_vinculados.append(membro)
+
+    conta = Conta.objects.create(household=household, nome=nome, propriedade=propriedade)
+    for membro in membros_vinculados:
+        AcessoConta.objects.create(conta=conta, membro=membro, papel=AcessoConta.Papel.TITULAR)
+    return conta
+
+
+def papel_na_conta(usuario, conta):
+    """Papel do usuário na conta, ou None se ele não tem acesso."""
+    from .models import AcessoConta
+
+    acesso = AcessoConta.objects.filter(conta=conta, membro__usuario=usuario).first()
+    return acesso.papel if acesso else None
+
+
+def conceder_acesso(conta, usuario, papel, por):
+    """Concede acesso de leitor ou titular. Só titulares da conta podem conceder."""
+    from .models import AcessoConta
+
+    if papel_na_conta(por, conta) != AcessoConta.Papel.TITULAR:
+        raise PermissaoNegada("Só o titular da conta concede acesso.")
+    membro = _membro_do_household(conta.household, usuario)
+    if membro is None:
+        raise ErroDeNegocio("Usuário não pertence ao household.")
+    acesso, _ = AcessoConta.objects.update_or_create(conta=conta, membro=membro, defaults={"papel": papel})
+    return acesso
+
+
+def contas_visiveis(usuario, household):
+    """Contas do household às quais o usuário tem acesso."""
+    from .models import Conta
+
+    return list(Conta.objects.filter(household=household, acessos__membro__usuario=usuario).distinct())
+
+
+def criar_cartao(conta, nome, ultimos_digitos, dia_fechamento, dia_vencimento):
+    """Cadastra um cartão. Aceita só os 4 últimos dígitos (nunca o número completo)."""
+    from .models import Cartao
+
+    if not (len(ultimos_digitos) == 4 and ultimos_digitos.isdigit()):
+        raise ErroDeNegocio("Informe exatamente os 4 últimos dígitos do cartão.")
+    return Cartao.objects.create(
+        conta=conta,
+        nome=nome,
+        ultimos_digitos=ultimos_digitos,
+        dia_fechamento=dia_fechamento,
+        dia_vencimento=dia_vencimento,
+    )
+
+
+def fatura_da_compra(cartao, data_compra):
+    """Fatura que recebe a compra, criando-a se ainda não existir."""
+    from .cartoes import mes_da_fatura
+    from .models import Fatura
+
+    mes = mes_da_fatura(data_compra, dia_fechamento=cartao.dia_fechamento)
+    fatura, _ = Fatura.objects.get_or_create(cartao=cartao, mes_referencia=mes)
+    return fatura

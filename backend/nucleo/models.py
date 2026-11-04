@@ -516,3 +516,97 @@ class PushInscricao(models.Model):
 
     def __str__(self):
         return self.endpoint[:60]
+
+
+class Household(models.Model):
+    """Casa compartilhada: agrupa membros com login próprio."""
+
+    nome = models.CharField(max_length=80)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.nome
+
+
+class MembroHousehold(models.Model):
+    """Vínculo de um usuário (login próprio) com um household."""
+
+    class Papel(models.TextChoices):
+        ADMIN = "admin", "Administrador"
+        MEMBRO = "membro", "Membro"
+
+    household = models.ForeignKey(Household, on_delete=models.CASCADE, related_name="membros")
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="membros_household")
+    papel = models.CharField(max_length=10, choices=Papel.choices, default=Papel.MEMBRO)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["household", "usuario"], name="uniq_membro_por_household"),
+        ]
+
+    def __str__(self):
+        return f"{self.usuario} em {self.household}"
+
+
+class Conta(models.Model):
+    """Conta bancária do household: individual (um titular) ou conjunta (dois ou mais)."""
+
+    class Propriedade(models.TextChoices):
+        INDIVIDUAL = "individual", "Individual"
+        CONJUNTA = "conjunta", "Conjunta"
+
+    household = models.ForeignKey(Household, on_delete=models.CASCADE, related_name="contas")
+    nome = models.CharField(max_length=80)
+    propriedade = models.CharField(max_length=12, choices=Propriedade.choices)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.nome
+
+
+class AcessoConta(models.Model):
+    """Quem pode ver (leitor) ou é titular de uma conta. Cada membro tem o próprio login."""
+
+    class Papel(models.TextChoices):
+        TITULAR = "titular", "Titular"
+        LEITOR = "leitor", "Leitor"
+
+    conta = models.ForeignKey(Conta, on_delete=models.CASCADE, related_name="acessos")
+    membro = models.ForeignKey(MembroHousehold, on_delete=models.CASCADE, related_name="acessos")
+    papel = models.CharField(max_length=10, choices=Papel.choices, default=Papel.LEITOR)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["conta", "membro"], name="uniq_acesso_por_conta_e_membro"),
+        ]
+
+    def __str__(self):
+        return f"{self.membro} em {self.conta} ({self.papel})"
+
+
+class Cartao(models.Model):
+    """Cartão de crédito vinculado a uma conta. Guarda só os 4 últimos dígitos."""
+
+    conta = models.ForeignKey(Conta, on_delete=models.CASCADE, related_name="cartoes")
+    nome = models.CharField(max_length=80)
+    ultimos_digitos = models.CharField(max_length=4)
+    dia_fechamento = models.PositiveSmallIntegerField()
+    dia_vencimento = models.PositiveSmallIntegerField()
+
+    def __str__(self):
+        return f"{self.nome} ••{self.ultimos_digitos}"
+
+
+class Fatura(models.Model):
+    """Fatura de um cartão em um mês de referência (YYYY-MM)."""
+
+    cartao = models.ForeignKey(Cartao, on_delete=models.CASCADE, related_name="faturas")
+    mes_referencia = models.CharField(max_length=7)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["cartao", "mes_referencia"], name="uniq_fatura_por_cartao_mes"),
+        ]
+
+    def __str__(self):
+        return f"Fatura {self.mes_referencia} · {self.cartao}"
