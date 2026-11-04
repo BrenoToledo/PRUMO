@@ -2901,3 +2901,40 @@ def lancamentos_visiveis(usuario, household):
         .filter(contas_com_acesso & (publicos | privados_do_usuario))
         .distinct()
     )
+
+
+def resumo_financas(usuario, household, mes, meses_previsao=3):
+    """Início das finanças: total do mês, por cartão e previsão das próximas faturas.
+
+    Só entram lançamentos que o usuário pode ver (`lancamentos_visiveis`).
+    """
+    from django.db.models import Sum
+
+    from .cartoes import somar_meses
+
+    visiveis = lancamentos_visiveis(usuario, household)
+
+    def total_da_fatura(mes_ref):
+        return visiveis.filter(fatura__mes_referencia=mes_ref).aggregate(t=Sum("valor_centavos"))["t"] or 0
+
+    cartoes = []
+    for cartao in {
+        lc.fatura.cartao for lc in visiveis.filter(fatura__mes_referencia=mes).select_related("fatura__cartao")
+    }:
+        cartoes.append(
+            {
+                "cartao_id": cartao.pk,
+                "nome": cartao.nome,
+                "ultimos_digitos": cartao.ultimos_digitos,
+                "total": visiveis.filter(fatura__mes_referencia=mes, fatura__cartao=cartao).aggregate(
+                    t=Sum("valor_centavos")
+                )["t"]
+                or 0,
+            }
+        )
+
+    previsao = [
+        {"mes": somar_meses(mes, i), "total": total_da_fatura(somar_meses(mes, i))}
+        for i in range(1, meses_previsao + 1)
+    ]
+    return {"mes": mes, "total_mes": total_da_fatura(mes), "cartoes": cartoes, "previsao": previsao}

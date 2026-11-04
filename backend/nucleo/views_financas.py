@@ -139,3 +139,14 @@ class CartoesView(APIView):
         except services.ErroDeNegocio as erro:
             return _problema(422, "Cartão inválido", str(erro))
         return Response(_json_cartao(cartao), status=status.HTTP_201_CREATED)
+
+
+class DashboardView(APIView):
+    """Início das finanças: resumo do mês para o usuário autenticado (ver `services.resumo_financas`)."""
+
+    def get(self, request, household_id):
+        household = _household_do_usuario(request, household_id)
+        mes = request.query_params.get("mes", "")
+        if len(mes) != 7 or mes[4] != "-":
+            return _problema(400, "Mês inválido", "Use o formato AAAA-MM.")
+        return Response(services.resumo_financas(request.user, household, mes=mes))
