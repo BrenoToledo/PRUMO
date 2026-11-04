@@ -2809,3 +2809,28 @@ def contas_visiveis(usuario, household):
     from .models import Conta
 
     return list(Conta.objects.filter(household=household, acessos__membro__usuario=usuario).distinct())
+
+
+def criar_cartao(conta, nome, ultimos_digitos, dia_fechamento, dia_vencimento):
+    """Cadastra um cartão. Aceita só os 4 últimos dígitos (nunca o número completo)."""
+    from .models import Cartao
+
+    if not (len(ultimos_digitos) == 4 and ultimos_digitos.isdigit()):
+        raise ErroDeNegocio("Informe exatamente os 4 últimos dígitos do cartão.")
+    return Cartao.objects.create(
+        conta=conta,
+        nome=nome,
+        ultimos_digitos=ultimos_digitos,
+        dia_fechamento=dia_fechamento,
+        dia_vencimento=dia_vencimento,
+    )
+
+
+def fatura_da_compra(cartao, data_compra):
+    """Fatura que recebe a compra, criando-a se ainda não existir."""
+    from .cartoes import mes_da_fatura
+    from .models import Fatura
+
+    mes = mes_da_fatura(data_compra, dia_fechamento=cartao.dia_fechamento)
+    fatura, _ = Fatura.objects.get_or_create(cartao=cartao, mes_referencia=mes)
+    return fatura

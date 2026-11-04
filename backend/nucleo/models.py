@@ -582,3 +582,31 @@ class AcessoConta(models.Model):
 
     def __str__(self):
         return f"{self.membro} em {self.conta} ({self.papel})"
+
+
+class Cartao(models.Model):
+    """Cartão de crédito vinculado a uma conta. Guarda só os 4 últimos dígitos."""
+
+    conta = models.ForeignKey(Conta, on_delete=models.CASCADE, related_name="cartoes")
+    nome = models.CharField(max_length=80)
+    ultimos_digitos = models.CharField(max_length=4)
+    dia_fechamento = models.PositiveSmallIntegerField()
+    dia_vencimento = models.PositiveSmallIntegerField()
+
+    def __str__(self):
+        return f"{self.nome} ••{self.ultimos_digitos}"
+
+
+class Fatura(models.Model):
+    """Fatura de um cartão em um mês de referência (YYYY-MM)."""
+
+    cartao = models.ForeignKey(Cartao, on_delete=models.CASCADE, related_name="faturas")
+    mes_referencia = models.CharField(max_length=7)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["cartao", "mes_referencia"], name="uniq_fatura_por_cartao_mes"),
+        ]
+
+    def __str__(self):
+        return f"Fatura {self.mes_referencia} · {self.cartao}"
