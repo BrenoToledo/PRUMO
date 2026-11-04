@@ -39,6 +39,11 @@ urlpatterns = [
         views_financas.ContasView.as_view(),
         name="financas-contas",
     ),
+    path(
+        "financas/households/<int:household_id>/dashboard/",
+        views_financas.DashboardView.as_view(),
+        name="financas-dashboard",
+    ),
     path("financas/contas/<int:pk>/", views_financas.ContaDetalheView.as_view(), name="financas-conta"),
     path("financas/contas/<int:pk>/acessos/", views_financas.AcessosView.as_view(), name="financas-acessos"),
     path("financas/contas/<int:pk>/cartoes/", views_financas.CartoesView.as_view(), name="financas-cartoes"),

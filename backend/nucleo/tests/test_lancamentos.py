@@ -7,20 +7,9 @@ from django.contrib.auth import get_user_model
 
 from nucleo import services
 from nucleo.cartoes import dividir_em_partes
-from nucleo.models import Conta, Lancamento
+from nucleo.models import Lancamento
 
 Usuario = get_user_model()
-
-
-@pytest.fixture
-def casa(db):
-    breno = Usuario.objects.create_user("breno", password="senha-forte-123")
-    paloma = Usuario.objects.create_user("paloma", password="senha-forte-123")
-    household = services.criar_household(breno, nome="Casa Toledo")
-    services.adicionar_membro(household, paloma, papel="membro")
-    conta = services.criar_conta(household, nome="Conta", propriedade=Conta.Propriedade.INDIVIDUAL, titular=breno)
-    cartao = services.criar_cartao(conta, nome="Itaú", ultimos_digitos="1234", dia_fechamento=20, dia_vencimento=6)
-    return household, breno, paloma, cartao
 
 
 def test_dividir_em_partes_soma_exato_com_resto_nos_primeiros():
@@ -35,8 +24,8 @@ def test_dividir_em_partes_recusa_partes_invalidas():
 
 
 @pytest.mark.django_db
-def test_compra_parcelada_gera_uma_parcela_por_fatura(casa):
-    household, breno, _, cartao = casa
+def test_compra_parcelada_gera_uma_parcela_por_fatura(casa_financas):
+    household, breno, _, cartao = casa_financas
 
     lancamentos = services.criar_lancamento(
         cartao,
@@ -53,8 +42,8 @@ def test_compra_parcelada_gera_uma_parcela_por_fatura(casa):
 
 
 @pytest.mark.django_db
-def test_lancamento_grava_a_divisao_aplicada(casa):
-    household, breno, paloma, cartao = casa
+def test_lancamento_grava_a_divisao_aplicada(casa_financas):
+    household, breno, paloma, cartao = casa_financas
 
     (lc,) = services.criar_lancamento(
         cartao,
@@ -70,8 +59,8 @@ def test_lancamento_grava_a_divisao_aplicada(casa):
 
 
 @pytest.mark.django_db
-def test_gasto_privado_so_aparece_para_o_dono(casa):
-    household, breno, paloma, cartao = casa
+def test_gasto_privado_so_aparece_para_o_dono(casa_financas):
+    household, breno, paloma, cartao = casa_financas
     services.criar_lancamento(
         cartao,
         descricao="Presente surpresa",
