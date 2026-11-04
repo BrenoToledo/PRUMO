@@ -8,6 +8,7 @@ from .telas import (
     calendarios,
     clarificacao,
     dados,
+    financas,
     foco,
     ia,
     imprevistos,
@@ -62,3 +63,4 @@ urlpatterns += pessoas.urlpatterns
 urlpatterns += revisao_semanal.urlpatterns
 urlpatterns += notificacoes.urlpatterns
 urlpatterns += todas_tarefas.urlpatterns
+urlpatterns += financas.urlpatterns

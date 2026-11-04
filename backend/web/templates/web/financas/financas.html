@@ -1,0 +1,26 @@
+{% extends "web/base.html" %}
+{% block titulo %}Finanças da casa{% endblock %}
+{% block conteudo %}
+<h1>Finanças da casa</h1>
+{% if not grupos %}
+  <p class="financas__vazio">Nenhuma conta ainda. Cadastre uma conta para começar.</p>
+{% endif %}
+{% for grupo in grupos %}
+  <section class="financas__casa">
+    <h2>{{ grupo.household.nome }}</h2>
+    {% for item in grupo.contas %}
+      <article class="financas__conta">
+        <h3>{{ item.conta.nome }}</h3>
+        <p>{{ item.conta.get_propriedade_display }}</p>
+        <ul>
+          {% for cartao in item.cartoes %}
+            <li>{{ cartao.nome }} ••{{ cartao.ultimos_digitos }} · fecha dia {{ cartao.dia_fechamento }}, vence dia {{ cartao.dia_vencimento }}</li>
+          {% empty %}
+            <li>Nenhum cartão cadastrado.</li>
+          {% endfor %}
+        </ul>
+      </article>
+    {% endfor %}
+  </section>
+{% endfor %}
+{% endblock %}
