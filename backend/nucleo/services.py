@@ -2903,7 +2903,7 @@ def lancamentos_visiveis(usuario, household):
     )
 
 
-def resumo_financas(usuario, household, mes, meses_previsao=3):
+def resumo_financas(usuario, household, mes, meses_previsao=3, meses_antes=3, meses_depois=6):
     """Início das finanças: total do mês, por cartão e previsão das próximas faturas.
 
     Só entram lançamentos que o usuário pode ver (`lancamentos_visiveis`).
@@ -2932,4 +2932,14 @@ def resumo_financas(usuario, household, mes, meses_previsao=3):
         {"mes": somar_meses(mes, i), "total": total(fatura__mes_referencia=somar_meses(mes, i))}
         for i in range(1, meses_previsao + 1)
     ]
-    return {"mes": mes, "total_mes": total(fatura__mes_referencia=mes), "cartoes": cartoes, "previsao": previsao}
+    serie = [
+        {"mes": somar_meses(mes, i), "total_centavos": total(fatura__mes_referencia=somar_meses(mes, i))}
+        for i in range(-meses_antes, meses_depois + 1)
+    ]
+    return {
+        "mes": mes,
+        "total_mes": total(fatura__mes_referencia=mes),
+        "cartoes": cartoes,
+        "previsao": previsao,
+        "serie": serie,
+    }

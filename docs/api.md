@@ -81,6 +81,14 @@ Base: `/api/`. Autenticação por sessão ou token. Para ferramentas (MCP, scrip
 
 As preferências da M34 ficam em `GET/PATCH /perfil/`: `avisos` (`{tipo: bool}`; um tipo que falta conta como ligado), `nao_perturbe_foco` e `limite_avisos_dia` (de 1 a 20).
 
+## Finanças da casa
+
+| Método e rota | O que faz | Tela |
+| --- | --- | --- |
+| `GET /financas/households/{id}/dashboard/?mes=AAAA-MM` | Início: `total_mes`, `cartoes` (total do mês por cartão), `previsao` (próximas 3 faturas) e `serie` (de 3 meses antes a 6 depois, `[{mes, total_centavos}]`, para o carrossel de meses). Só entram lançamentos que o usuário pode ver. `400` se `mes` não for `AAAA-MM` com mês de 01 a 12; `404` se não for membro do household | Início (em construção) |
+
+Valores em centavos inteiros. O contrato completo das finanças está em `financas/openapi.yaml`.
+
 ## Seus dados (LGPD)
 
 | Método e rota | O que faz | Tela |

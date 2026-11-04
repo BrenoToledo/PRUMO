@@ -1,5 +1,7 @@
 """API das finanças da casa (contrato em financas/openapi.yaml). Views só validam e chamam services."""
 
+import re
+
 from django.contrib.auth import get_user_model
 from django.http import Http404
 from rest_framework import status
@@ -141,12 +143,15 @@ class CartoesView(APIView):
         return Response(_json_cartao(cartao), status=status.HTTP_201_CREATED)
 
 
+MES_RE = re.compile(r"\d{4}-(0[1-9]|1[0-2])")
+
+
 class DashboardView(APIView):
     """Início das finanças: resumo do mês para o usuário autenticado (ver `services.resumo_financas`)."""
 
     def get(self, request, household_id):
         household = _household_do_usuario(request, household_id)
         mes = request.query_params.get("mes", "")
-        if len(mes) != 7 or mes[4] != "-":
+        if not MES_RE.fullmatch(mes):
             return _problema(400, "Mês inválido", "Use o formato AAAA-MM.")
         return Response(services.resumo_financas(request.user, household, mes=mes))
