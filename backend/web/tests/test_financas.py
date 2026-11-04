@@ -57,3 +57,10 @@ def test_tela_exige_login():
     resp = Client().get("/financas/")
 
     assert resp.status_code == 302
+
+
+@pytest.mark.django_db
+def test_menu_tem_link_para_financas(logado):
+    corpo = logado.get("/financas/").content.decode()
+
+    assert 'href="/financas/"' in corpo
