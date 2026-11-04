@@ -7,25 +7,14 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
 from nucleo import services
-from nucleo.models import Conta, Lancamento
+from nucleo.models import Lancamento
 
 Usuario = get_user_model()
 
 
-@pytest.fixture
-def casa(db):
-    breno = Usuario.objects.create_user("breno", password="senha-forte-123")
-    paloma = Usuario.objects.create_user("paloma", password="senha-forte-123")
-    household = services.criar_household(breno, nome="Casa Toledo")
-    services.adicionar_membro(household, paloma, papel="membro")
-    conta = services.criar_conta(household, nome="Conta", propriedade=Conta.Propriedade.INDIVIDUAL, titular=breno)
-    cartao = services.criar_cartao(conta, nome="Itaú", ultimos_digitos="1234", dia_fechamento=20, dia_vencimento=6)
-    return household, breno, paloma, cartao
-
-
 @pytest.mark.django_db
-def test_total_do_mes_soma_so_as_parcelas_da_fatura(casa):
-    household, breno, _, cartao = casa
+def test_total_do_mes_soma_so_as_parcelas_da_fatura(casa_financas):
+    household, breno, _, cartao = casa_financas
     services.criar_lancamento(
         cartao, descricao="Mercado", valor_centavos=25140, data_compra=date(2026, 9, 15), n_parcelas=1, por=breno
     )
@@ -40,8 +29,8 @@ def test_total_do_mes_soma_so_as_parcelas_da_fatura(casa):
 
 
 @pytest.mark.django_db
-def test_privado_de_outro_nao_entra_no_total(casa):
-    household, breno, paloma, cartao = casa
+def test_privado_de_outro_nao_entra_no_total(casa_financas):
+    household, breno, paloma, cartao = casa_financas
     services.criar_lancamento(
         cartao,
         descricao="Presente",
@@ -57,8 +46,8 @@ def test_privado_de_outro_nao_entra_no_total(casa):
 
 
 @pytest.mark.django_db
-def test_previsao_mostra_as_proximas_faturas(casa):
-    household, breno, _, cartao = casa
+def test_previsao_mostra_as_proximas_faturas(casa_financas):
+    household, breno, _, cartao = casa_financas
     services.criar_lancamento(
         cartao, descricao="Curso", valor_centavos=30000, data_compra=date(2026, 9, 10), n_parcelas=3, por=breno
     )
@@ -70,8 +59,8 @@ def test_previsao_mostra_as_proximas_faturas(casa):
 
 
 @pytest.mark.django_db
-def test_endpoint_do_dashboard(casa):
-    household, breno, _, cartao = casa
+def test_endpoint_do_dashboard(casa_financas):
+    household, breno, _, cartao = casa_financas
     services.criar_lancamento(
         cartao, descricao="Mercado", valor_centavos=25140, data_compra=date(2026, 9, 15), n_parcelas=1, por=breno
     )
