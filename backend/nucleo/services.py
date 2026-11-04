@@ -2747,3 +2747,65 @@ def households_do_usuario(usuario):
     from .models import Household
 
     return list(Household.objects.filter(membros__usuario=usuario).distinct())
+
+
+class ErroDeNegocio(Exception):
+    """Regra de negócio violada (ex.: conta conjunta com um membro só)."""
+
+
+def _membro_do_household(household, usuario):
+    from .models import MembroHousehold
+
+    return MembroHousehold.objects.filter(household=household, usuario=usuario).first()
+
+
+def criar_conta(household, nome, propriedade, titular=None, membros=None):
+    """Cria conta individual (com `titular`) ou conjunta (com pelo menos dois `membros`)."""
+    from .models import AcessoConta, Conta
+
+    if propriedade == Conta.Propriedade.INDIVIDUAL:
+        usuarios = [titular]
+    else:
+        usuarios = list(membros or [])
+        if len(usuarios) < 2:
+            raise ErroDeNegocio("Conta conjunta precisa de pelo menos dois membros.")
+
+    membros_vinculados = []
+    for usuario in usuarios:
+        membro = _membro_do_household(household, usuario)
+        if membro is None:
+            raise ErroDeNegocio("Usuário não pertence ao household.")
+        membros_vinculados.append(membro)
+
+    conta = Conta.objects.create(household=household, nome=nome, propriedade=propriedade)
+    for membro in membros_vinculados:
+        AcessoConta.objects.create(conta=conta, membro=membro, papel=AcessoConta.Papel.TITULAR)
+    return conta
+
+
+def papel_na_conta(usuario, conta):
+    """Papel do usuário na conta, ou None se ele não tem acesso."""
+    from .models import AcessoConta
+
+    acesso = AcessoConta.objects.filter(conta=conta, membro__usuario=usuario).first()
+    return acesso.papel if acesso else None
+
+
+def conceder_acesso(conta, usuario, papel, por):
+    """Concede acesso de leitor ou titular. Só titulares da conta podem conceder."""
+    from .models import AcessoConta
+
+    if papel_na_conta(por, conta) != AcessoConta.Papel.TITULAR:
+        raise PermissaoNegada("Só o titular da conta concede acesso.")
+    membro = _membro_do_household(conta.household, usuario)
+    if membro is None:
+        raise ErroDeNegocio("Usuário não pertence ao household.")
+    acesso, _ = AcessoConta.objects.update_or_create(conta=conta, membro=membro, defaults={"papel": papel})
+    return acesso
+
+
+def contas_visiveis(usuario, household):
+    """Contas do household às quais o usuário tem acesso."""
+    from .models import Conta
+
+    return list(Conta.objects.filter(household=household, acessos__membro__usuario=usuario).distinct())

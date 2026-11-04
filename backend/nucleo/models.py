@@ -546,3 +546,39 @@ class MembroHousehold(models.Model):
 
     def __str__(self):
         return f"{self.usuario} em {self.household}"
+
+
+class Conta(models.Model):
+    """Conta bancária do household: individual (um titular) ou conjunta (dois ou mais)."""
+
+    class Propriedade(models.TextChoices):
+        INDIVIDUAL = "individual", "Individual"
+        CONJUNTA = "conjunta", "Conjunta"
+
+    household = models.ForeignKey(Household, on_delete=models.CASCADE, related_name="contas")
+    nome = models.CharField(max_length=80)
+    propriedade = models.CharField(max_length=12, choices=Propriedade.choices)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.nome
+
+
+class AcessoConta(models.Model):
+    """Quem pode ver (leitor) ou é titular de uma conta. Cada membro tem o próprio login."""
+
+    class Papel(models.TextChoices):
+        TITULAR = "titular", "Titular"
+        LEITOR = "leitor", "Leitor"
+
+    conta = models.ForeignKey(Conta, on_delete=models.CASCADE, related_name="acessos")
+    membro = models.ForeignKey(MembroHousehold, on_delete=models.CASCADE, related_name="acessos")
+    papel = models.CharField(max_length=10, choices=Papel.choices, default=Papel.LEITOR)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["conta", "membro"], name="uniq_acesso_por_conta_e_membro"),
+        ]
+
+    def __str__(self):
+        return f"{self.membro} em {self.conta} ({self.papel})"
