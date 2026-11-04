@@ -610,3 +610,24 @@ class Fatura(models.Model):
 
     def __str__(self):
         return f"Fatura {self.mes_referencia} · {self.cartao}"
+
+
+class Lancamento(models.Model):
+    """Uma compra no cartão. Compra parcelada vira uma linha por parcela, cada uma na sua fatura."""
+
+    class Visibilidade(models.TextChoices):
+        COMPARTILHADO = "compartilhado", "Compartilhado"
+        PRIVADO = "privado", "Privado"
+
+    fatura = models.ForeignKey(Fatura, on_delete=models.CASCADE, related_name="lancamentos")
+    criado_por = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="lancamentos_criados")
+    descricao = models.CharField(max_length=140)
+    valor_centavos = models.BigIntegerField()
+    data_compra = models.DateField()
+    parcela_numero = models.PositiveSmallIntegerField(default=1)
+    total_parcelas = models.PositiveSmallIntegerField(default=1)
+    visibilidade = models.CharField(max_length=14, choices=Visibilidade.choices, default=Visibilidade.COMPARTILHADO)
+    divisao_aplicada = models.JSONField(default=dict, blank=True)
+
+    def __str__(self):
+        return f"{self.descricao} ({self.parcela_numero}/{self.total_parcelas})"
