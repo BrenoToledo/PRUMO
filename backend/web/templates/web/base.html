@@ -71,6 +71,12 @@
             Revisão
           </a>
         </li>
+        <li>
+          <a class="nav__item" href="{% url 'web:financas' %}"{% if aba == "financas" %} aria-current="page"{% endif %}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            Finanças
+          </a>
+        </li>
       </ul>
       <div class="nav__tema">
         <label for="tema-seletor">Tema</label>
