@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from . import views
+from . import views, views_financas
 
 router = DefaultRouter()
 router.register("areas", views.AreaViewSet, basename="area")
@@ -33,6 +33,15 @@ urlpatterns = [
     path("notificacoes/lidas/", views.marcar_notificacoes_lidas, name="notificacoes-lidas"),
     path("revisao/diaria/", views.RevisaoDiariaView.as_view(), name="revisao-diaria"),
     path("perfil/", views.PerfilView.as_view(), name="perfil"),
+    path("financas/households/", views_financas.HouseholdsView.as_view(), name="financas-households"),
+    path(
+        "financas/households/<int:household_id>/contas/",
+        views_financas.ContasView.as_view(),
+        name="financas-contas",
+    ),
+    path("financas/contas/<int:pk>/", views_financas.ContaDetalheView.as_view(), name="financas-conta"),
+    path("financas/contas/<int:pk>/acessos/", views_financas.AcessosView.as_view(), name="financas-acessos"),
+    path("financas/contas/<int:pk>/cartoes/", views_financas.CartoesView.as_view(), name="financas-cartoes"),
     path("exportar/", views.exportar, name="exportar"),
     path("importar/", views.importar, name="importar"),
     path("conta/", views.excluir_conta, name="excluir-conta"),
