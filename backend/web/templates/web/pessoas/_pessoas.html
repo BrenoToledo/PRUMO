@@ -5,12 +5,12 @@
     <p>Cadastre quem faz parte das suas entregas, como o gestor ou a orientadora. Depois, no detalhe de cada tarefa, diga quem espera aquilo de você ou de quem você está esperando.</p>
   </div>
 {% else %}
-  {% if painel.esperam_de_voce %}<section aria-labelledby="titulo-esperam">
-    <h2 id="titulo-esperam" class="pessoas__secao">Esperam de você</h2>
+  {% if painel.esperam_de_voce %}<section class="pessoas__area" aria-labelledby="titulo-esperam">
+    <h2 id="titulo-esperam" class="pessoas__secao">Esperam de você <span class="pessoas__contagem">{{ painel.esperam_de_voce|length }}</span></h2>
     <ul class="pessoas__lista">
       {% for e in painel.esperam_de_voce %}<li>
         <a class="pessoa-card" href="{% url 'web:pessoa' e.pessoa.pk %}">
-          <span class="pessoa-card__avatar" aria-hidden="true">{{ e.pessoa.nome|slice:":1"|upper }}</span>
+          {% include "web/pessoas/_avatar.html" with nome=e.pessoa.nome %}
           <span class="pessoa-card__texto">
             <span class="pessoa-card__nome">{{ e.pessoa.nome }}</span>
             {% if e.pessoa.papel %}<span class="pessoa-card__meta">{{ e.pessoa.papel }}</span>{% endif %}
@@ -21,38 +21,42 @@
     </ul>
   </section>{% endif %}
 
-  {% if painel.voce_espera %}<section aria-labelledby="titulo-aguardando">
-    <h2 id="titulo-aguardando" class="pessoas__secao">Você espera de</h2>
+  {% if painel.voce_espera %}<section class="pessoas__area" aria-labelledby="titulo-aguardando">
+    <h2 id="titulo-aguardando" class="pessoas__secao">Você espera de <span class="pessoas__contagem">{{ painel.voce_espera|length }}</span></h2>
     <ul class="pessoas__lista">
-      {% for i in painel.voce_espera %}<li class="pessoa-card pessoa-card--aguardando">
-        <span class="pessoa-card__avatar" aria-hidden="true">{{ i.pessoa.nome|slice:":1"|upper }}</span>
-        <span class="pessoa-card__texto">
-          <a class="pessoa-card__nome" href="{% url 'web:pessoa' i.pessoa.pk %}">{{ i.pessoa.nome }}</a>
-          <a class="pessoa-card__meta" href="{% url 'web:tarefa' i.tarefa.pk %}">{{ i.tarefa.titulo }}</a>
-          <span class="pessoa-card__meta">{% if i.cobrar_hoje %}<strong class="pessoas__cobrar">cobrar hoje</strong>{% else %}próxima cobrança {{ i.proxima_cobranca|date:"j b" }}{% endif %}{% if i.ultima_cobranca %} · cobrou {{ i.ultima_cobranca|date:"j b" }}{% endif %}</span>
-        </span>
-        <span class="pessoa-card__acoes">
-          <span class="selo selo--espera">há {{ i.dias }} dia{{ i.dias|pluralize }}</span>
-          <form method="post" action="{% url 'web:cobrei' i.vinculo.pk %}">
-            {% csrf_token %}
-            <input type="hidden" name="proximo" value="{{ aqui }}">
-            <button class="botao botao--pequeno" type="submit" aria-label="Cobrei {{ i.pessoa.nome }}: {{ i.tarefa.titulo }}">Cobrei</button>
-          </form>
-          <form method="post" action="{% url 'web:redigir_mensagem' i.vinculo.pk %}">
-            {% csrf_token %}
-            <button class="botao botao--texto" type="submit" aria-label="Mensagem para {{ i.pessoa.nome }}: {{ i.tarefa.titulo }}">Mensagem</button>
-          </form>
-        </span>
+      {% for i in painel.voce_espera %}<li>
+        <article class="pessoa-card pessoa-card--aguardando{% if i.cobrar_hoje %} pessoa-card--cobrar{% endif %}">
+          {% include "web/pessoas/_avatar.html" with nome=i.pessoa.nome %}
+          <span class="pessoa-card__texto">
+            <a class="pessoa-card__nome" href="{% url 'web:pessoa' i.pessoa.pk %}">{{ i.pessoa.nome }}</a>
+            <a class="pessoa-card__meta" href="{% url 'web:tarefa' i.tarefa.pk %}">{{ i.tarefa.titulo }}</a>
+            <span class="pessoa-card__meta">{% if i.cobrar_hoje %}<strong class="pessoas__cobrar">cobrar hoje</strong>{% else %}Próxima cobrança {{ i.proxima_cobranca|date:"j b" }}{% endif %}{% if i.ultima_cobranca %} · cobrou {{ i.ultima_cobranca|date:"j b" }}{% endif %}</span>
+          </span>
+          <span class="pessoa-card__acoes">
+            <span class="selo selo--espera">há {{ i.dias }} dia{{ i.dias|pluralize }}</span>
+            <span class="pessoa-card__botoes">
+              <form method="post" action="{% url 'web:cobrei' i.vinculo.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="proximo" value="{{ aqui }}">
+                <button class="botao botao--pequeno" type="submit" aria-label="Cobrei {{ i.pessoa.nome }}: {{ i.tarefa.titulo }}">Cobrei</button>
+              </form>
+              <form method="post" action="{% url 'web:redigir_mensagem' i.vinculo.pk %}">
+                {% csrf_token %}
+                <button class="botao botao--texto botao--pequeno" type="submit" aria-label="Mensagem para {{ i.pessoa.nome }}: {{ i.tarefa.titulo }}">Mensagem</button>
+              </form>
+            </span>
+          </span>
+        </article>
       </li>{% endfor %}
     </ul>
   </section>{% endif %}
 
-  {% if painel.sem_pendencias %}<section aria-labelledby="titulo-outras">
-    <h2 id="titulo-outras" class="pessoas__secao">Sem pendências</h2>
-    <ul class="pessoas__lista">
+  {% if painel.sem_pendencias %}<section class="pessoas__area pessoas__area--larga" aria-labelledby="titulo-outras">
+    <h2 id="titulo-outras" class="pessoas__secao">Sem pendências <span class="pessoas__contagem">{{ painel.sem_pendencias|length }}</span></h2>
+    <ul class="pessoas__lista pessoas__lista--grade">
       {% for p in painel.sem_pendencias %}<li>
         <a class="pessoa-card" href="{% url 'web:pessoa' p.pk %}">
-          <span class="pessoa-card__avatar" aria-hidden="true">{{ p.nome|slice:":1"|upper }}</span>
+          {% include "web/pessoas/_avatar.html" with nome=p.nome %}
           <span class="pessoa-card__texto">
             <span class="pessoa-card__nome">{{ p.nome }}</span>
             {% if p.papel %}<span class="pessoa-card__meta">{{ p.papel }}</span>{% endif %}
