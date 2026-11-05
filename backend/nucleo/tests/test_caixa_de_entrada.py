@@ -40,3 +40,13 @@ def test_pendentes_do_usuario_mais_novos_primeiro(usuario):
     services.capturar(outro, "de outra pessoa")
 
     assert list(services.caixa_de_entrada(usuario)) == [novo, antigo]
+
+
+def test_descartar_so_vale_para_item_pendente(usuario):
+    item = services.capturar(usuario, "Ligar para o seguro")
+    services.para_lista_rapida(item, usuario.areas.first())
+
+    with pytest.raises(ValueError):
+        services.descartar(item)
+    item.refresh_from_db()
+    assert item.status == ItemCaptura.Status.LISTA_RAPIDA

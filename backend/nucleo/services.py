@@ -274,6 +274,8 @@ def para_lista_rapida(item: ItemCaptura, area: Area, minutos: int = 5) -> Tarefa
 
 
 def descartar(item: ItemCaptura) -> None:
+    if item.status != ItemCaptura.Status.PENDENTE:
+        raise ValueError("só um item pendente pode ser descartado")
     item.status = ItemCaptura.Status.DESCARTADO
     item.save(update_fields=["status"])
 

@@ -157,6 +157,7 @@ def test_lista_rapida_e_descartar(api, usuario, educacao):
     assert api.post(f"/api/captura/{b}/descartar/").status_code == 204
     assert api.get("/api/captura/").data["count"] == 0
     assert any(t["titulo"] == "pagar boleto" for t in api.get("/api/hoje/").data["tarefas_leves"])
+    assert api.post(f"/api/captura/{a}/descartar/").status_code == 400
 
 
 def test_respostas_de_importancia_invalidas(api, educacao):

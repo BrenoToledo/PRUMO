@@ -297,7 +297,10 @@ class CapturaViewSet(
 
     @action(detail=True, methods=["post"])
     def descartar(self, request, pk=None):
-        services.descartar(self._item(pk))
+        try:
+            services.descartar(self._item(pk))
+        except ValueError as exc:
+            return _erro(exc)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
