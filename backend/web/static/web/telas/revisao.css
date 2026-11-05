@@ -19,8 +19,26 @@
 }
 .revisao__subtitulo { margin: 0 0 var(--e2); font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
 .revisao__dica { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
-.revisao__linhas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
-.revisao__linha { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); }
+.revisao__linhas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); position: relative; }
+.revisao__linha {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e3);
+  padding-left: var(--e4); position: relative;
+  animation: revisao-entra var(--transicao-lenta, 320ms) ease-out both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+/* Fio vertical do dia: liga as linhas e mostra a ordem do planejado. */
+.revisao__linha::before {
+  content: ""; position: absolute; left: 4px; top: 0; bottom: 0; width: 2px;
+  background: var(--borda);
+}
+.revisao__linha::after {
+  content: ""; position: absolute; left: 1px; top: 50%; width: 8px; height: 8px; margin-top: -4px;
+  border-radius: 50%; background: var(--superficie); border: 2px solid var(--texto-secundario);
+}
+.revisao__linha:has(.revisao__chip--feito)::after { background: var(--primaria); border-color: var(--primaria); }
+.revisao__linha:has(.revisao__chip--aviso)::after { border-color: var(--aviso); }
+.revisao__linha:has(.revisao__chip--perigo)::after { border-color: var(--prioridade-critica); }
+@keyframes revisao-entra { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .revisao__tarefa { min-width: 0; overflow-wrap: anywhere; }
 .revisao__tarefa time { color: var(--texto-secundario); font-size: var(--legenda-tam); font-variant-numeric: tabular-nums; }
 .revisao__chip {
@@ -54,6 +72,15 @@
 .revisao__pilula:has(input:checked) { background: var(--primaria); border-color: var(--primaria); color: var(--texto-na-primaria); }
 .revisao__pilula:has(input:focus-visible) { outline: 2px solid var(--primaria); outline-offset: 2px; }
 .revisao__concluir { width: 100%; margin-top: var(--e3); }
+.revisao__distracoes:focus-visible,
+.revisao__pilula input:focus-visible + span { outline: 2px solid var(--primaria); outline-offset: 2px; }
+.revisao__distracoes { transition: background var(--transicao); }
+.revisao__distracoes:hover { background: var(--primaria-suave); }
+
+@media (prefers-reduced-motion: reduce) {
+  .revisao__linha { animation: none; }
+  .revisao__distracoes { transition: none; }
+}
 
 /* Intenção de hoje no topo da tela Hoje: vem da revisão de ontem. */
 .intencao {
