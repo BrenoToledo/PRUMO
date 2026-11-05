@@ -122,3 +122,32 @@ def test_mes_invalido_cai_no_mes_atual(logado, breno):
     resp = logado.get("/financas/?mes=lixo")
 
     assert resp.status_code == 200
+
+
+@pytest.mark.django_db
+def test_carrossel_desenha_curva_com_um_ponto_por_mes(logado, breno):
+    _casa_com_compras(breno)
+
+    corpo = logado.get("/financas/?mes=2026-09").content.decode()
+
+    assert 'class="financas__curva"' in corpo
+    assert corpo.count('class="financas__ponto') == 10
+
+
+def test_pontos_mapeiam_maior_valor_para_o_topo_e_zero_para_a_base():
+    from web.telas.financas import pontos_curva
+
+    pontos = pontos_curva([0, 50, 100], largura=104, altura=100)
+
+    assert pontos[0][1] == pytest.approx(80)
+    assert pontos[2][1] == pytest.approx(24)
+    assert [x for x, _ in pontos] == pytest.approx([48, 152, 256])
+
+
+def test_caminho_suave_passa_pelos_pontos():
+    from web.telas.financas import caminho_suave
+
+    caminho = caminho_suave([(48, 80), (152, 24)])
+
+    assert caminho.startswith("M48.0,80.0 C")
+    assert caminho.endswith("152.0,24.0")

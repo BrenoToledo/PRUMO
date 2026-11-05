@@ -33,6 +33,54 @@ def rotulo_mes(mes):
     return ABREVIACOES[num - 1]
 
 
+PASSO_PILULA = 104  # largura da pílula (96) + espaço entre elas (8)
+ALTURA_CURVA = 100
+TOPO_CURVA, BASE_CURVA = 24, 80
+
+
+def pontos_curva(totais, largura=PASSO_PILULA, altura=ALTURA_CURVA):
+    """Um ponto por mês, no centro de cada pílula. O maior total fica no topo, zero na base."""
+    maximo = max(totais) or 1
+    pontos = []
+    for i, total in enumerate(totais):
+        x = i * largura + (largura - 8) / 2  # centro da pílula de 96px
+        y = BASE_CURVA - (total / maximo) * (BASE_CURVA - TOPO_CURVA)
+        pontos.append((x, y))
+    return pontos
+
+
+def caminho_suave(pontos):
+    """Curva que passa pelos pontos, com tangentes horizontais em cada um (estilo de gráfico de banco)."""
+    if not pontos:
+        return ""
+    (x0, y0), *resto = pontos
+    partes = [f"M{x0:.1f},{y0:.1f}"]
+    anterior = (x0, y0)
+    for x, y in resto:
+        meio = (anterior[0] + x) / 2
+        partes.append(f" C{meio:.1f},{anterior[1]:.1f} {meio:.1f},{y:.1f} {x:.1f},{y:.1f}")
+        anterior = (x, y)
+    return "".join(partes)
+
+
+def _curva(serie, mes):
+    totais = [s["total_centavos"] for s in serie]
+    pontos = pontos_curva(totais)
+    atual = next((i for i, s in enumerate(serie) if s["mes"] == mes), 0)
+    area = caminho_suave(pontos) + f" L{pontos[-1][0]:.1f},{BASE_CURVA} L{pontos[0][0]:.1f},{BASE_CURVA} Z"
+    return {
+        "largura": len(serie) * PASSO_PILULA - 8,
+        "altura": ALTURA_CURVA,
+        "area": area,
+        "passado": caminho_suave(pontos[: atual + 1]),
+        "futuro": caminho_suave(pontos[atual:]),
+        "pontos": [
+            {"x": f"{x:.1f}", "y": f"{y:.1f}", "atual": i == atual, "futuro": i > atual}
+            for i, (x, y) in enumerate(pontos)
+        ],
+    }
+
+
 def _mes_escolhido(request):
     mes = request.GET.get("mes", "")
     if MES_RE.fullmatch(mes):
@@ -51,6 +99,7 @@ def _painel(usuario, household, mes):
     )
     return {
         "mes": mes,
+        "curva": _curva(resumo["serie"], mes),
         "total_mes": brl(resumo["total_mes"]),
         "serie": [
             {

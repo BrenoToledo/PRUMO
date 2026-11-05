@@ -226,7 +226,7 @@ a { color: var(--primaria); }
 .nav__tema select { font-family: inherit; font-size: inherit; color: var(--texto); background: var(--superficie); border: 1px solid var(--borda); border-radius: 6px; padding: 2px 6px; }
 
 /* Finanças: Início (carrossel de meses e resumo) */
-.financas__meses { display: flex; gap: var(--e2); overflow-x: auto; scroll-snap-type: x mandatory; padding: var(--e2) 0; margin-bottom: var(--e4); }
+.financas__meses { position: relative; display: flex; gap: var(--e2); overflow-x: auto; scroll-snap-type: x mandatory; padding: var(--e2) 0; margin-bottom: var(--e4); }
 .financas__mes { flex: 0 0 auto; scroll-snap-align: center; display: flex; flex-direction: column; align-items: center; min-width: 96px; padding: var(--e2) var(--e3); border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--superficie); color: var(--texto); text-decoration: none; transition: var(--transicao); }
 .financas__mes-rotulo { font-size: var(--legenda-tam); color: var(--texto-secundario); }
 .financas__mes-total { font-weight: 600; font-size: var(--corpo-tam); }
@@ -238,3 +238,8 @@ a { color: var(--primaria); }
 .financas__bloco ul { list-style: none; padding: 0; margin: 0; }
 .financas__bloco li { display: flex; justify-content: space-between; gap: var(--e3); padding: var(--e2) 0; border-bottom: 1px solid var(--borda); }
 .financas__valor { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.financas__curva { position: absolute; left: 0; top: var(--e2); z-index: 2; pointer-events: none; overflow: visible; }
+.financas__mes { height: 100px; box-sizing: border-box; justify-content: space-between; background: rgba(255, 255, 255, 0.7); }
+.financas__mes--atual { background: rgba(204, 251, 241, 0.8); }
+.financas__ponto { fill: var(--primaria); }
+.financas__ponto--futuro { fill: var(--superficie); }
