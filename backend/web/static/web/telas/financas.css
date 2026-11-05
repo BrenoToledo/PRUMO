@@ -1,10 +1,6 @@
 /* Finanças: cabeçalho, carrossel de meses com curva, total do mês e listas em registro.
    Componentes reutilizáveis: .financas__secao, .financas__lista, .financas__registro, .revelar. */
 
-.financas__cabeca { margin-bottom: var(--e6); }
-.financas__cabeca h1 { font-size: var(--display-tam); line-height: var(--display-alt); font-weight: var(--display-peso); margin: 0; }
-.financas__sub { margin: var(--e1) 0 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
-
 /* Carrossel de meses */
 .financas__meses { position: relative; display: flex; gap: var(--e2); overflow-x: auto; scroll-snap-type: x mandatory; padding: var(--e2) 0; margin-bottom: var(--e6); }
 .financas__mes {

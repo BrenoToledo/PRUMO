@@ -3,10 +3,7 @@
 {% block titulo %}Finanças{% endblock %}
 {% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/financas.css' %}">{% endblock %}
 {% block conteudo %}
-<header class="financas__cabeca">
-  <h1>Finanças</h1>
-  {% if painel %}<p class="financas__sub">{{ painel.mes_extenso|capfirst }}</p>{% endif %}
-</header>
+{% include "web/_cabecalho.html" with titulo="Finanças" sub=painel.mes_extenso|capfirst %}
 
 {% if painel %}
   <nav class="financas__meses revelar" aria-label="Meses">
