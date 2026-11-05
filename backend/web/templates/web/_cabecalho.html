@@ -4,5 +4,6 @@
     <h1>{{ titulo }}</h1>
     {% if sub %}<p class="cabecalho__sub">{{ sub }}</p>{% endif %}
   </div>
+  {% if acoes %}{% include acoes %}{% endif %}
   {% include "web/_botao_sair.html" %}
 </header>
