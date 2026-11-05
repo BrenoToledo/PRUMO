@@ -177,3 +177,19 @@ def test_tela_tem_formulario_de_lista_rapida_com_areas(logado, usuario):
     assert 'hx-post="' + reverse("web:lista_rapida", args=[item.pk]) + '"' in html
     assert "Educação" in html
     assert "Pessoal" in html
+
+
+# ---------------------------------------------------------------- consultas
+def test_pagina_consulta_as_areas_uma_vez_so_mesmo_com_varios_itens(logado, usuario):
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    for i in range(5):
+        services.capturar(usuario, f"item {i}")
+
+    with CaptureQueriesContext(connection) as consultas:
+        resposta = logado.get(reverse("web:entrada"))
+
+    assert resposta.status_code == 200
+    consultas_de_areas = [q for q in consultas.captured_queries if '"nucleo_area"' in q["sql"]]
+    assert len(consultas_de_areas) <= 2
