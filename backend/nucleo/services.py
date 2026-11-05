@@ -2443,6 +2443,8 @@ def responder_revisao(revisao: Revisao, chave: str, opcao: str, texto: str = "")
 
 
 def concluir_revisao_semanal(revisao: Revisao) -> Revisao:
+    if revisao.metricas.get("concluida_em"):
+        return revisao  # já concluída: mantém o momento da primeira conclusão
     revisao.metricas["passo"] = len(rs.PASSOS)
     revisao.metricas["concluida_em"] = timezone.now().isoformat()
     revisao.save(update_fields=["metricas"])
