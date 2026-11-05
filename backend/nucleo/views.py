@@ -112,9 +112,7 @@ class PessoaViewSet(DoUsuarioViewSet):
     serializer_class = PessoaSerializer
 
     def get_queryset(self):
-        busca = self.request.query_params.get("busca", "").strip()
-        qs = super().get_queryset()
-        return qs.filter(nome__icontains=busca) if busca else qs
+        return services.filtrar_por_nome(super().get_queryset(), self.request.query_params.get("busca", ""))
 
     def perform_create(self, serializer):
         serializer.instance = services.criar_pessoa(self.request.user, serializer.validated_data)
@@ -142,15 +140,15 @@ class PessoaViewSet(DoUsuarioViewSet):
                     for e in d["espera_de_voce"]
                 ],
                 "voce_espera": [_aguardando(i) for i in d["voce_espera"]],
-                "minha_pontualidade": _pontualidade(d["minha_pontualidade"]),
-                "pontualidade_dela": _pontualidade(d["pontualidade_dela"]),
+                "minha_pontualidade": _pontualidade_json(d["minha_pontualidade"]),
+                "pontualidade_dela": _pontualidade_json(d["pontualidade_dela"]),
                 "ultimo_contato": d["ultimo_contato"],
                 "proxima_cobranca": d["proxima_cobranca"],
             }
         )
 
 
-def _pontualidade(p) -> dict:
+def _pontualidade_json(p) -> dict:
     return {"total": p.total, "no_prazo": p.no_prazo, "pct": p.pct, "atraso_medio": p.atraso_medio}
 
 
@@ -170,7 +168,7 @@ def _aguardando(item) -> dict:
 
 def _mensagem(sugestao: SugestaoIA) -> dict:
     c = sugestao.conteudo
-    p = Pessoa.objects.get(pk=c["pessoa"])
+    p = get_object_or_404(Pessoa, pk=c["pessoa"], usuario=sugestao.usuario)
     canais = []
     for canal in pes.CANAIS:
         url = pes.link_mensagem(
@@ -246,8 +244,7 @@ def cobrei(request, pk):
         services.registrar_cobranca(vinculo)
     except ValueError as exc:
         return _erro(exc)
-    item = next(i for i in services.aguardando(request.user, vinculo.pessoa) if i["vinculo"].pk == vinculo.pk)
-    return Response(_aguardando(item))
+    return Response(_aguardando(services.item_aguardando(vinculo)))
 
 
 class CapturaViewSet(

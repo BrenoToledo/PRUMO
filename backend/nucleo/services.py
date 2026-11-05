@@ -1996,11 +1996,13 @@ def trocar_na_proposta(sugestao: SugestaoIA, a: int, b: int, *, de_a: date | Non
 CAMPOS_PESSOA = ("nome", "papel", "email", "whatsapp", "teams", "cadencia_dias")
 
 
+def filtrar_por_nome(pessoas: QuerySet[Pessoa], busca: str) -> QuerySet[Pessoa]:
+    busca = busca.strip()
+    return pessoas.filter(nome__icontains=busca) if busca else pessoas
+
+
 def pessoas_de(usuario, busca: str = "") -> list[Pessoa]:
-    pessoas = Pessoa.objects.filter(usuario=usuario)
-    if busca.strip():
-        pessoas = pessoas.filter(nome__icontains=busca.strip())
-    return list(pessoas)
+    return list(filtrar_por_nome(Pessoa.objects.filter(usuario=usuario), busca))
 
 
 def _gravar_pessoa(pessoa: Pessoa, dados: dict) -> Pessoa:
@@ -2039,7 +2041,8 @@ def desvincular_pessoa(vinculo: TarefaPessoa) -> None:
     vinculo.delete()
 
 
-def _item_aguardando(vinculo: TarefaPessoa, dia: date) -> Aguardando:
+def item_aguardando(vinculo: TarefaPessoa, dia: date | None = None) -> Aguardando:
+    dia = dia or hoje()
     tarefa, pessoa = vinculo.tarefa, vinculo.pessoa
     desde = timezone.localtime(tarefa.criada_em).date()
     ultima = timezone.localtime(vinculo.ultima_cobranca).date() if vinculo.ultima_cobranca else None
@@ -2067,7 +2070,7 @@ def aguardando(usuario, pessoa: Pessoa | None = None) -> list[Aguardando]:
     if pessoa is not None:
         vinculos = vinculos.filter(pessoa=pessoa)
     dia = hoje()
-    itens = [_item_aguardando(v, dia) for v in vinculos]
+    itens = [item_aguardando(v, dia) for v in vinculos]
     return sorted(itens, key=lambda i: (not i["cobrar_hoje"], i["proxima_cobranca"], -i["dias"], i["tarefa"].pk))
 
 
@@ -2249,14 +2252,14 @@ def enviar_mensagem(sugestao: SugestaoIA, *, canal: str, texto: str, lembrar: bo
         raise ValueError("a pessoa não tem esse canal cadastrado")
     status = SugestaoIA.Status.ACEITA if texto == sugestao.conteudo.get("texto") else SugestaoIA.Status.EDITADA
     _responder(sugestao, status, {"canal": canal, "texto": texto, "lembrar": lembrar})
-    aguardo = vinculo
+    cobrado = vinculo
     if vinculo.relacao == TarefaPessoa.Relacao.DEPENDE_DE_MIM:
-        aguardo = vincular_pessoa(vinculo.tarefa, p, TarefaPessoa.Relacao.EU_DEPENDO) if lembrar else None
-    if aguardo is not None and vinculo.tarefa.status == Tarefa.Status.ABERTA:
-        registrar_cobranca(aguardo)
+        cobrado = vincular_pessoa(vinculo.tarefa, p, TarefaPessoa.Relacao.EU_DEPENDO) if lembrar else None
+    if cobrado is not None and vinculo.tarefa.status == Tarefa.Status.ABERTA:
+        registrar_cobranca(cobrado)
         if lembrar:
-            aguardo.proxima_cobranca = hoje() + timedelta(days=LEMBRETE_DIAS)
-            aguardo.save(update_fields=["proxima_cobranca"])
+            cobrado.proxima_cobranca = hoje() + timedelta(days=LEMBRETE_DIAS)
+            cobrado.save(update_fields=["proxima_cobranca"])
     return link
 
 
