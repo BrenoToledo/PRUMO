@@ -3,13 +3,7 @@
 {% block titulo %}Tarefas{% endblock %}
 {% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/todas_tarefas.css' %}">{% endblock %}
 {% block conteudo %}
-<header class="cabecalho">
-  <div>
-    <h1>Tarefas</h1>
-    <p class="cabecalho__sub">Todas as tarefas num lugar só, com filtros e busca.</p>
-  </div>
-  {% include "web/_botao_sair.html" %}
-</header>
+{% include "web/_cabecalho.html" with titulo="Tarefas" sub="Todas as tarefas num lugar só, com filtros e busca." %}
 
 <form class="filtros" method="get" action="{% url 'web:todas_tarefas' %}" role="search">
   <label class="campo">

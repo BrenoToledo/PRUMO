@@ -2,13 +2,7 @@
 {% block titulo %}Projetos{% endblock %}
 {% block estilos %}{% include "web/projetos/_cabeca.html" %}{% endblock %}
 {% block conteudo %}
-<header class="cabecalho">
-  <div>
-    <h1>Projetos</h1>
-    <p class="cabecalho__sub">Tarefas agrupadas por objetivo, com o progresso em blocos.</p>
-  </div>
-  {% include "web/_botao_sair.html" %}
-</header>
+{% include "web/_cabecalho.html" with titulo="Projetos" sub="Tarefas agrupadas por objetivo, com o progresso em blocos." %}
 
 {% if projetos %}
 <ul class="projetos">

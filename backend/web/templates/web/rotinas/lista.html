@@ -2,13 +2,7 @@
 {% block titulo %}Rotinas{% endblock %}
 {% block estilos %}{% include "web/rotinas/_cabeca.html" %}{% endblock %}
 {% block conteudo %}
-<header class="cabecalho">
-  <div>
-    <h1>Rotinas</h1>
-    <p class="cabecalho__sub">O que se repete: cada dia da rotina vira uma tarefa em Hoje.</p>
-  </div>
-  {% include "web/_botao_sair.html" %}
-</header>
+{% include "web/_cabecalho.html" with titulo="Rotinas" sub="O que se repete: cada dia da rotina vira uma tarefa em Hoje." %}
 
 {% if rotinas %}
 <ul class="rotinas">
