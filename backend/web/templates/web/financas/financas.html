@@ -1,22 +1,21 @@
 {% extends "web/base.html" %}
-{% block titulo %}Início · Finanças{% endblock %}
+{% load static %}
+{% block titulo %}Finanças{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/financas.css' %}">{% endblock %}
 {% block conteudo %}
-<h1>Início</h1>
+<header class="financas__cabeca">
+  <h1>Finanças</h1>
+  {% if painel %}<p class="financas__sub">{{ painel.mes_extenso|capfirst }}</p>{% endif %}
+</header>
 
 {% if painel %}
-  <nav class="financas__meses" aria-label="Meses">
+  <nav class="financas__meses revelar" aria-label="Meses">
     <svg class="financas__curva" width="{{ painel.curva.largura }}" height="{{ painel.curva.altura }}" viewBox="0 0 {{ painel.curva.largura }} {{ painel.curva.altura }}" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id="financas-area" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="var(--primaria)" stop-opacity="0.35"/>
-          <stop offset="1" stop-color="var(--primaria)" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <path class="financas__area" d="{{ painel.curva.area }}" fill="url(#financas-area)"/>
-      <path class="financas__linha" d="{{ painel.curva.passado }}" fill="none" stroke="var(--primaria)" stroke-width="2"/>
-      <path class="financas__linha financas__linha--futuro" d="{{ painel.curva.futuro }}" fill="none" stroke="var(--primaria)" stroke-width="2" stroke-dasharray="5 4"/>
+      <path class="financas__area" d="{{ painel.curva.area }}"/>
+      <path class="financas__linha financas__linha--passado" pathLength="1" d="{{ painel.curva.passado }}"/>
+      <path class="financas__linha financas__linha--futuro" d="{{ painel.curva.futuro }}"/>
       {% for p in painel.curva.pontos %}
-        <circle class="financas__ponto{% if p.atual %} financas__ponto--atual{% endif %}{% if p.futuro %} financas__ponto--futuro{% endif %}" cx="{{ p.x }}" cy="{{ p.y }}" r="{% if p.atual %}6{% else %}4{% endif %}" stroke="var(--primaria)" stroke-width="2"/>
+        <circle class="financas__ponto{% if p.atual %} financas__ponto--atual{% endif %}{% if p.futuro %} financas__ponto--futuro{% endif %}" cx="{{ p.x }}" cy="{{ p.y }}" r="{% if p.atual %}6{% else %}4{% endif %}"/>
       {% endfor %}
     </svg>
     {% for s in painel.serie %}
@@ -27,66 +26,77 @@
     {% endfor %}
   </nav>
 
-  <section class="financas__resumo" aria-label="Resumo do mês">
-    <p class="financas__total-rotulo">Total da fatura de {{ painel.mes }}</p>
+  <section class="financas__destaque" aria-label="Total do mês">
+    <p class="financas__total-rotulo">Total da fatura</p>
     <p class="financas__total">{{ painel.total_mes }}</p>
   </section>
 
-  <section class="financas__bloco">
+  <section class="financas__secao">
     <h2>Cartões no mês</h2>
-    <ul>
+    <ul class="financas__lista">
       {% for c in painel.cartoes %}
-        <li>{{ c.nome }} ••{{ c.ultimos_digitos }} <span class="financas__valor">{{ c.total }}</span></li>
+        <li class="financas__registro">
+          <span>{{ c.nome }} ••{{ c.ultimos_digitos }}</span>
+          <span class="financas__valor">{{ c.total }}</span>
+        </li>
       {% empty %}
-        <li>Nenhum lançamento neste mês.</li>
+        <li class="financas__vazio">Nenhum lançamento neste mês.</li>
       {% endfor %}
     </ul>
   </section>
 
-  <section class="financas__bloco">
+  <section class="financas__secao">
     <h2>Lançamentos do mês</h2>
-    <ul>
+    <ul class="financas__lista">
       {% for lc in painel.lancamentos %}
-        <li>
+        <li class="financas__registro">
           <span>{{ lc.descricao }}{% if lc.parcela %} · parcela {{ lc.parcela }}{% endif %}</span>
           <span class="financas__valor">{{ lc.valor }}</span>
         </li>
       {% empty %}
-        <li>Nenhum lançamento neste mês.</li>
+        <li class="financas__vazio">Nenhum lançamento neste mês.</li>
       {% endfor %}
     </ul>
   </section>
 
-  <section class="financas__bloco">
+  <section class="financas__secao">
     <h2>Próximas faturas</h2>
-    <ul>
+    <ul class="financas__lista">
       {% for p in painel.previsao %}
-        <li>{{ p.rotulo }} <span class="financas__valor">{{ p.total }}</span></li>
+        <li class="financas__registro">
+          <span>{{ p.rotulo }}</span>
+          <span class="financas__valor">{{ p.total }}</span>
+        </li>
       {% endfor %}
     </ul>
   </section>
 {% endif %}
 
-<h2>Contas</h2>
-{% if not grupos %}
-  <p class="financas__vazio">Nenhuma conta ainda. Cadastre uma conta para começar.</p>
-{% endif %}
-{% for grupo in grupos %}
-  <section class="financas__casa">
-    <h3>{{ grupo.household.nome }}</h3>
-    {% for item in grupo.contas %}
-      <article class="financas__conta">
-        <h4>{{ item.conta.nome }}</h4>
-        <p>{{ item.conta.get_propriedade_display }}</p>
-        <ul>
-          {% for cartao in item.cartoes %}
-            <li>{{ cartao.nome }} ••{{ cartao.ultimos_digitos }} · fecha dia {{ cartao.dia_fechamento }}, vence dia {{ cartao.dia_vencimento }}</li>
-          {% empty %}
-            <li>Nenhum cartão cadastrado.</li>
-          {% endfor %}
-        </ul>
-      </article>
-    {% endfor %}
-  </section>
-{% endfor %}
+<section class="financas__secao">
+  <h2>Contas</h2>
+  {% if not grupos %}
+    <p class="financas__vazio-bloco">Nenhuma conta ainda. Cadastre uma conta para começar.</p>
+  {% endif %}
+  {% for grupo in grupos %}
+    <div class="financas__casa">
+      <h3>{{ grupo.household.nome }}</h3>
+      {% for item in grupo.contas %}
+        <article class="financas__conta">
+          <h4>{{ item.conta.nome }}</h4>
+          <p class="financas__propriedade">{{ item.conta.get_propriedade_display }}</p>
+          <ul class="financas__lista">
+            {% for cartao in item.cartoes %}
+              <li class="financas__registro financas__registro--cartao">
+                <span>{{ cartao.nome }} ••{{ cartao.ultimos_digitos }}</span>
+                <span class="financas__detalhe">fecha dia {{ cartao.dia_fechamento }} · vence dia {{ cartao.dia_vencimento }}</span>
+              </li>
+            {% empty %}
+              <li class="financas__vazio">Nenhum cartão cadastrado.</li>
+            {% endfor %}
+          </ul>
+        </article>
+      {% endfor %}
+    </div>
+  {% endfor %}
+</section>
 {% endblock %}

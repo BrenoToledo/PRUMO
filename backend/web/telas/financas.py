@@ -16,6 +16,20 @@ from nucleo import services
 
 MES_RE = re.compile(r"\d{4}-(0[1-9]|1[0-2])")
 ABREVIACOES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+MESES_EXTENSO = [
+    "janeiro",
+    "fevereiro",
+    "março",
+    "abril",
+    "maio",
+    "junho",
+    "julho",
+    "agosto",
+    "setembro",
+    "outubro",
+    "novembro",
+    "dezembro",
+]
 
 
 def brl(centavos):
@@ -31,6 +45,11 @@ def rotulo_mes(mes):
     if num == 1:
         return f"Jan {str(ano)[2:]}"
     return ABREVIACOES[num - 1]
+
+
+def mes_por_extenso(mes):
+    """'2026-11' → 'novembro de 2026'."""
+    return f"{MESES_EXTENSO[int(mes[5:7]) - 1]} de {mes[:4]}"
 
 
 PASSO_PILULA = 104  # largura da pílula (96) + espaço entre elas (8)
@@ -99,6 +118,7 @@ def _painel(usuario, household, mes):
     )
     return {
         "mes": mes,
+        "mes_extenso": mes_por_extenso(mes),
         "curva": _curva(resumo["serie"], mes),
         "total_mes": brl(resumo["total_mes"]),
         "serie": [

@@ -1,0 +1,67 @@
+/* Finanças: cabeçalho, carrossel de meses com curva, total do mês e listas em registro.
+   Componentes reutilizáveis: .financas__secao, .financas__lista, .financas__registro, .revelar. */
+
+.financas__cabeca { margin-bottom: var(--e6); }
+.financas__cabeca h1 { font-size: var(--display-tam); line-height: var(--display-alt); font-weight: var(--display-peso); margin: 0; }
+.financas__sub { margin: var(--e1) 0 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+
+/* Carrossel de meses */
+.financas__meses { position: relative; display: flex; gap: var(--e2); overflow-x: auto; scroll-snap-type: x mandatory; padding: var(--e2) 0; margin-bottom: var(--e6); }
+.financas__mes {
+  flex: 0 0 auto; scroll-snap-align: center; box-sizing: border-box; height: 100px; min-width: 96px;
+  display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+  padding: var(--e2) var(--e3) var(--e2); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background: var(--superficie); color: var(--texto); text-decoration: none;
+  transition: border-color var(--transicao), background var(--transicao);
+}
+.financas__mes:hover { border-color: var(--primaria); }
+.financas__mes:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
+.financas__mes-rotulo { font-size: var(--legenda-tam); color: var(--texto-secundario); }
+.financas__mes-total { font-weight: 600; font-size: var(--corpo-tam); font-variant-numeric: tabular-nums; }
+.financas__mes--atual { border-color: var(--primaria); background: var(--primaria-suave); }
+
+.financas__curva { position: absolute; left: 0; top: var(--e2); z-index: 2; pointer-events: none; overflow: visible; }
+.financas__area { fill: var(--primaria); fill-opacity: 0.08; }
+.financas__linha { fill: none; stroke: var(--primaria); stroke-width: 2; }
+.financas__linha--futuro { stroke-dasharray: 5 4; }
+.financas__ponto { fill: var(--primaria); stroke: var(--primaria); stroke-width: 2; }
+.financas__ponto--futuro { fill: var(--superficie); }
+
+/* Total do mês: o número é o destaque da página */
+.financas__destaque { margin-bottom: var(--e8); }
+.financas__total-rotulo { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.financas__total { margin: 0; font-size: var(--display-tam); line-height: var(--display-alt); font-weight: var(--display-peso); font-variant-numeric: tabular-nums; }
+
+/* Seção e lista em registro (componentes reutilizáveis) */
+.financas__secao { margin-bottom: var(--e8); }
+.financas__secao h2 { font-size: var(--titulo-tam); line-height: var(--titulo-alt); font-weight: var(--titulo-peso); margin: 0 0 var(--e2); }
+.financas__lista { list-style: none; padding: 0; margin: 0; }
+.financas__registro {
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--e3);
+  padding: var(--e3) 0; border-bottom: 1px solid var(--borda); font-size: var(--corpo-tam); line-height: var(--corpo-alt);
+}
+.financas__registro--cartao { flex-wrap: wrap; }
+.financas__valor { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }
+.financas__detalhe { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.financas__vazio, .financas__vazio-bloco { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); padding: var(--e3) 0; margin: 0; }
+
+/* Contas por casa */
+.financas__casa + .financas__casa { margin-top: var(--e6); }
+.financas__casa h3 { font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); margin: 0 0 var(--e2); color: var(--texto-secundario); }
+.financas__conta { margin-bottom: var(--e6); }
+.financas__conta h4 { font-size: var(--corpo-tam); line-height: var(--corpo-alt); font-weight: 600; margin: 0; }
+.financas__propriedade { margin: 0 0 var(--e2); color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+
+/* Animação de entrada: uma só, quando a página abre. A curva se desenha da esquerda para a direita. */
+.revelar { animation: revelar 480ms ease-out both; }
+.financas__linha--passado { stroke-dasharray: 1; stroke-dashoffset: 1; animation: desenhar 700ms 150ms ease-out forwards; }
+.financas__area { opacity: 0; animation: surgir 400ms 500ms ease-out forwards; }
+@keyframes revelar { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes desenhar { to { stroke-dashoffset: 0; } }
+@keyframes surgir { to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .revelar, .financas__linha--passado, .financas__area { animation: none; }
+  .financas__linha--passado { stroke-dasharray: none; }
+  .financas__area { opacity: 1; }
+}

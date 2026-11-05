@@ -89,7 +89,7 @@ def test_inicio_mostra_total_do_mes_escolhido(logado, breno):
 
     corpo = logado.get("/financas/?mes=2026-09").content.decode()
 
-    assert "Início" in corpo
+    assert "Finanças" in corpo
     assert "R$ 351,40" in corpo
 
 
