@@ -1636,9 +1636,9 @@ def atualizar_rotina(rotina: Rotina, dados: dict) -> Rotina:
     _gravar_rotina(rotina, dados)
     abertas = rotina.ocorrencias.filter(status=Tarefa.Status.ABERTA)
     if not rotina.ativa:
-        for tarefa in abertas:
-            cancelar_tarefa(tarefa, motivo="rotina pausada")
-        return rotina
+        return _cancelar_abertas(rotina, "rotina pausada")
+    if not rot.datas(rotina.recorrencia, rotina.inicio, hoje(), hoje()):
+        return _cancelar_abertas(rotina, "fora da recorrência")
     abertas.update(
         titulo=rotina.nome[:200],
         proxima_acao=rotina.nome[:300],
@@ -1650,11 +1650,16 @@ def atualizar_rotina(rotina: Rotina, dados: dict) -> Rotina:
     return rotina
 
 
+def _cancelar_abertas(rotina: Rotina, motivo: str) -> Rotina:
+    for tarefa in rotina.ocorrencias.filter(status=Tarefa.Status.ABERTA):
+        cancelar_tarefa(tarefa, motivo=motivo)
+    return rotina
+
+
 @transaction.atomic
 def excluir_rotina(rotina: Rotina) -> None:
     """Apaga a rotina; a ocorrência aberta é cancelada e as concluídas ficam no histórico, sem a rotina."""
-    for tarefa in rotina.ocorrencias.filter(status=Tarefa.Status.ABERTA):
-        cancelar_tarefa(tarefa, motivo="rotina excluída")
+    _cancelar_abertas(rotina, "rotina excluída")
     rotina.delete()
 
 

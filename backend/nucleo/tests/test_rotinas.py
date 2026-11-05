@@ -67,6 +67,17 @@ def test_atualizar_e_pausar(usuario, area):
 
 
 @freeze_time(SEG)
+def test_mudar_a_recorrencia_tira_a_ocorrencia_de_hoje_se_ela_nao_cai_hoje(usuario, area):
+    rotina = services.criar_rotina(usuario, dados(area))
+    [ocorrencia] = services.gerar_ocorrencias(usuario)
+
+    services.atualizar_rotina(rotina, {"recorrencia": "FREQ=WEEKLY;BYDAY=TU"})
+
+    ocorrencia.refresh_from_db()
+    assert ocorrencia.status == Tarefa.Status.CANCELADA
+
+
+@freeze_time(SEG)
 def test_excluir_cancela_as_ocorrencias_abertas(usuario, area):
     rotina = services.criar_rotina(usuario, dados(area))
     ocorrencia = services.gerar_ocorrencias(usuario)[0]
