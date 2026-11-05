@@ -239,7 +239,7 @@ a { color: var(--primaria); }
 .financas__bloco li { display: flex; justify-content: space-between; gap: var(--e3); padding: var(--e2) 0; border-bottom: 1px solid var(--borda); }
 .financas__valor { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .financas__curva { position: absolute; left: 0; top: var(--e2); z-index: 2; pointer-events: none; overflow: visible; }
-.financas__mes { height: 100px; box-sizing: border-box; justify-content: space-between; background: rgba(255, 255, 255, 0.7); }
+.financas__mes { height: 100px; box-sizing: border-box; justify-content: space-between; padding-bottom: var(--e2); background: rgba(255, 255, 255, 0.7); }
 .financas__mes--atual { background: rgba(204, 251, 241, 0.8); }
 .financas__ponto { fill: var(--primaria); }
 .financas__ponto--futuro { fill: var(--superficie); }

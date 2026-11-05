@@ -135,12 +135,12 @@ def test_carrossel_desenha_curva_com_um_ponto_por_mes(logado, breno):
 
 
 def test_pontos_mapeiam_maior_valor_para_o_topo_e_zero_para_a_base():
-    from web.telas.financas import pontos_curva
+    from web.telas.financas import BASE_CURVA, TOPO_CURVA, pontos_curva
 
     pontos = pontos_curva([0, 50, 100], largura=104, altura=100)
 
-    assert pontos[0][1] == pytest.approx(80)
-    assert pontos[2][1] == pytest.approx(24)
+    assert pontos[0][1] == pytest.approx(BASE_CURVA)
+    assert pontos[2][1] == pytest.approx(TOPO_CURVA)
     assert [x for x, _ in pontos] == pytest.approx([48, 152, 256])
 
 
