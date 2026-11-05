@@ -12,7 +12,7 @@
 
 {% if projetos %}
 <ul class="projetos">
-  {% for p in projetos %}<li>
+  {% for p in projetos %}<li style="--i: {{ forloop.counter0 }}">
     <a class="projeto-card{% if p.projeto.status != 'ativo' %} projeto-card--inativo{% endif %}" href="{% url 'web:projeto' p.projeto.pk %}">
       <span class="projeto-card__topo">
         <span class="projeto-card__nome">{{ p.projeto.nome }}</span>

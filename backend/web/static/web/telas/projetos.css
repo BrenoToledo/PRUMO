@@ -1,10 +1,19 @@
 /* Projetos (M18, M19): lista com progresso, detalhe com as tarefas e o formulário de criar e editar. */
 .projetos { list-style: none; margin: 0 0 var(--e4); padding: 0; display: flex; flex-direction: column; gap: var(--e3); }
+@keyframes projeto-entrada { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .projeto-card {
   display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3) var(--e4);
   background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
   color: var(--texto); text-decoration: none;
+  transition: border-color var(--transicao), transform var(--transicao);
+  animation: projeto-entrada var(--transicao-lenta, 240ms) ease both;
+  animation-delay: calc(var(--i, 0) * 40ms);
 }
+.projeto-card:hover { border-color: var(--primaria); }
+.projeto-card:active { transform: scale(.99); }
+.projeto-card:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
+.projeto-card .barra::-webkit-progress-value { transition: inline-size var(--transicao-lenta, 240ms) ease; }
+.projeto-card .barra::-moz-progress-bar { transition: width var(--transicao-lenta, 240ms) ease; }
 .projeto-card--inativo { opacity: .7; }
 .projeto-card__topo { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); }
 .projeto-card__nome { min-width: 0; overflow-wrap: anywhere; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
@@ -17,7 +26,9 @@
   display: inline-flex; align-items: center; gap: var(--e2); min-height: 44px; margin-bottom: var(--e12);
   color: var(--primaria); text-decoration: none; font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: var(--legenda-peso);
 }
-.projetos__novo svg { width: 18px; height: 18px; }
+.projetos__novo svg { width: 18px; height: 18px; transition: transform var(--transicao); }
+.projetos__novo:hover svg { transform: rotate(90deg); }
+.projetos__novo:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; border-radius: var(--raio-campo); }
 
 .projeto__topo { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); }
 .projeto__subtitulo { margin: var(--e2) 0 0; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
@@ -30,7 +41,12 @@
   min-height: 52px; padding: var(--e2) var(--e4);
   background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
   color: var(--texto); text-decoration: none;
+  transition: border-color var(--transicao);
 }
+.projeto__tarefa:hover { border-color: var(--primaria); }
+.projeto__tarefa:focus-visible,
+.voltar:focus-visible,
+.projeto-form__check input:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
 .projeto__tarefa-titulo { min-width: 0; overflow-wrap: anywhere; }
 .projeto__tarefa--feita .projeto__tarefa-titulo { color: var(--texto-secundario); text-decoration: line-through; }
 
@@ -67,3 +83,9 @@
 .projeto-form__area input:checked + span { border-color: var(--cor-area); background: color-mix(in srgb, var(--cor-area) 15%, transparent); }
 .projeto-form__area input:focus-visible + span { outline: 2px solid var(--primaria); outline-offset: 2px; }
 .projeto-form__check { display: flex; align-items: center; gap: var(--e2); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+
+@media (prefers-reduced-motion: reduce) {
+  .projeto-card, .projeto-card .barra::-webkit-progress-value, .projeto-card .barra::-moz-progress-bar,
+  .projetos__novo svg { animation: none; transition: none; }
+  .projeto-card:active { transform: none; }
+}
