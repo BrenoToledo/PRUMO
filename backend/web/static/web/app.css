@@ -222,3 +222,13 @@ a { color: var(--primaria); }
   .item__acoes { flex: none; max-width: 60%; }
   .sair-celular { display: none; }
 }
+
+/* Animação de entrada reutilizável: adicione a classe `surgir` ao item e, se quiser escalonar, `style="--i: N"`. */
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.surgir { animation: surgir var(--transicao) both; animation-delay: calc(var(--i, 0) * 40ms); }
+@media (prefers-reduced-motion: reduce) {
+  .surgir { animation: none; }
+}

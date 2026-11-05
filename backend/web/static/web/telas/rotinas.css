@@ -5,6 +5,9 @@
   background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
   color: var(--texto); text-decoration: none;
 }
+.rotina-card { transition: background var(--transicao), border-color var(--transicao); }
+.rotina-card:hover { border-color: var(--primaria); background: var(--primaria-suave); }
+.rotina-card:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
 .rotina-card--pausada { opacity: .7; }
 .rotina-card__icone { flex: none; width: 20px; height: 20px; color: var(--primaria); }
 .rotina-card__texto { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
@@ -21,13 +24,16 @@
   font-size: var(--legenda-tam); line-height: var(--legenda-alt);
 }
 .opcao--dia span { min-width: 44px; padding: 0 var(--e2); }
+.opcao span { transition: background var(--transicao), border-color var(--transicao), color var(--transicao); }
+.opcao:hover span { border-color: var(--primaria); }
 .opcao input:checked + span { border-color: var(--primaria); background: var(--primaria); color: var(--texto-na-primaria); }
 .opcao input:focus-visible + span { outline: 2px solid var(--primaria); outline-offset: 2px; }
 .rotina-form__duracao { display: inline-flex; align-items: center; gap: var(--e1); font-size: var(--legenda-tam); }
 .rotina-form .rotina-form__duracao input { width: 88px; min-height: 36px; }
 .rotina-form__dica { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
 .rotina-form__excluir { margin: 0 0 var(--e12); }
-.rotina-form__excluir summary { display: inline-flex; list-style: none; cursor: pointer; }
+.rotina-form__excluir summary { display: inline-flex; list-style: none; cursor: pointer; min-height: 44px; align-items: center; }
+.rotina-form__excluir summary:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; border-radius: var(--raio-chip); }
 .rotina-form__excluir summary::-webkit-details-marker { display: none; }
 .rotina-form__excluir form { display: flex; flex-direction: column; align-items: flex-start; gap: var(--e2); margin-top: var(--e3); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
 .rotina-form__excluir p { margin: 0; }

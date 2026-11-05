@@ -12,7 +12,7 @@
 
 {% if rotinas %}
 <ul class="rotinas">
-  {% for item in rotinas %}{% with r=item.rotina %}<li>
+  {% for item in rotinas %}{% with r=item.rotina %}<li class="surgir" style="--i: {{ forloop.counter0 }}">
     <a class="rotina-card{% if not r.ativa %} rotina-card--pausada{% endif %}" href="{% url 'web:editar_rotina' r.pk %}">
       <svg class="rotina-card__icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
       <span class="rotina-card__texto">
