@@ -77,3 +77,8 @@
     if (folha?.open && c) c.focus();
   });
 })();
+
+// Finanças: ao abrir, o carrossel de meses rola até o mês escolhido.
+document.querySelectorAll(".financas__mes--atual").forEach(function (el) {
+  el.scrollIntoView({ inline: "center", block: "nearest" });
+});
