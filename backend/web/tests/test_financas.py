@@ -64,3 +64,61 @@ def test_menu_tem_link_para_financas(logado):
     corpo = logado.get("/financas/").content.decode()
 
     assert 'href="/financas/"' in corpo
+
+
+def _casa_com_compras(breno):
+    from datetime import date
+
+    casa = services.criar_household(breno, nome="Casa Toledo")
+    conta = services.criar_conta(casa, nome="Conta do Breno", propriedade=Conta.Propriedade.INDIVIDUAL, titular=breno)
+    cartao = services.criar_cartao(
+        conta, nome="Itaú Black", ultimos_digitos="1234", dia_fechamento=20, dia_vencimento=6
+    )
+    services.criar_lancamento(
+        cartao, descricao="Mercado", valor_centavos=25140, data_compra=date(2026, 9, 15), n_parcelas=1, por=breno
+    )
+    services.criar_lancamento(
+        cartao, descricao="Curso", valor_centavos=30000, data_compra=date(2026, 9, 10), n_parcelas=3, por=breno
+    )
+    return casa
+
+
+@pytest.mark.django_db
+def test_inicio_mostra_total_do_mes_escolhido(logado, breno):
+    _casa_com_compras(breno)
+
+    corpo = logado.get("/financas/?mes=2026-09").content.decode()
+
+    assert "Início" in corpo
+    assert "R$ 351,40" in corpo
+
+
+@pytest.mark.django_db
+def test_carrossel_mostra_meses_com_totais_e_marca_o_escolhido(logado, breno):
+    _casa_com_compras(breno)
+
+    corpo = logado.get("/financas/?mes=2026-09").content.decode()
+
+    assert "Out" in corpo and "R$ 100,00" in corpo
+    assert 'href="?mes=2026-10"' in corpo
+    assert 'aria-current="true"' in corpo
+
+
+@pytest.mark.django_db
+def test_inicio_lista_lancamentos_do_mes(logado, breno):
+    _casa_com_compras(breno)
+
+    corpo = logado.get("/financas/?mes=2026-09").content.decode()
+
+    assert "Mercado" in corpo
+    assert "Curso" in corpo
+    assert "1/3" in corpo
+
+
+@pytest.mark.django_db
+def test_mes_invalido_cai_no_mes_atual(logado, breno):
+    _casa_com_compras(breno)
+
+    resp = logado.get("/financas/?mes=lixo")
+
+    assert resp.status_code == 200

@@ -1,16 +1,68 @@
 {% extends "web/base.html" %}
-{% block titulo %}Finanças da casa{% endblock %}
+{% block titulo %}Início · Finanças{% endblock %}
 {% block conteudo %}
-<h1>Finanças da casa</h1>
+<h1>Início</h1>
+
+{% if painel %}
+  <nav class="financas__meses" aria-label="Meses">
+    {% for s in painel.serie %}
+      <a class="financas__mes{% if s.atual %} financas__mes--atual{% endif %}" href="?mes={{ s.mes }}"{% if s.atual %} aria-current="true"{% endif %}>
+        <span class="financas__mes-rotulo">{{ s.rotulo }}</span>
+        <span class="financas__mes-total">{{ s.total }}</span>
+      </a>
+    {% endfor %}
+  </nav>
+
+  <section class="financas__resumo" aria-label="Resumo do mês">
+    <p class="financas__total-rotulo">Total da fatura de {{ painel.mes }}</p>
+    <p class="financas__total">{{ painel.total_mes }}</p>
+  </section>
+
+  <section class="financas__bloco">
+    <h2>Cartões no mês</h2>
+    <ul>
+      {% for c in painel.cartoes %}
+        <li>{{ c.nome }} ••{{ c.ultimos_digitos }} <span class="financas__valor">{{ c.total }}</span></li>
+      {% empty %}
+        <li>Nenhum lançamento neste mês.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="financas__bloco">
+    <h2>Lançamentos do mês</h2>
+    <ul>
+      {% for lc in painel.lancamentos %}
+        <li>
+          <span>{{ lc.descricao }}{% if lc.parcela %} · parcela {{ lc.parcela }}{% endif %}</span>
+          <span class="financas__valor">{{ lc.valor }}</span>
+        </li>
+      {% empty %}
+        <li>Nenhum lançamento neste mês.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="financas__bloco">
+    <h2>Próximas faturas</h2>
+    <ul>
+      {% for p in painel.previsao %}
+        <li>{{ p.rotulo }} <span class="financas__valor">{{ p.total }}</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+
+<h2>Contas</h2>
 {% if not grupos %}
   <p class="financas__vazio">Nenhuma conta ainda. Cadastre uma conta para começar.</p>
 {% endif %}
 {% for grupo in grupos %}
   <section class="financas__casa">
-    <h2>{{ grupo.household.nome }}</h2>
+    <h3>{{ grupo.household.nome }}</h3>
     {% for item in grupo.contas %}
       <article class="financas__conta">
-        <h3>{{ item.conta.nome }}</h3>
+        <h4>{{ item.conta.nome }}</h4>
         <p>{{ item.conta.get_propriedade_display }}</p>
         <ul>
           {% for cartao in item.cartoes %}
