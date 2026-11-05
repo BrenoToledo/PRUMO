@@ -19,6 +19,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from nucleo import services
 from nucleo.models import Area
+from web.htmx import eh_htmx
 
 ROTA_AREAS = "web:areas"
 COR_PADRAO = "#06B6D4"
@@ -45,7 +46,7 @@ def _lista(request, *, erro="", erro_em=None, nova=None, status=200):
         "erro_em": erro_em,
         "nova": nova or {"nome": "", "cor": COR_PADRAO},
     }
-    modelo = "web/areas/_lista.html" if request.headers.get("HX-Request") else "web/areas/areas.html"
+    modelo = "web/areas/_lista.html" if eh_htmx(request) else "web/areas/areas.html"
     return render(request, modelo, contexto, status=status)
 
 
@@ -54,11 +55,11 @@ def _responder(request, acao, aviso, *, erro_em=None, nova=None):
     try:
         acao()
     except ValueError as exc:
-        if request.headers.get("HX-Request") or nova is not None:
+        if eh_htmx(request) or nova is not None:
             return _lista(request, erro=str(exc), erro_em=erro_em, nova=nova, status=422)
         messages.error(request, str(exc))
         return redirect(ROTA_AREAS)
-    if request.headers.get("HX-Request"):
+    if eh_htmx(request):
         return _lista(request)
     messages.success(request, aviso)
     return redirect(ROTA_AREAS)

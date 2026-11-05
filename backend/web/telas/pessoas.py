@@ -35,6 +35,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from nucleo import pessoas as pes
 from nucleo import services
 from nucleo.models import Pessoa, SugestaoIA, Tarefa, TarefaPessoa
+from web.htmx import eh_htmx
 
 ROTA_LISTA = "web:pessoas"
 ROTA_PESSOA = "web:pessoa"
@@ -102,7 +103,7 @@ def pessoas(request):
         "tem_pessoas": Pessoa.objects.filter(usuario=request.user).exists(),
         "aqui": reverse(ROTA_LISTA),
     }
-    if request.headers.get("HX-Request"):
+    if eh_htmx(request):
         return render(request, "web/pessoas/_pessoas.html", contexto)
     return render(request, "web/pessoas/lista.html", contexto)
 

@@ -28,6 +28,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from nucleo import prioridade as motor
 from nucleo import services
 from nucleo.models import Esforco, ItemCaptura, PedidoIA, Pessoa, Projeto, SugestaoIA, TarefaPessoa
+from web.htmx import eh_htmx
 
 AVISO_CRIADA = "Tarefa criada"
 TITULO_MAX = 200
@@ -158,7 +159,7 @@ def _pagina(request, item, form, status=200, sugestao=None, erro_ia="", pedido=N
         "ia": services.ia_disponivel(request.user),
         "pedido": pedido,
     }
-    modelo = PARCIAL if request.headers.get("HX-Request") else "web/clarificacao/clarificar.html"
+    modelo = PARCIAL if eh_htmx(request) else "web/clarificacao/clarificar.html"
     return render(request, modelo, contexto, status=status)
 
 
@@ -212,7 +213,7 @@ def clarificar(request, pk):
         services.registrar_resposta(sugestao, form.como_sugestao(), tarefa=tarefa)
     messages.success(request, AVISO_CRIADA)
     destino = _destino_depois_de_salvar(request.user)
-    if request.headers.get("HX-Request"):
+    if eh_htmx(request):
         resposta = HttpResponse()
         resposta["HX-Redirect"] = destino
         return resposta
@@ -224,7 +225,7 @@ def clarificar(request, pk):
 def sugerir(request, pk):
     item = _item_do_usuario(request, pk)
     pedido = services.pedir_clarificacao(item, novo=request.POST.get("novo") == "1")
-    htmx = request.headers.get("HX-Request")
+    htmx = eh_htmx(request)
     if pedido.status == PedidoIA.Status.ERRO:
         if not htmx:
             messages.error(request, f"A IA não ajudou agora: {pedido.erro}")
@@ -246,7 +247,7 @@ def recusar(request, pk):
     sugestao = _sugestao_pendente(request, item, request.POST.get("sugestao", ""))
     if sugestao:
         services.recusar_sugestao(sugestao)
-    if not request.headers.get("HX-Request"):
+    if not eh_htmx(request):
         return redirect(ROTA_CLARIFICAR, pk=item.pk)
     return _pagina(request, item, _form_vazio(request, item))
 

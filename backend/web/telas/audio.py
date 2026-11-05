@@ -11,29 +11,17 @@ Rotas reservadas pelo contrato:
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import path, reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from nucleo import services
 from nucleo.models import PedidoIA, SugestaoIA
+from web.htmx import eh_htmx, ir_para
 
 ROTA_CAPTURAR = "web:capturar_audio"
 RESULTADO = "web/audio/_resultado.html"
 PROCESSANDO = "web/fila/_processando.html"
-
-
-def _htmx(request) -> bool:
-    return bool(request.headers.get("HX-Request"))
-
-
-def _ir_para(request, destino: str):
-    if _htmx(request):
-        resposta = HttpResponse()
-        resposta["HX-Redirect"] = destino
-        return resposta
-    return redirect(destino)
 
 
 def _url_do_resultado(pedido: PedidoIA) -> str:
@@ -81,11 +69,11 @@ def enviar_audio(request):
             raise ValueError("O áudio passou de 10 MB. Grave um trecho mais curto.")
         pedido = services.capturar_audio(request.user, arquivo.read(), arquivo.content_type or "")
     except ValueError as erro:
-        if not _htmx(request):
+        if not eh_htmx(request):
             messages.error(request, str(erro))
             return redirect(ROTA_CAPTURAR)
         return render(request, RESULTADO, {"pedido": None, "erro": str(erro)}, status=422)
-    if not _htmx(request):
+    if not eh_htmx(request):
         return redirect(_url_do_resultado(pedido))
     return _resultado(request, pedido)
 
@@ -111,14 +99,14 @@ def salvar_audio(request, pk):
         return render(request, RESULTADO, contexto, status=422)
     quantos = len(criados)
     messages.success(request, f"{quantos} {'itens salvos' if quantos > 1 else 'item salvo'} na entrada")
-    return _ir_para(request, reverse("web:entrada"))
+    return ir_para(request, reverse("web:entrada"))
 
 
 @require_POST
 @login_required
 def descartar_audio(request, pk):
     services.recusar_sugestao(_sugestao_do_audio(request, pk))
-    return _ir_para(request, reverse(ROTA_CAPTURAR))
+    return ir_para(request, reverse(ROTA_CAPTURAR))
 
 
 def _destino(pedido: PedidoIA) -> str:
@@ -134,14 +122,14 @@ def _destino(pedido: PedidoIA) -> str:
 def pedido(request, pk):
     pedido = get_object_or_404(PedidoIA, pk=pk, usuario=request.user)
     if pedido.em_andamento:
-        if _htmx(request):
+        if eh_htmx(request):
             return _processando(request, pedido)
         return render(request, "web/fila/pedido.html", {"pedido": pedido, "destino": _destino(pedido)})
-    if pedido.tipo == PedidoIA.Tipo.AUDIO and _htmx(request):
+    if pedido.tipo == PedidoIA.Tipo.AUDIO and eh_htmx(request):
         return _resultado(request, pedido)  # o resultado entra no lugar do "processando", sem recarregar
     if pedido.status == PedidoIA.Status.ERRO and pedido.tipo != PedidoIA.Tipo.AUDIO:
         messages.error(request, f"A IA não ajudou agora: {pedido.erro}")
-    return _ir_para(request, _destino(pedido))
+    return ir_para(request, _destino(pedido))
 
 
 urlpatterns = [

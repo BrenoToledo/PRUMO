@@ -17,6 +17,7 @@ from django.urls import path, reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from nucleo import services
+from web.htmx import eh_htmx
 
 MOTIVOS = [
     ("Imprevisto no trabalho", "parada de linha, chamado urgente"),
@@ -104,7 +105,7 @@ def aplicar_replanejamento(request):
     aviso = f"Plano refeito · {mudancas} de dia"
     messages.success(request, aviso)
     url = reverse("web:hoje")
-    if request.headers.get("HX-Request"):
+    if eh_htmx(request):
         resposta = HttpResponse()
         resposta["HX-Redirect"] = url
         return resposta
