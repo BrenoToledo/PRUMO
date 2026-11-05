@@ -78,6 +78,7 @@ def test_se_a_ia_nao_separa_fica_a_transcricao_inteira(usuario, ia):
 @pytest.mark.parametrize(
     ("conteudo", "tipo"),
     [(b"", "audio/webm"), (b"abc", "video/mp4"), (b"x" * (services.AUDIO_MAX_BYTES + 1), "audio/webm")],
+    ids=["vazio", "tipo-errado", "grande-demais"],
 )
 def test_audio_invalido_e_recusado_sem_guardar(usuario, ia, conteudo, tipo):
     with pytest.raises(ValueError):
