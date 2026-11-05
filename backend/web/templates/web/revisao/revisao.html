@@ -3,13 +3,7 @@
 {% block titulo %}Revisão do dia{% endblock %}
 {% block estilos %}<link rel="stylesheet" href="{% static 'web/telas/revisao.css' %}">{% endblock %}
 {% block conteudo %}
-<header class="cabecalho">
-  <div>
-    <p class="data">{{ resumo.dia|date:"l, j \d\e F" }}</p>
-    <h1>Revisão do dia</h1>
-  </div>
-  <a class="botao botao--texto" href="{% url 'web:revisao_semanal' %}">Revisão semanal</a>
-</header>
+{% include "web/_cabecalho.html" with titulo="Revisão do dia" data=resumo.dia|date:"l, j \d\e F" acoes="web/revisao/_acao_semanal.html" %}
 
 <div class="revisao">
   <ul class="revisao__numeros" aria-label="Resumo do dia">
@@ -22,7 +16,7 @@
     <h2 id="titulo-real" class="revisao__subtitulo">Planejado vs. real</h2>
     {% if linhas %}
     <ul class="revisao__linhas">
-      {% for linha in linhas %}<li class="revisao__linha">
+      {% for linha in linhas %}<li class="revisao__linha" style="--i: {{ forloop.counter0 }}">
         <span class="revisao__tarefa"><time datetime="{{ linha.inicio|date:'c' }}">{{ linha.inicio|date:"H:i" }}</time> {{ linha.tarefa }}</span>
         <span class="revisao__chip revisao__chip--{{ linha.estilo }}">{{ linha.rotulo }}</span>
       </li>{% endfor %}
