@@ -35,7 +35,7 @@ def rotulo_mes(mes):
 
 PASSO_PILULA = 104  # largura da pílula (96) + espaço entre elas (8)
 ALTURA_CURVA = 100
-TOPO_CURVA, BASE_CURVA = 24, 80
+TOPO_CURVA, BASE_CURVA = 40, 66  # faixa do meio da pílula: o nome fica em cima e o valor embaixo
 
 
 def pontos_curva(totais, largura=PASSO_PILULA, altura=ALTURA_CURVA):
