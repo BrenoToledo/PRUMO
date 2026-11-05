@@ -456,3 +456,25 @@ Regras: toda rota filtra pelo usuário autenticado; o filtro de área ignora ár
 ## Mudar um contrato
 
 Um contrato só muda num commit próprio na branch `contratos-api` (ou numa nova a partir do main) que altera, juntos, `nucleo/contratos.py`, este arquivo e, se for REST, `docs/api.md`. As branches que dependem dele fazem merge desse commit. Nunca mude uma assinatura ou um campo dentro de uma branch de etapa.
+
+## Onboarding (#37, história 1: M29 e M30)
+
+Dona: branch `issue-37-onboarding-boas-vindas`. Sem migração. Escopo desta história: boas-vindas e escolha das áreas iniciais. Horário e energia (M31), IA e primeira captura (M32) ficam para as próximas histórias do épico.
+
+| Rota | Caminho | Método | Módulo | Serviço |
+| --- | --- | --- | --- | --- |
+| `web:onboarding` | `/onboarding/` | GET | onboarding | — (M29, texto e botão de início) |
+| `web:onboarding_areas` | `/onboarding/areas/` | GET, POST | onboarding | `criar_areas_iniciais` |
+
+Serviço novo em `nucleo/services.py`:
+
+| Função | Retorno | Regras |
+| --- | --- | --- |
+| `criar_areas_iniciais(usuario, escolhas)` | `list[Area]` | `escolhas`: lista de `(nome, cor)`. Cria cada área com `criar_area`; nome já existente do usuário é ignorado (não é erro). Nome vazio ou cor inválida: `ValueError`, nada é gravado (transação). Retorna só as áreas criadas. |
+
+Constante em `nucleo/services.py`: `AREAS_SUGERIDAS`, com as oito áreas da especificação (Trabalho, Educação, Saúde, Família, Religião, Finanças, Casa, Pessoal), com as cores de `docs/contexto.md`.
+
+Formulário M30 (`POST /onboarding/areas/`):
+- `sugeridas`: nomes marcados entre `AREAS_SUGERIDAS` (valores repetidos). Ausente = nenhuma.
+- `nova_nome` e `nova_cor` (opcionais): uma área extra. Se `nova_nome` estiver vazio, a área extra é ignorada.
+- Sucesso: redireciona para `web:areas` com aviso "N áreas criadas". Erro (`ValueError`): volta à mesma página com status 422 e a mensagem, sem gravar nada.
