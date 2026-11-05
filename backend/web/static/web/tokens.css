@@ -57,6 +57,7 @@
   --raio-card: 12px;
   --raio-chip: 999px;
   --transicao: 150ms ease;
+  --transicao-lenta: 240ms ease;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -97,5 +98,6 @@
 @media (prefers-reduced-motion: reduce) {
   :root {
     --transicao: 0ms;
+    --transicao-lenta: 0ms;
   }
 }
