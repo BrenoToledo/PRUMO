@@ -60,7 +60,7 @@ def test_barra_de_capacidade_e_folga(logado, usuario):
     assert cap > 0
     assert f"{plano['planejados']} de {cap} blocos · {round(plano['ocupacao'] * 100)}%" in html
     assert "30% do dia livre para imprevistos" in html
-    assert '<progress class="capacidade__barra"' in html
+    assert 'class="capacidade__trilho" role="meter"' in html
 
 
 @freeze_time(SEGUNDA)
