@@ -49,7 +49,7 @@
 {% if tarefas %}
 <p class="contagem">{{ tarefas|length }} tarefa{{ tarefas|length|pluralize:"s" }}</p>
 <ul class="lista-tarefas">
-  {% for t in tarefas %}<li class="lista-tarefas__linha">
+  {% for t in tarefas %}<li class="lista-tarefas__linha" style="--i: {{ forloop.counter0 }}">
     {% if t.status == "aberta" %}
     <form method="post" action="{% url 'web:concluir_tarefa' t.pk %}?{{ voltar }}" class="lista-tarefas__concluir">
       {% csrf_token %}
