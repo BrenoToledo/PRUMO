@@ -256,7 +256,7 @@ SERVICOS: dict[str, str] = {
     "recalcular_prioridade": "(tarefa: 'Tarefa', *, salvar: 'bool' = True) -> 'motor.Avaliacao'",
     # Plano do dia (P2 usa)
     "hoje": "() -> 'date'",
-    "tarefas_leves": "(usuario) -> 'QuerySet[Tarefa]'",
+    "tarefas_leves": "(usuario, dia: 'date | None' = None) -> 'QuerySet[Tarefa]'",
     "tem_tarefas_para_planejar": "(usuario) -> 'bool'",
     "plano_do_dia": "(usuario, dia: 'date | None' = None) -> 'PlanoDoDia'",
     "gerar_plano_do_dia": "(usuario, dia: 'date | None' = None) -> 'plan.Plano'",
