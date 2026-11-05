@@ -98,3 +98,9 @@ Valores em centavos inteiros. O contrato completo das finanças está em `financ
 | `DELETE /conta/` | Exclui a conta e todos os dados do usuário. Corpo `{"senha": "…"}` com a senha atual: `204`; sem senha ou senha errada, `400` e nada é apagado | M33 |
 
 Os campos de cada resposta estão fixados em `backend/nucleo/contratos.py` e testados em `nucleo/tests/test_contratos.py`; ver [contratos.md](contratos.md).
+
+## CORS (issue #128)
+
+- A API `/api/` responde cabeçalhos CORS apenas para as origens listadas em `DJANGO_CORS_ORIGINS` (separadas por vírgula).
+- Origem permitida recebe `Access-Control-Allow-Origin` (com `Vary: Origin`). Preflight `OPTIONS` com `Access-Control-Request-Method` responde `204`.
+- Sem a variável, nenhum cabeçalho CORS é enviado. Rotas fora de `/api/` não são afetadas.

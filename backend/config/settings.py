@@ -16,6 +16,14 @@ DEBUG = env_bool("DJANGO_DEBUG", True)
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-inseguro-troque-em-producao" if DEBUG else "")
 if not SECRET_KEY:
     raise RuntimeError("defina DJANGO_SECRET_KEY")
+
+
+def _origens_cors():
+    return [o.strip() for o in os.environ.get("DJANGO_CORS_ORIGINS", "").split(",") if o.strip()]
+
+
+CORS_ORIGINS = _origens_cors()
+
 ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h]
 
 INSTALLED_APPS = [
@@ -42,6 +50,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "config.cors.CorsApiMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
