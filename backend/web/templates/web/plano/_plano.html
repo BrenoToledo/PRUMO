@@ -4,7 +4,7 @@
     <h2 id="titulo-capacidade" class="capacidade__titulo">Capacidade do dia</h2>
     <span class="capacidade__valor">{{ plano.planejados }} de {{ plano.capacidade }} blocos · {{ ocupacao_pct }}%</span>
   </div>
-  <progress class="capacidade__barra" aria-labelledby="titulo-capacidade" max="100" value="{{ barra_pct }}">{{ barra_pct }}%</progress>
+  <div class="capacidade__trilho" role="meter" aria-labelledby="titulo-capacidade" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ barra_pct }}" aria-valuetext="{{ ocupacao_pct }}% ocupado"><span class="capacidade__preenchimento" style="--pct: {{ barra_pct }}"></span></div>
   <p class="capacidade__folga">{{ folga_pct }}% do dia livre para imprevistos · <a href="{% url 'web:semana' %}">ver a semana</a></p>
 </section>
 
