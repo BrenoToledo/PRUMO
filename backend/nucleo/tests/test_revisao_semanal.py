@@ -108,6 +108,18 @@ def test_concluir_a_revisao(revisao):
 
 
 @freeze_time(SAB)
+def test_concluir_duas_vezes_mantem_a_primeira_conclusao(revisao):
+    services.concluir_revisao_semanal(revisao)
+    primeira = revisao.metricas["concluida_em"]
+
+    with freeze_time("2026-10-24 17:00"):
+        services.concluir_revisao_semanal(revisao)
+
+    revisao.refresh_from_db()
+    assert revisao.metricas["concluida_em"] == primeira
+
+
+@freeze_time(SAB)
 def test_revisao_concluida_nao_aceita_resposta(usuario, revisao):
     services.capturar(usuario, "Ligar para o seguro")
     services.concluir_revisao_semanal(revisao)
