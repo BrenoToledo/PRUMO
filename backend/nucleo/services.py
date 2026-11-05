@@ -304,8 +304,8 @@ def _abertas_no_dia(usuario, dia: date) -> QuerySet[Tarefa]:
     return abertas.exclude(partes__status=Tarefa.Status.ABERTA)  # quebrada: as partes entram no lugar dela
 
 
-def tarefas_leves(usuario) -> QuerySet[Tarefa]:
-    return _abertas_no_dia(usuario, hoje()).filter(esforco=Esforco.BAIXO)
+def tarefas_leves(usuario, dia: date | None = None) -> QuerySet[Tarefa]:
+    return _abertas_no_dia(usuario, dia or hoje()).filter(esforco=Esforco.BAIXO)
 
 
 def tem_tarefas_para_planejar(usuario) -> bool:
@@ -367,7 +367,7 @@ def plano_do_dia(usuario, dia: date | None = None) -> PlanoDoDia:
         "ocupacao": round(len(ativos) / cap, 2) if cap else 0.0,
         "folga_diaria": perfil_de(usuario).folga_diaria,
         "blocos": blocos,
-        "tarefas_leves": list(tarefas_leves(usuario)[:10]),
+        "tarefas_leves": list(tarefas_leves(usuario, dia)[:10]),
         "eventos": eventos_do_dia(usuario, dia),
         "rotinas": rotinas_do_dia(usuario, dia),
     }
