@@ -5,6 +5,20 @@
 
 {% if painel %}
   <nav class="financas__meses" aria-label="Meses">
+    <svg class="financas__curva" width="{{ painel.curva.largura }}" height="{{ painel.curva.altura }}" viewBox="0 0 {{ painel.curva.largura }} {{ painel.curva.altura }}" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="financas-area" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="var(--primaria)" stop-opacity="0.35"/>
+          <stop offset="1" stop-color="var(--primaria)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path class="financas__area" d="{{ painel.curva.area }}" fill="url(#financas-area)"/>
+      <path class="financas__linha" d="{{ painel.curva.passado }}" fill="none" stroke="var(--primaria)" stroke-width="2"/>
+      <path class="financas__linha financas__linha--futuro" d="{{ painel.curva.futuro }}" fill="none" stroke="var(--primaria)" stroke-width="2" stroke-dasharray="5 4"/>
+      {% for p in painel.curva.pontos %}
+        <circle class="financas__ponto{% if p.atual %} financas__ponto--atual{% endif %}{% if p.futuro %} financas__ponto--futuro{% endif %}" cx="{{ p.x }}" cy="{{ p.y }}" r="{% if p.atual %}6{% else %}4{% endif %}" stroke="var(--primaria)" stroke-width="2"/>
+      {% endfor %}
+    </svg>
     {% for s in painel.serie %}
       <a class="financas__mes{% if s.atual %} financas__mes--atual{% endif %}" href="?mes={{ s.mes }}"{% if s.atual %} aria-current="true"{% endif %}>
         <span class="financas__mes-rotulo">{{ s.rotulo }}</span>
