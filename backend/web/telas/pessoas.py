@@ -249,11 +249,8 @@ def _mensagem_do_usuario(request, pk) -> SugestaoIA:
 def _contexto_mensagem(request, sugestao, **extra) -> dict:
     c = sugestao.conteudo
     p = get_object_or_404(Pessoa, pk=c["pessoa"], usuario=request.user)
-    canais = [
-        (canal, ROTULOS_CANAL[canal])
-        for canal in pes.CANAIS
-        if pes.link_mensagem(canal, "-", assunto="", whatsapp=p.whatsapp, email=p.email, teams=p.teams)
-    ]
+    disponiveis = {nome for nome, _ in pes.canais(whatsapp=p.whatsapp, email=p.email, teams=p.teams)}
+    canais = [(canal, ROTULOS_CANAL[canal]) for canal in pes.CANAIS if ROTULOS_CANAL[canal] in disponiveis]
     return {
         "aba": "pessoas",
         "sugestao": sugestao,
