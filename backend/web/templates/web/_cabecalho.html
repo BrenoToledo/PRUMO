@@ -1,0 +1,8 @@
+<header class="cabecalho">
+  <div>
+    {% if data %}<p class="data">{{ data }}</p>{% endif %}
+    <h1>{{ titulo }}</h1>
+    {% if sub %}<p class="cabecalho__sub">{{ sub }}</p>{% endif %}
+  </div>
+  {% include "web/_botao_sair.html" %}
+</header>
