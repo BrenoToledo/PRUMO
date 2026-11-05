@@ -265,18 +265,22 @@ def _render(request, contexto: dict, status: int = 200):
     return render(request, modelo, contexto, status=status)
 
 
-def _parcial_ou_volta(request, **extra):
-    """Depois de uma ação: o parcial na mesma data e visão (HTMX) ou de volta para a tela."""
+def _onde_estava(request) -> tuple[str, date]:
+    """A visão e a data da tela de onde veio a ação (campos `visao` e `data` do formulário)."""
     visao = _visao(request, request.POST.get("visao"))
-    referencia = _referencia(request.POST.get("data"), visao)
+    return visao, _referencia(request.POST.get("data"), visao)
+
+
+def _parcial_ou_volta(request):
+    """Depois de uma ação: o parcial na mesma data e visão (HTMX) ou de volta para a tela."""
+    visao, referencia = _onde_estava(request)
     if eh_htmx(request):
-        return _render(request, _contexto(request, referencia, visao, **extra))
+        return _render(request, _contexto(request, referencia, visao))
     return redirect(_endereco(visao, referencia))
 
 
 def _erro(request, erro: ValueError):
-    visao = _visao(request, request.POST.get("visao"))
-    referencia = _referencia(request.POST.get("data"), visao)
+    visao, referencia = _onde_estava(request)
     return _render(request, _contexto(request, referencia, visao, erro=str(erro).capitalize()), status=422)
 
 
