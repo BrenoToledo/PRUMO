@@ -1,5 +1,15 @@
 /* Planejamento da semana (M28 no celular, D04 no desktop): dias com as tarefas e "Não couberam". */
-.semana { padding-bottom: var(--e12); }
+/* Animações: a tela inteira sobe e aparece ao trocar de visão ou de dia (o htmx troca o #semana por inteiro). */
+@keyframes semana-entrar { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.semana { padding-bottom: var(--e12); animation: semana-entrar var(--transicao) ease-out both; }
+.semana a, .semana button, .semana [draggable="true"], .semana summary, .semana input:not([type="hidden"]) { transition: background-color var(--transicao), border-color var(--transicao), color var(--transicao), box-shadow var(--transicao), opacity var(--transicao); }
+.semana a:focus-visible, .semana button:focus-visible, .semana summary:focus-visible, .semana input:focus-visible, .semana [draggable="true"]:focus-visible {
+  outline: 2px solid var(--primaria); outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .semana, .semana * { animation: none !important; transition: none !important; }
+}
+.semana__dica, .semana__sub, .semana__folga { text-wrap: pretty; }
 .semana__topo { margin-bottom: var(--e4); }
 .semana__barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--e2); margin-top: var(--e2); }
 .semana__nav { display: flex; gap: var(--e2); }
@@ -38,6 +48,7 @@
   font-size: var(--legenda-tam); line-height: var(--legenda-alt);
 }
 .tarefa-semana[draggable="true"] { cursor: grab; }
+.tarefa-semana[draggable="true"]:hover { box-shadow: 0 2px 6px color-mix(in srgb, var(--cor-area) 30%, transparent); }
 .tarefa-semana.arrastando { opacity: .4; }
 .tarefa-semana__titulo { min-width: 0; overflow-wrap: anywhere; }
 .tarefa-semana__hora, .tarefa-semana__blocos { color: var(--texto-secundario); }
@@ -103,7 +114,7 @@
   overflow: hidden; color: transparent; font-size: 0; /* no celular, só um ponto por item */
 }
 .mes__item--rotina { background: color-mix(in srgb, var(--cor-area) 50%, var(--superficie)); }
-.mes__mais { color: var(--texto-secundario); font-size: 11px; }
+.mes__mais { color: var(--texto-secundario); font-size: var(--micro-tam); }
 
 /* Desktop (D04): dias em colunas e "Não couberam" na lateral */
 @media (min-width: 1024px) {
@@ -120,7 +131,7 @@
   }
   .grade__horas li {
     position: absolute; right: 0; top: calc(var(--ini) * var(--px-min)); transform: translateY(-50%);
-    color: var(--texto-secundario); font-size: 11px; line-height: 1;
+    color: var(--texto-secundario); font-size: var(--micro-tam); line-height: 1;
   }
   .grade .dia__topo { height: var(--topo-dia); margin-bottom: var(--e2); align-items: center; }
   .grade .semana__dias .dia { min-height: 0; }
