@@ -1793,36 +1793,56 @@ def proposta_da_semana(usuario) -> SugestaoIA | None:
     return sugestao if sugestao is not None and _proposta_valida(sugestao) else None
 
 
-def mover_na_proposta(sugestao: SugestaoIA, tarefa: int, *, de: date | None, para: date | None) -> SugestaoIA:
-    """Leva os blocos de `tarefa` de um dia (ou de "não couberam", `None`) para outro (#80). Junta se já houver."""
+def _atual_editavel(sugestao: SugestaoIA) -> tuple[dict[str, list[dict]], list[dict]]:
+    """Cópia da versão atual da proposta (dias e "não couberam") para editar; recusa se já foi respondida."""
     if sugestao.tipo != TIPO_SEMANA or sugestao.status != SugestaoIA.Status.PENDENTE:
         raise ValueError("esta proposta já foi respondida")
     atual = sugestao.conteudo["atual"]
-    dias = {d: list(alocadas) for d, alocadas in atual["dias"].items()}
-    fora = list(atual["nao_couberam"])
+    return {d: list(alocadas) for d, alocadas in atual["dias"].items()}, list(atual["nao_couberam"])
 
-    def lista(dia: date | None) -> list[dict]:
-        if dia is None:
-            return fora
-        if dia.isoformat() not in dias:
-            raise ValueError("escolha um dia desta semana")
-        return dias[dia.isoformat()]
 
-    origem, destino = lista(de), lista(para)
-    alocacao = next((a for a in origem if a["tarefa"] == tarefa), None)
+def _lista_do_dia(dias: dict[str, list[dict]], fora: list[dict], dia: date | None) -> list[dict]:
+    """A lista de alocações de um dia desta semana, ou a de "não couberam" (`dia` vazio)."""
+    if dia is None:
+        return fora
+    if dia.isoformat() not in dias:
+        raise ValueError("escolha um dia desta semana")
+    return dias[dia.isoformat()]
+
+
+def _alocacao_da_tarefa(lista: list[dict], tarefa: int) -> dict:
+    alocacao = next((a for a in lista if a["tarefa"] == tarefa), None)
     if alocacao is None:
         raise ValueError("a tarefa não está nesse dia")
-    if origem is destino:
-        return sugestao
-    origem.remove(alocacao)
-    junto = next((a for a in destino if a["tarefa"] == tarefa), None)
+    return alocacao
+
+
+def _somar_em(destino: list[dict], alocacao: dict) -> None:
+    """Põe a alocação no destino; se a tarefa já está lá, soma os blocos (a tarefa não aparece duas vezes)."""
+    junto = next((a for a in destino if a["tarefa"] == alocacao["tarefa"]), None)
     if junto is None:
         destino.append(dict(alocacao))
     else:
-        destino[destino.index(junto)] = {"tarefa": tarefa, "blocos": junto["blocos"] + alocacao["blocos"]}
+        destino[destino.index(junto)] = {"tarefa": alocacao["tarefa"], "blocos": junto["blocos"] + alocacao["blocos"]}
+
+
+def _gravar_atual(sugestao: SugestaoIA, dias: dict[str, list[dict]], fora: list[dict]) -> SugestaoIA:
     sugestao.conteudo = sugestao.conteudo | {"atual": {"dias": dias, "nao_couberam": fora}}
     sugestao.save(update_fields=["conteudo"])
     return sugestao
+
+
+def mover_na_proposta(sugestao: SugestaoIA, tarefa: int, *, de: date | None, para: date | None) -> SugestaoIA:
+    """Leva os blocos de `tarefa` de um dia (ou de "não couberam", `None`) para outro (#80). Junta se já houver."""
+    dias, fora = _atual_editavel(sugestao)
+    origem = _lista_do_dia(dias, fora, de)
+    destino = _lista_do_dia(dias, fora, para)
+    alocacao = _alocacao_da_tarefa(origem, tarefa)
+    if origem is destino:
+        return sugestao
+    origem.remove(alocacao)
+    _somar_em(destino, alocacao)
+    return _gravar_atual(sugestao, dias, fora)
 
 
 @transaction.atomic
@@ -1951,37 +1971,18 @@ def trocar_blocos(a: Bloco, b: Bloco) -> tuple[Bloco, Bloco]:
 
 def trocar_na_proposta(sugestao: SugestaoIA, a: int, b: int, *, de_a: date | None, de_b: date | None) -> SugestaoIA:
     """Troca de dia (ou com "não couberam", `None`) as tarefas `a` e `b` da proposta (#101). Junta se já houver."""
-    if sugestao.tipo != TIPO_SEMANA or sugestao.status != SugestaoIA.Status.PENDENTE:
-        raise ValueError("esta proposta já foi respondida")
-    atual = sugestao.conteudo["atual"]
-    dias = {d: list(alocadas) for d, alocadas in atual["dias"].items()}
-    fora = list(atual["nao_couberam"])
-
-    def lista(dia: date | None) -> list[dict]:
-        if dia is None:
-            return fora
-        if dia.isoformat() not in dias:
-            raise ValueError("escolha um dia desta semana")
-        return dias[dia.isoformat()]
-
-    origem_a, origem_b = lista(de_a), lista(de_b)
-    alocacao_a = next((x for x in origem_a if x["tarefa"] == a), None)
-    alocacao_b = next((x for x in origem_b if x["tarefa"] == b), None)
-    if alocacao_a is None or alocacao_b is None:
-        raise ValueError("a tarefa não está nesse dia")
+    dias, fora = _atual_editavel(sugestao)
+    origem_a = _lista_do_dia(dias, fora, de_a)
+    origem_b = _lista_do_dia(dias, fora, de_b)
+    alocacao_a = _alocacao_da_tarefa(origem_a, a)
+    alocacao_b = _alocacao_da_tarefa(origem_b, b)
     if origem_a is origem_b:
         return sugestao
     origem_a.remove(alocacao_a)
     origem_b.remove(alocacao_b)
-    for destino, alocacao in ((origem_b, alocacao_a), (origem_a, alocacao_b)):
-        junto = next((x for x in destino if x["tarefa"] == alocacao["tarefa"]), None)
-        if junto is None:
-            destino.append(dict(alocacao))
-        else:
-            destino[destino.index(junto)] = {"tarefa": junto["tarefa"], "blocos": junto["blocos"] + alocacao["blocos"]}
-    sugestao.conteudo = sugestao.conteudo | {"atual": {"dias": dias, "nao_couberam": fora}}
-    sugestao.save(update_fields=["conteudo"])
-    return sugestao
+    _somar_em(origem_b, alocacao_a)
+    _somar_em(origem_a, alocacao_b)
+    return _gravar_atual(sugestao, dias, fora)
 
 
 # --------------------------------------------------------------------------- pessoas e follow-up (P16)
