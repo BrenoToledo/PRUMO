@@ -11,13 +11,13 @@ ficam no evento `iniciada`, junto com a duração escolhida.
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import path, reverse
 from django.views.decorators.http import require_http_methods
 
 from nucleo import services
 from nucleo.models import Bloco
+from web.htmx import eh_htmx, ir_para
 
 DURACOES_PADRAO = (25, 50, 90)
 CHECKLIST = (
@@ -53,18 +53,6 @@ class PrepararForm(forms.Form):
             self.data = self.data.copy()
             self.data.setlist("checklist", [i for i in self.data.getlist("checklist") if i in conhecidos])
         super().full_clean()
-
-
-def _htmx(request) -> bool:
-    return bool(request.headers.get("HX-Request"))
-
-
-def _ir_para(request, url: str):
-    if _htmx(request):
-        resposta = HttpResponse()
-        resposta["HX-Redirect"] = url
-        return resposta
-    return redirect(url)
 
 
 def _contexto(bloco: Bloco, form: PrepararForm) -> dict:
@@ -108,16 +96,16 @@ def preparar_foco(request, pk):
 
     form = PrepararForm(request.POST, planejado=planejado)
     if not form.is_valid():
-        if not _htmx(request):
+        if not eh_htmx(request):
             messages.error(request, form.errors["minutos"][0])
             return redirect("web:preparar_foco", pk=bloco.pk)
         return render(request, "web/preparar/_form_preparar.html", _contexto(bloco, form), status=422)
 
     if services.bloco_em_foco(request.user) is not None:
         messages.error(request, "Já há um bloco em foco. Conclua ou saia dele antes de começar outro.")
-        return _ir_para(request, reverse("web:foco"))
+        return ir_para(request, reverse("web:foco"))
     services.iniciar_bloco(bloco, minutos=form.cleaned_data["minutos"], checklist=form.cleaned_data["checklist"])
-    return _ir_para(request, reverse("web:foco"))
+    return ir_para(request, reverse("web:foco"))
 
 
 urlpatterns = [

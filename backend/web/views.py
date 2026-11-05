@@ -12,6 +12,7 @@ from nucleo import services
 from nucleo.models import ItemCaptura
 
 from .forms import CapturaForm, ListaRapidaForm
+from .htmx import eh_htmx
 
 AVISO_CAPTURA = "Salvo na entrada"
 
@@ -37,7 +38,7 @@ def _sem_htmx(request, aviso):
 def descartar(request, pk):
     item = _item_do_usuario(request, pk)
     services.descartar(item)
-    if not request.headers.get("HX-Request"):
+    if not eh_htmx(request):
         return _sem_htmx(request, "Item descartado")
     return render(request, "web/_item_descartado.html", {"item": item})
 
@@ -47,7 +48,7 @@ def descartar(request, pk):
 def restaurar(request, pk):
     item = _item_do_usuario(request, pk, status=ItemCaptura.Status.DESCARTADO)
     services.restaurar_item(item)
-    if not request.headers.get("HX-Request"):
+    if not eh_htmx(request):
         return _sem_htmx(request, "Item de volta na entrada")
     return render(request, "web/_item_entrada.html", {"item": item, "form": ListaRapidaForm(request.user), "oob": True})
 
@@ -58,13 +59,13 @@ def lista_rapida(request, pk):
     item = _item_do_usuario(request, pk)
     form = ListaRapidaForm(request.user, request.POST)
     if not form.is_valid():
-        if not request.headers.get("HX-Request"):
+        if not eh_htmx(request):
             messages.error(request, "Escolha uma das suas áreas e até 10 minutos.")
             return redirect("web:entrada")
         contexto = {"item": item, "form": form, "aberto": True}
         return render(request, "web/_item_entrada.html", contexto, status=422)
     tarefa = services.para_lista_rapida(item, form.cleaned_data["area"], form.cleaned_data["minutos"])
-    if not request.headers.get("HX-Request"):
+    if not eh_htmx(request):
         return _sem_htmx(request, "Foi para a lista rápida")
     return render(request, "web/_item_lista_rapida.html", {"item": item, "tarefa": tarefa})
 
@@ -77,7 +78,7 @@ def capturar(request):
     valido = form.is_valid()
     item = services.capturar(request.user, form.cleaned_data["texto"]) if valido else None
 
-    if not request.headers.get("HX-Request"):
+    if not eh_htmx(request):
         if valido:
             messages.success(request, AVISO_CAPTURA)
         else:

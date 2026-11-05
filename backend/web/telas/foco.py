@@ -18,7 +18,6 @@ from datetime import UTC, datetime, timedelta
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import path, reverse
 from django.utils import timezone
@@ -26,6 +25,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from nucleo import services
 from nucleo.models import Bloco, ItemCaptura, Tarefa
+from web.htmx import eh_htmx, ir_para
 
 ROTA_FOCO = "web:foco"
 ROTA_HOJE = "web:hoje"
@@ -74,21 +74,6 @@ class FimDoBlocoForm(forms.Form):
 
 
 # --------------------------------------------------------------------------- apoio
-def _htmx(request) -> bool:
-    return bool(request.headers.get("HX-Request"))
-
-
-def _ir_para(request, url: str, aviso: str = "", nivel: int = messages.SUCCESS):
-    """Troca de página: redirect comum ou `HX-Redirect` quando o pedido veio do HTMX."""
-    if aviso:
-        messages.add_message(request, nivel, aviso)
-    if _htmx(request):
-        resposta = HttpResponse()
-        resposta["HX-Redirect"] = url
-        return resposta
-    return redirect(url)
-
-
 def _bloco_do_usuario(request, pk, *status):
     return get_object_or_404(Bloco, pk=pk, usuario=request.user, status__in=status)
 
@@ -178,9 +163,9 @@ def iniciar_bloco(request, pk):
     if bloco.status == Bloco.Status.PLANEJADO:
         if services.bloco_em_foco(request.user) is not None:
             aviso = "Já há um bloco em foco. Conclua ou saia dele antes de começar outro."
-            return _ir_para(request, reverse(ROTA_FOCO), aviso, messages.ERROR)
+            return ir_para(request, reverse(ROTA_FOCO), aviso, messages.ERROR)
         services.iniciar_bloco(bloco)
-    return _ir_para(request, reverse(ROTA_FOCO))
+    return ir_para(request, reverse(ROTA_FOCO))
 
 
 @require_POST
@@ -191,8 +176,8 @@ def focar_tarefa(request, pk):
     try:
         services.iniciar_foco_agora(tarefa)
     except ValueError as erro:
-        return _ir_para(request, reverse("web:tarefa", kwargs={"pk": tarefa.pk}), str(erro), messages.ERROR)
-    return _ir_para(request, reverse(ROTA_FOCO))
+        return ir_para(request, reverse("web:tarefa", kwargs={"pk": tarefa.pk}), str(erro), messages.ERROR)
+    return ir_para(request, reverse(ROTA_FOCO))
 
 
 @require_POST
@@ -201,7 +186,7 @@ def sair_do_bloco(request, pk):
     bloco = _bloco_do_usuario(request, pk, Bloco.Status.EM_FOCO)
     form = SairForm(request.POST)
     if not form.is_valid():
-        if not _htmx(request):
+        if not eh_htmx(request):
             messages.error(request, form.errors["motivo"][0])
             return redirect(reverse(ROTA_FOCO) + "?sair=1")
         return render(request, "web/foco/_form_sair.html", {"bloco": bloco, "form_sair": form}, status=422)
@@ -209,7 +194,7 @@ def sair_do_bloco(request, pk):
     aviso = f"Bloco encerrado · {bloco.minutos_focados} min registrados"
     # "Sair e replanejar o dia" (M12 → M13, #14): registra a saída e abre o "meu dia quebrou".
     destino = "web:meu_dia_quebrou" if request.POST.get("depois") == "replanejar" else ROTA_HOJE
-    return _ir_para(request, reverse(destino), aviso)
+    return ir_para(request, reverse(destino), aviso)
 
 
 @require_POST
@@ -218,12 +203,12 @@ def anotar_distracao(request, pk):
     bloco = _bloco_do_usuario(request, pk, Bloco.Status.EM_FOCO)
     form = DistracaoForm(request.POST)
     if not form.is_valid():
-        if not _htmx(request):
+        if not eh_htmx(request):
             messages.error(request, form.errors["texto"][0])
             return redirect(reverse(ROTA_FOCO) + "?anotar=1")
         return render(request, "web/foco/_form_distracao.html", _contexto_distracao(bloco, form), status=422)
     services.capturar(request.user, form.cleaned_data["texto"], origem=ItemCaptura.Origem.FOCO)
-    if not _htmx(request):
+    if not eh_htmx(request):
         messages.success(request, "Anotado · vai para a caixa de entrada")
         return redirect(ROTA_FOCO)
     # O timer roda no navegador e a página não recarrega: o foco continua de onde estava.
@@ -238,7 +223,7 @@ def concluir_bloco(request, pk):
     bloco = _bloco_do_usuario(request, pk, Bloco.Status.EM_FOCO)
     form = FimDoBlocoForm(request.POST)
     if not form.is_valid():
-        if not _htmx(request):
+        if not eh_htmx(request):
             messages.error(request, form.primeiro_erro())
             return redirect(reverse(ROTA_FOCO) + "?fim=1")
         return render(request, "web/foco/_form_fim.html", _contexto_fim(bloco, form), status=422)
@@ -251,7 +236,7 @@ def concluir_bloco(request, pk):
         nova_proxima_acao=form.cleaned_data["nova_proxima_acao"],
     )
     aviso = "Bloco registrado · tarefa concluída" if resultado == Bloco.Resultado.CONCLUIU else "Bloco registrado"
-    return _ir_para(request, reverse(ROTA_HOJE), aviso)
+    return ir_para(request, reverse(ROTA_HOJE), aviso)
 
 
 urlpatterns = [

@@ -47,6 +47,17 @@ def _dia(request) -> date:
     return date.fromisoformat(texto) if texto else services.hoje()
 
 
+class ExecutaServicoMixin:
+    """Roda uma ação de serviço sobre o objeto da URL e devolve o serializado, ou 400 com a mensagem do ValueError."""
+
+    def _executa(self, fn, *args, **kw):
+        try:
+            objeto = fn(self.get_object(), *args, **kw)
+        except ValueError as exc:
+            return _erro(exc)
+        return Response(self.get_serializer(objeto).data)
+
+
 class DoUsuarioViewSet(viewsets.ModelViewSet):
     """CRUD restrito aos objetos do usuário autenticado."""
 
@@ -290,7 +301,7 @@ class CapturaViewSet(
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class TarefaViewSet(DoUsuarioViewSet):
+class TarefaViewSet(ExecutaServicoMixin, DoUsuarioViewSet):
     queryset = Tarefa.objects.select_related("area").prefetch_related("vinculos__pessoa")
     serializer_class = TarefaSerializer
     filterset_fields = ["status", "area", "projeto", "esforco"]
@@ -318,13 +329,6 @@ class TarefaViewSet(DoUsuarioViewSet):
                 tarefa.status = novo
                 tarefa.save(update_fields=["status"])
             services.recalcular_prioridade(tarefa)
-
-    def _executa(self, fn, **kw):
-        try:
-            tarefa = fn(self.get_object(), **kw)
-        except ValueError as exc:
-            return _erro(exc)
-        return Response(TarefaSerializer(tarefa, context={"request": self.request}).data)
 
     @action(detail=True, methods=["post"])
     def concluir(self, request, pk=None):
@@ -489,18 +493,11 @@ def aprovar_semana(request):
     return Response(services.aprovar_semana(_proposta_ou_404(request)))
 
 
-class BlocoViewSet(viewsets.ReadOnlyModelViewSet):
+class BlocoViewSet(ExecutaServicoMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = BlocoSerializer
 
     def get_queryset(self):
         return Bloco.objects.filter(usuario=self.request.user).select_related("tarefa", "tarefa__area")
-
-    def _executa(self, fn, *args, **kw):
-        try:
-            bloco = fn(self.get_object(), *args, **kw)
-        except ValueError as exc:
-            return _erro(exc)
-        return Response(BlocoSerializer(bloco, context={"request": self.request}).data)
 
     @action(detail=False, methods=["get"], url_path="em-foco")
     def em_foco(self, request):

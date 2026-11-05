@@ -33,6 +33,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from nucleo import planejamento as plan
 from nucleo import services
 from nucleo.models import Area, Bloco, Esforco, Tarefa
+from web.htmx import eh_htmx
 
 ROTA = "web:semana"
 DIAS_CURTOS = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
@@ -260,7 +261,7 @@ def _contexto(request, referencia: date | None = None, visao: str | None = None,
 
 
 def _render(request, contexto: dict, status: int = 200):
-    modelo = "web/semana/_semana.html" if request.headers.get("HX-Request") else "web/semana/semana.html"
+    modelo = "web/semana/_semana.html" if eh_htmx(request) else "web/semana/semana.html"
     return render(request, modelo, contexto, status=status)
 
 
@@ -268,7 +269,7 @@ def _parcial_ou_volta(request, **extra):
     """Depois de uma ação: o parcial na mesma data e visão (HTMX) ou de volta para a tela."""
     visao = _visao(request, request.POST.get("visao"))
     referencia = _referencia(request.POST.get("data"), visao)
-    if request.headers.get("HX-Request"):
+    if eh_htmx(request):
         return _render(request, _contexto(request, referencia, visao, **extra))
     return redirect(_endereco(visao, referencia))
 
@@ -293,7 +294,7 @@ def propor_semana(request):
     inicio = date.fromisoformat(sugestao.conteudo["inicio"])  # mostra a semana da proposta, em qualquer visão
     visao = _visao(request, request.POST.get("visao"))
     visao = "uteis" if visao in ("mes", "dia") else visao
-    if request.headers.get("HX-Request"):
+    if eh_htmx(request):
         return _render(request, _contexto(request, inicio, visao))
     return redirect(_endereco(visao, inicio))
 

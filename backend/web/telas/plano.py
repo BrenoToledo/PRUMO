@@ -15,6 +15,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from nucleo import services
 from nucleo.models import Bloco
+from web.htmx import eh_htmx
 
 SABADO = 5
 
@@ -76,7 +77,7 @@ def hoje(request):
 @login_required
 def gerar_plano(request):
     """Gera os blocos de hoje. Se já há blocos não iniciados, só refaz com `confirmar`."""
-    htmx = request.headers.get("HX-Request")
+    htmx = eh_htmx(request)
     contexto = _contexto(request.user)
     if contexto["tem_planejados"] and not request.POST.get("confirmar"):
         if not htmx:

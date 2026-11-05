@@ -19,6 +19,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from nucleo import revisao_semanal as rs
 from nucleo import services
+from web.htmx import eh_htmx
 
 ROTA = "web:revisao_semanal"
 PARCIAL = "web/revisao_semanal/_passo.html"
@@ -37,7 +38,7 @@ def _contexto(revisao, erro: str = "") -> dict:
 
 
 def _pagina(request, revisao, *, erro: str = "", status: int = 200):
-    modelo = PARCIAL if request.headers.get("HX-Request") else "web/revisao_semanal/revisao_semanal.html"
+    modelo = PARCIAL if eh_htmx(request) else "web/revisao_semanal/revisao_semanal.html"
     return render(request, modelo, _contexto(revisao, erro), status=status)
 
 
@@ -55,7 +56,7 @@ def revisao_semanal(request):
 
 
 def _ir(request, destino: str):
-    if request.headers.get("HX-Request"):
+    if eh_htmx(request):
         resposta = HttpResponse()
         resposta["HX-Redirect"] = destino
         return resposta
@@ -74,7 +75,7 @@ def responder(request):
         return _pagina(request, revisao, erro=str(erro), status=422)
     if resposta["efeito"] in EFEITOS and resposta["alvo"]:
         return _ir(request, reverse(EFEITOS[resposta["efeito"]], args=[resposta["alvo"]]))
-    if not request.headers.get("HX-Request"):
+    if not eh_htmx(request):
         return redirect(ROTA)
     return _pagina(request, revisao)
 

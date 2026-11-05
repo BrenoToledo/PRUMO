@@ -15,6 +15,7 @@ from django.views.decorators.http import require_http_methods
 
 from nucleo import services
 from nucleo.models import Perfil
+from web.htmx import eh_htmx
 
 FOLGAS = (0.2, 0.3, 0.4)  # 30% é o recomendado (docs/contexto.md)
 FOLGA_RECOMENDADA = 0.3
@@ -102,7 +103,7 @@ def perfil(request):
         return render(request, "web/perfil/perfil.html", _contexto(request, PerfilForm(instance=atual)))
 
     form = PerfilForm(request.POST, instance=atual)
-    htmx = request.headers.get("HX-Request")
+    htmx = eh_htmx(request)
     if not form.is_valid():
         atual.refresh_from_db()  # o ModelForm já escreveu os valores inválidos na instância
         modelo = "web/perfil/_form_perfil.html" if htmx else "web/perfil/perfil.html"

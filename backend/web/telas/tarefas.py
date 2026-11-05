@@ -37,6 +37,7 @@ from django.views.decorators.http import require_GET, require_POST
 from nucleo import prioridade as motor
 from nucleo import services
 from nucleo.models import Esforco, PedidoIA, SugestaoIA, Tarefa
+from web.htmx import eh_htmx
 
 ERRO_DATA_ADIAR = "Escolha uma data depois de hoje."
 ROTA_TAREFA = "web:tarefa"
@@ -178,7 +179,7 @@ def tarefa(request, pk):
 def editar_tarefa(request, pk):
     tarefa = _tarefa_do_usuario(request, pk)
     form = TarefaForm(request.user, request.POST, instance=tarefa)
-    htmx = request.headers.get("HX-Request")
+    htmx = eh_htmx(request)
     if not form.is_valid():
         tarefa.refresh_from_db()  # o ModelForm já escreveu os valores inválidos na instância
         contexto = _contexto(request, tarefa, form=form, editando=True)
@@ -205,7 +206,7 @@ def _voltar(request, aviso):
 @login_required
 def concluir_tarefa(request, pk):
     tarefa = services.concluir_tarefa(_tarefa_do_usuario(request, pk, Tarefa.Status.ABERTA))
-    if not request.headers.get("HX-Request"):
+    if not eh_htmx(request):
         return _voltar(request, "Tarefa concluída")
     return render(request, "web/tarefas/_tarefa_leve_concluida.html", {"tarefa": tarefa})
 
@@ -214,7 +215,7 @@ def concluir_tarefa(request, pk):
 @login_required
 def reabrir_tarefa(request, pk):
     tarefa = services.reabrir_tarefa(_tarefa_do_usuario(request, pk, Tarefa.Status.CONCLUIDA))
-    if not request.headers.get("HX-Request"):
+    if not eh_htmx(request):
         return _voltar(request, "Tarefa reaberta")
     return render(request, "web/tarefas/_tarefa_leve.html", {"tarefa": tarefa})
 
@@ -229,12 +230,12 @@ def adiar_tarefa(request, pk):
             raise ValueError(ERRO_DATA_ADIAR)
         services.adiar_tarefa(tarefa, para=form.cleaned_data["para"], motivo=form.cleaned_data["motivo"])
     except ValueError:
-        if not request.headers.get("HX-Request"):
+        if not eh_htmx(request):
             messages.error(request, ERRO_DATA_ADIAR)
             return redirect(ROTA_TAREFA, pk=tarefa.pk)
         contexto = _contexto(request, tarefa) | {"erro_adiar": ERRO_DATA_ADIAR}
         return render(request, PARCIAL_DETALHE, contexto, status=422)
-    if not request.headers.get("HX-Request"):
+    if not eh_htmx(request):
         return _voltar(request, f"Tarefa adiada para {tarefa.adiada_ate:%d/%m}")
     return render(request, PARCIAL_DETALHE, _contexto(request, tarefa))
 
@@ -246,7 +247,7 @@ def cancelar_tarefa(request, pk):
     form = CancelarForm(request.POST)
     motivo = form.cleaned_data["motivo"] if form.is_valid() else ""
     services.cancelar_tarefa(tarefa, motivo=motivo)
-    if not request.headers.get("HX-Request"):
+    if not eh_htmx(request):
         messages.success(request, "Tarefa cancelada")
         return redirect("web:hoje")
     return render(request, PARCIAL_DETALHE, _contexto(request, tarefa))
