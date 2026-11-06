@@ -1,0 +1,24 @@
+{% extends "web/base.html" %}
+{% block titulo %}Áreas da vida{% endblock %}
+{% block conteudo %}
+<section class="onboarding">
+  <h1>Áreas da vida</h1>
+  <p>Marque as áreas que quer organizar. Você pode mudar isso depois, em Áreas.</p>
+  {% if erro %}<p role="alert" class="erro">{{ erro }}</p>{% endif %}
+  <form method="post" action="{% url 'web:onboarding_areas' %}">
+    {% csrf_token %}
+    <fieldset>
+      <legend>Sugeridas</legend>
+      {% for area in sugeridas %}
+      <label><input type="checkbox" name="sugeridas" value="{{ area.nome }}"{% if area.marcada %} checked{% endif %}{% if area.ja_existe %} disabled{% endif %}> {{ area.nome }}{% if area.ja_existe %} (já criada){% endif %}</label>
+      {% endfor %}
+    </fieldset>
+    <fieldset>
+      <legend>Outra área</legend>
+      <label>Nome <input type="text" name="nova_nome" maxlength="60" value="{{ nova.nome }}"></label>
+      <label>Cor <input type="color" name="nova_cor" value="{{ nova.cor }}"></label>
+    </fieldset>
+    <button type="submit" class="botao">Criar áreas</button>
+  </form>
+</section>
+{% endblock %}
