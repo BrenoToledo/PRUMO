@@ -1,0 +1,10 @@
+{% extends "web/base.html" %}
+{% block titulo %}Bem-vindo ao Prumo{% endblock %}
+{% block conteudo %}
+<section class="onboarding">
+  <h1>Bem-vindo ao Prumo</h1>
+  <p>Organize o que precisa ser feito em poucas áreas da sua vida.</p>
+  <p>Você escolhe o que importa e o Prumo sugere o que fazer hoje, sem lotar o seu dia.</p>
+  <p><a class="botao" href="{% url 'web:onboarding_areas' %}">Começar</a></p>
+</section>
+{% endblock %}
