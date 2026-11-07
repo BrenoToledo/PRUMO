@@ -162,6 +162,21 @@ O servidor MCP deixa usar o Prumo de dentro do Claude (ou de outro assistente). 
 
 Um erro vira resultado de ferramenta com `isError` e a mensagem em português; nada é gravado. Transporte: `stdio`, pelo comando `python manage.py servidor_mcp` com a chave em `PRUMO_TOKEN` (sem token válido o comando para antes de abrir o servidor). Guia de configuração em [mcp.md](mcp.md).
 
+### Transporte HTTP do servidor MCP (aditivo)
+
+Além do stdio, o mesmo servidor responde em HTTP em `POST /mcp/` (rota `assistente:mcp_http`, sem CSRF, só `POST`). Mensagens JSON-RPC 2.0 em uma requisição por vez, resposta em JSON (sem SSE, sem sessão: cada requisição se autentica de novo).
+
+| Item | Regra |
+| --- | --- |
+| Autenticação | `Authorization: Bearer prumo_…` (mesmo token do stdio, `autenticar`). Sem cabeçalho ou token inválido: `401` com `WWW-Authenticate: Bearer` e corpo JSON-RPC de erro (`-32001`) |
+| Métodos | `initialize` (devolve `protocolVersion` da requisição, `capabilities.tools` e `serverInfo` com nome `Prumo`), `ping`, `tools/list` (mesmos nomes e argumentos de `FERRAMENTAS_MCP`), `tools/call` (`name`, `arguments`) |
+| Notificações | Mensagem sem `id` (ex.: `notifications/initialized`): `202` sem corpo |
+| Resultado de ferramenta | `result` com `content` (texto JSON), `structuredContent` e `isError`; erro de uso (ex.: texto vazio) vira `isError: true` com a mensagem em português, sem gravar |
+| Erros de protocolo | JSON inválido `400` `-32700`; método desconhecido `-32601`; ferramenta desconhecida ou argumentos inválidos `-32602`; lote (array) `-32600` |
+| Outros verbos | `GET`/`PUT`/`DELETE` dão `405` |
+
+Variáveis: nenhuma nova. Branch de implementação: `mcp-transporte-http`.
+
 ## Ordem de junção
 
 1. `contratos-api` → main.
