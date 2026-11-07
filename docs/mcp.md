@@ -85,4 +85,8 @@ Peça ao Claude: "anota no Prumo: ligar para o seguro amanhã" e depois "o que t
 
 ## Segurança
 
-O token dá ao assistente o mesmo acesso que você tem na API. O banco guarda só o hash dele; a chave em texto fica apenas na configuração do assistente, no seu computador. Use um token por assistente, para revogar um sem afetar os outros. O transporte por HTTP (para usar o Prumo pelo Claude no navegador ou no celular) fica para uma próxima história.
+O token dá ao assistente o mesmo acesso que você tem na API. O banco guarda só o hash dele; a chave em texto fica apenas na configuração do assistente, no seu computador. Use um token por assistente, para revogar um sem afetar os outros. O transporte por HTTP (`POST /mcp/`) usa o mesmo token, no cabeçalho `Authorization: Bearer prumo_…`; sem token válido a resposta é `401`. Ele não guarda sessão: cada requisição se autentica de novo.
+
+## Transporte HTTP
+
+Para assistentes que aceitam um servidor remoto por URL, aponte para `https://seu-prumo/mcp/` com o cabeçalho `Authorization: Bearer prumo_SUA_CHAVE`. O servidor responde JSON-RPC 2.0 (uma mensagem por requisição) com `initialize`, `ping`, `tools/list` e `tools/call`; as ferramentas são as mesmas da tabela acima. O contrato está em [contratos.md](contratos.md#transporte-http-do-servidor-mcp-aditivo).
