@@ -8,9 +8,8 @@ import asyncio
 import json
 
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
 from mcp.server.mcpserver.exceptions import ToolError
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 
 from nucleo import contratos
 
@@ -78,9 +77,11 @@ def _despachar(usuario, mensagem: dict):
     return JsonResponse(_erro(id_, -32601, f"método não suportado: {metodo}"))
 
 
-@csrf_exempt
-@require_POST
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([])
 def mcp_http(request: HttpRequest) -> HttpResponse:
+    """Autenticação própria por token (Bearer); sem sessão e sem CSRF, por isso o DRF só dá o método."""
     try:
         usuario = servidor.autenticar(_chave(request))
     except PermissionError as exc:
