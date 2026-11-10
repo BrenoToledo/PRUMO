@@ -20,7 +20,7 @@
   /* Computador: "Esperam de você" e "Você espera de" lado a lado; "Sem pendências" ocupa a largura toda. */
   #pessoas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--e6); align-items: start; }
   .pessoas > .vazio, .pessoas > .pessoas__nada, .pessoas__area--larga { grid-column: 1 / -1; }
-  .pessoas__lista--grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pessoas__lista.pessoas__lista--grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .pessoa__secao { color: var(--texto); font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); letter-spacing: 0; text-transform: none; margin-top: var(--e6); }
 .pessoas__lista { list-style: none; margin: 0 0 var(--e4); padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
