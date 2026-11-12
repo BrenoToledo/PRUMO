@@ -841,6 +841,32 @@ def mover_area(area: Area, passo: int) -> None:
     Area.objects.bulk_update(areas, ["ordem"])
 
 
+AREAS_SUGERIDAS = [
+    ("Trabalho", "#3B82F6"),
+    ("Educação", "#EC4899"),
+    ("Saúde", "#10B981"),
+    ("Família", "#F59E0B"),
+    ("Religião", "#8B5CF6"),
+    ("Finanças", "#84CC16"),
+    ("Casa", "#F97316"),
+    ("Pessoal", "#06B6D4"),
+]
+
+
+@transaction.atomic
+def criar_areas_iniciais(usuario, escolhas: list[tuple[str, str]]) -> list[Area]:
+    """Onboarding (M30): cria as áreas escolhidas; nome que já existe é ignorado. Erro de validação não grava nada."""
+    criadas = []
+    for nome, cor in escolhas:
+        nome = (nome or "").strip()
+        if not nome:
+            raise ValueError("Dê um nome à área.")
+        if Area.objects.filter(usuario=usuario, nome__iexact=nome).exists():
+            continue
+        criadas.append(criar_area(usuario, nome, cor))
+    return criadas
+
+
 def excluir_area(area: Area) -> None:
     """Só exclui área sem tarefas (de qualquer status), projetos ou rotinas; senão `ValueError` dizendo o que há."""
     em_uso = [

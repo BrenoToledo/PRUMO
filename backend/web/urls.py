@@ -14,6 +14,7 @@ from .telas import (
     imprevistos,
     lista_rapida,
     notificacoes,
+    onboarding,
     pausa,
     perfil,
     pessoas,
@@ -64,3 +65,4 @@ urlpatterns += revisao_semanal.urlpatterns
 urlpatterns += notificacoes.urlpatterns
 urlpatterns += todas_tarefas.urlpatterns
 urlpatterns += financas.urlpatterns
+urlpatterns += onboarding.urlpatterns
