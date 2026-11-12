@@ -471,3 +471,12 @@ Regras: toda rota filtra pelo usuário autenticado; o filtro de área ignora ár
 ## Mudar um contrato
 
 Um contrato só muda num commit próprio na branch `contratos-api` (ou numa nova a partir do main) que altera, juntos, `nucleo/contratos.py`, este arquivo e, se for REST, `docs/api.md`. As branches que dependem dele fazem merge desse commit. Nunca mude uma assinatura ou um campo dentro de uma branch de etapa.
+
+## Aderência do dia (#39, Fase 2)
+
+Funções puras em `nucleo/aderencia.py`, sem rota nova nesta etapa.
+
+| Função | Entrada | Saída |
+| --- | --- | --- |
+| `percentual(planejados, concluidos)` | inteiros | `int` de 0 a 100 (0 quando não há planejado) |
+| `aderencia_do_dia(blocos)` | lista de dicts com `status` (`Bloco.Status`) | `{"planejados", "concluidos", "percentual"}`; conta como concluído `status == "concluido"` |
