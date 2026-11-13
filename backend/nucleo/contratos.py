@@ -364,6 +364,7 @@ SERVICOS: dict[str, str] = {
     "proposta_da_semana": "(usuario) -> 'SugestaoIA | None'",
     "mover_na_proposta": "(sugestao: 'SugestaoIA', tarefa: 'int', *, de: 'date | None', para: 'date | None') "
     "-> 'SugestaoIA'",
+    "encaixe_da_proposta": "(sugestao: 'SugestaoIA') -> 'dict[str, dict[int, int]]'",
     "aprovar_semana": "(sugestao: 'SugestaoIA') -> 'dict'",
     "semana_planejada": "(usuario, dia: 'date | None' = None) -> 'SemanaPlanejada'",
     # Navegação, visões e arrastar no calendário (#99–#101): qualquer período; mover e trocar blocos com horário

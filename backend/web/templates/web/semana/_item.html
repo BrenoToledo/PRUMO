@@ -1,6 +1,7 @@
 {# Conteúdo de uma tarefa na proposta; o item de lista arrastável fica em _semana.html. #}
 <span class="tarefa-semana__titulo">{{ item.tarefa.titulo }}</span>
 <span class="tarefa-semana__blocos">{{ item.blocos }} bloco{{ item.blocos|pluralize }}</span>
+{% if item.fora %}<span class="tarefa-semana__fora">{{ item.fora }} bloco{{ item.fora|pluralize }} fica{{ item.fora|pluralize:"m" }} de fora ao aprovar</span>{% endif %}
 <details class="tarefa-semana__mover">
   <summary>Mover</summary>
   <form method="post" action="{% url 'web:mover_na_semana' %}" hx-post="{% url 'web:mover_na_semana' %}" hx-target="#semana" hx-swap="outerHTML">

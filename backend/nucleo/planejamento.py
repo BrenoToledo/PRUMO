@@ -7,6 +7,7 @@ chama estas funções e grava o resultado.
 from __future__ import annotations
 
 import math
+from collections.abc import Collection
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 
@@ -93,6 +94,24 @@ def _ordem(c: Candidata, hoje: date) -> tuple:
     return (0 if vence else 1, -c.prioridade, c.prazo or date.max, c.id)
 
 
+def blocos_que_cabem(
+    candidatas: list[Candidata], capacidade: int, dia: date, na_frente: Collection[int] = ()
+) -> dict[int, int]:
+    """Quantos blocos de cada candidata entram no dia, na ordem em que entram (#161).
+
+    A ordem é a do plano (prazo rígido vencendo, depois prioridade), com as de `na_frente` (as que o usuário pôs
+    no dia) antes das outras. Até 2 blocos por tarefa e até a capacidade; as de esforço baixo nem entram na conta.
+    """
+    cabem: dict[int, int] = {}
+    livres = max(capacidade, 0)
+    for c in sorted(candidatas, key=lambda c: (c.id not in na_frente, _ordem(c, dia))):
+        if c.esforco == "baixo" or c.blocos_restantes <= 0:
+            continue
+        cabem[c.id] = min(c.blocos_restantes, MAX_BLOCOS_POR_TAREFA_NO_DIA, livres)
+        livres -= cabem[c.id]
+    return cabem
+
+
 Intervalo = tuple[datetime, datetime]
 
 
@@ -142,6 +161,7 @@ def montar_plano_do_dia(
     tz=None,
     a_partir_de: datetime | None = None,
     ocupados: list[Intervalo] | None = None,
+    na_frente: Collection[int] = (),
 ) -> Plano:
     """Escolhe os blocos do dia e os horários.
 
@@ -153,6 +173,7 @@ def montar_plano_do_dia(
     * com `a_partir_de` depois do início da jornada, os blocos começam nele e só o tempo que resta conta
       para a capacidade (ver `inicio_do_plano`);
     * `ocupados` são compromissos (calendário): descontam da capacidade e nenhum bloco cai em cima deles.
+    * as de `na_frente` (as que o usuário pôs no dia) entram antes das outras (`blocos_que_cabem`).
     """
     ocupados = ocupados or []
     inicio, fim_jornada = _limites_da_jornada(dia, jornada, tz)
@@ -161,16 +182,10 @@ def montar_plano_do_dia(
         inicio = a_partir_de
     minutos_ocupados += sum(math.ceil((b - a).total_seconds() / 60) for a, b in _juntar(ocupados, inicio, fim_jornada))
     cap = capacidade_blocos(jornada, minutos_ocupados)
-    plano = Plano(capacidade=cap)
-    escolhidas: list[Candidata] = []
-    for c in sorted(candidatas, key=lambda c: _ordem(c, dia)):
-        if c.esforco == "baixo" or c.blocos_restantes <= 0:
-            continue
-        cabe = min(c.blocos_restantes, MAX_BLOCOS_POR_TAREFA_NO_DIA, cap - len(escolhidas))
-        if cabe <= 0:
-            plano.nao_couberam.append(c.id)
-            continue
-        escolhidas.extend([c] * cabe)
+    cabem = blocos_que_cabem(candidatas, cap, dia, na_frente)
+    plano = Plano(capacidade=cap, nao_couberam=[i for i, blocos in cabem.items() if not blocos])
+    por_id = {c.id: c for c in candidatas}
+    escolhidas = [por_id[i] for i, blocos in cabem.items() for _ in range(blocos)]
 
     # esforço alto no pico: manhã = primeiros horários; tarde/noite = últimos
     altos = [c for c in escolhidas if c.esforco == "alto"]
