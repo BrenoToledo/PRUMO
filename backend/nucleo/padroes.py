@@ -4,8 +4,10 @@ Sem Django: recebe horas, contagens e datas, devolve números. Quem busca no ban
 Nada aqui muda dado nenhum: a tela mostra a evidência e o usuário decide.
 """
 
+import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import date
 
 JANELA_DIAS = 28  # "últimas 4 semanas"
 PERIODOS = ("manha", "tarde", "noite")  # as mesmas chaves de `Perfil.Pico`
@@ -102,3 +104,49 @@ def calibracao_por_area(tarefas: Iterable[tuple[str, int, int]]) -> list[Calibra
         soma[2] += feitos
     areas = [Calibracao(area, *soma) for area, soma in somas.items() if soma[0] >= TAREFAS_PARA_CALIBRAR]
     return sorted(areas, key=lambda c: (-abs(c.desvio), c.area))
+
+
+# --------------------------------------------------------------------------- última hora e muito adiadas (#159)
+DIAS_DE_ANTECEDENCIA = 1  # prazo no dia em que a tarefa apareceu ou no seguinte
+VEZES_PARA_SER_PADRAO = 3  # o mesmo título em cima da hora, dentro da janela
+ADIADAS_NA_TELA = 5
+
+
+@dataclass(frozen=True)
+class UltimaHora:
+    """Um título que voltou a aparecer em cima da hora: candidato a virar rotina."""
+
+    titulo: str  # como foi escrito na primeira vez
+    vezes: int
+    dia_da_semana: int | None  # 0 = segunda; só quando todas as vezes caíram no mesmo dia
+
+
+def em_cima_da_hora(criada: date, prazo: date | None, concluida: date | None) -> bool:
+    """Apareceu com o prazo em cima (ou já vencido), ou foi feita no mesmo dia em que apareceu."""
+    if prazo is not None and (prazo - criada).days <= DIAS_DE_ANTECEDENCIA:
+        return True
+    return concluida == criada
+
+
+def _mesmo_titulo(titulo: str) -> str:
+    """Chave que ignora maiúsculas, acentos e espaços a mais."""
+    sem_acento = "".join(c for c in unicodedata.normalize("NFKD", titulo) if not unicodedata.combining(c))
+    return " ".join(sem_acento.casefold().split())
+
+
+def repetidas_de_ultima_hora(tarefas: Iterable[tuple[str, date]]) -> list[UltimaHora]:
+    """`tarefas`: (título, dia em que apareceu) das que vieram em cima da hora. A mais repetida vem primeiro."""
+    titulos: dict[str, str] = {}
+    dias: dict[str, list[date]] = {}
+    for titulo, dia in tarefas:
+        chave = _mesmo_titulo(titulo)
+        titulos.setdefault(chave, titulo.strip())
+        dias.setdefault(chave, []).append(dia)
+    repetidas = []
+    for chave, quando in dias.items():
+        if len(quando) < VEZES_PARA_SER_PADRAO:
+            continue
+        dias_da_semana = {dia.weekday() for dia in quando}
+        fixo = dias_da_semana.pop() if len(dias_da_semana) == 1 else None
+        repetidas.append(UltimaHora(titulos[chave], len(quando), fixo))
+    return sorted(repetidas, key=lambda r: (-r.vezes, r.titulo))

@@ -62,6 +62,11 @@ def test_resumo_da_revisao_devolve_o_formato_do_contrato(usuario):
     assert set(services.resumo_revisao_diaria(usuario)) == _chaves(contratos.ResumoRevisaoDiaria)
 
 
+@freeze_time(f"{SEG} 18:00")
+def test_padroes_devolvem_o_formato_do_contrato(usuario):
+    assert set(services.padroes(usuario)) == _chaves(contratos.Padroes)
+
+
 @freeze_time(f"{SEG} 08:00")
 def test_meu_dia_quebrou_devolve_o_formato_do_contrato(usuario, tarefa):
     services.gerar_plano_do_dia(usuario)

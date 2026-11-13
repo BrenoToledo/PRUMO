@@ -7,7 +7,7 @@ from freezegun import freeze_time
 
 from nucleo.models import Bloco, Perfil
 from nucleo.tests.apoio import nova_tarefa
-from nucleo.tests.test_padroes import bloco, concluida
+from nucleo.tests.test_padroes import SEXTAS, bloco, concluida, criada_em
 
 HOJE = "2026-11-12 15:00"  # quinta-feira, 12:00 em São Paulo
 ONTEM = date(2026, 11, 11)
@@ -134,3 +134,68 @@ def test_calibracao_sem_evidencia_diz_o_que_falta(logado, usuario):
     html = pagina(logado)
     assert "Ainda não há evidência" in html
     assert "subestima" not in html
+
+
+# ---------------------------------------------------------------- última hora (#159)
+@freeze_time(HOJE)
+def test_ultima_hora_sugere_virar_rotina(logado, usuario):
+    for dia in SEXTAS:
+        criada_em(usuario, "Relatório semanal", dia, prazo=date.fromisoformat(dia))
+    html = pagina(logado)
+    assert "Sempre de última hora" in html
+    assert "“Relatório semanal” apareceu 3 vezes em cima da hora, sempre numa sexta. Virar rotina?" in html
+    assert f'href="{reverse("web:nova_rotina")}?nome=Relat%C3%B3rio+semanal"' in html
+    assert "Criar rotina" in html
+
+
+@freeze_time(HOJE)
+def test_ultima_hora_sem_dia_fixo(logado, usuario):
+    for dia in ("2026-10-23", "2026-10-27", "2026-11-06"):
+        criada_em(usuario, "Pagar boleto", dia, prazo=date.fromisoformat(dia))
+    html = pagina(logado)
+    assert "“Pagar boleto” apareceu 3 vezes em cima da hora. Virar rotina?" in html
+
+
+@freeze_time(HOJE)
+def test_ultima_hora_vazia(logado):
+    assert "Nada se repetiu em cima da hora" in pagina(logado)
+
+
+def test_nova_rotina_ja_vem_com_o_nome(logado):
+    html = logado.get(reverse("web:nova_rotina"), {"nome": "Relatório semanal"}).content.decode()
+    assert 'value="Relatório semanal"' in html
+
+
+def test_nova_rotina_sem_nome_continua_vazia(logado):
+    html = logado.get(reverse("web:nova_rotina")).content.decode()
+    assert 'name="nome"' in html
+    assert 'value="Relatório' not in html
+
+
+# ---------------------------------------------------------------- muito adiadas (#159)
+@freeze_time(HOJE)
+def test_adiada_sugere_quebrar(logado, usuario):
+    tarefa = nova_tarefa(usuario, "Formatar referências ABNT", adiamentos=4)
+    html = pagina(logado)
+    assert "Muito adiadas" in html
+    assert "“Formatar referências ABNT” foi adiada 4 vezes. Quebrar em partes menores?" in html
+    assert f'href="{reverse("web:quebrar_tarefa", args=[tarefa.pk])}"' in html
+    assert "Quebrar tarefa" in html
+
+
+@freeze_time(HOJE)
+def test_adiadas_vazia(logado, usuario):
+    nova_tarefa(usuario, "Adiada só 2 vezes", adiamentos=2)
+    html = pagina(logado)
+    assert "Nenhuma tarefa aberta foi adiada 3 vezes ou mais" in html
+    assert "Quebrar tarefa" not in html
+
+
+@freeze_time(HOJE)
+def test_nao_mostra_tarefas_de_outro_usuario(logado, outra):
+    nova_tarefa(outra, "De outra pessoa", adiamentos=4)
+    for dia in SEXTAS:
+        criada_em(outra, "Relatório de outra pessoa", dia, prazo=date.fromisoformat(dia))
+    html = pagina(logado)
+    assert "De outra pessoa" not in html
+    assert "Relatório de outra pessoa" not in html

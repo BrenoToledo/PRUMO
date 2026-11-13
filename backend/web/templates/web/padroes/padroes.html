@@ -13,7 +13,7 @@
 </a>
 {% include "web/_cabecalho.html" with titulo="Padrões" data="Últimas 4 semanas" sub=janela %}
 
-<div class="revisao padroes">
+<div class="revisao">
   <section class="revisao__cartao" aria-labelledby="titulo-horarios">
     <h2 id="titulo-horarios" class="revisao__subtitulo">Aderência por horário</h2>
     <ul class="padroes__periodos">
@@ -43,6 +43,16 @@
     {% else %}
     <p class="revisao__dica">Ainda não há evidência: é preciso concluir 3 tarefas com blocos feitos numa mesma área.</p>
     {% endif %}
+  </section>
+
+  <section class="revisao__cartao" aria-labelledby="titulo-ultima-hora">
+    <h2 id="titulo-ultima-hora" class="revisao__subtitulo">Sempre de última hora</h2>
+    {% include "web/padroes/_sugestoes.html" with itens=ultima_hora acao="Criar rotina" vazio="Nada se repetiu em cima da hora nas últimas 4 semanas." %}
+  </section>
+
+  <section class="revisao__cartao" aria-labelledby="titulo-adiadas">
+    <h2 id="titulo-adiadas" class="revisao__subtitulo">Muito adiadas</h2>
+    {% include "web/padroes/_sugestoes.html" with itens=adiadas acao="Quebrar tarefa" vazio="Nenhuma tarefa aberta foi adiada 3 vezes ou mais." %}
   </section>
 </div>
 {% endblock %}

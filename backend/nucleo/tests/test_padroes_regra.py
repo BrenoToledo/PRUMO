@@ -1,5 +1,7 @@
 """Regras puras dos padrões (P22, épico #39, tela M27): sem banco, só números e datas."""
 
+from datetime import date
+
 from nucleo import padroes as pad
 
 
@@ -76,3 +78,43 @@ def test_desvio_pequeno_nao_e_relevante():
 def test_calibracao_ordena_pelo_maior_desvio():
     tarefas = [("Casa", 2, 2)] * 3 + [("Trabalho", 2, 3)] * 3 + [("Saúde", 4, 1)] * 3
     assert [c.area for c in pad.calibracao_por_area(tarefas)] == ["Saúde", "Trabalho", "Casa"]
+
+
+# ---------------------------------------------------------------- última hora (#159)
+def test_em_cima_da_hora_pelo_prazo():
+    criada = date(2026, 11, 6)
+    assert pad.em_cima_da_hora(criada, prazo=date(2026, 11, 6), concluida=None)  # prazo no mesmo dia
+    assert pad.em_cima_da_hora(criada, prazo=date(2026, 11, 7), concluida=None)  # prazo no dia seguinte
+    assert pad.em_cima_da_hora(criada, prazo=date(2026, 11, 5), concluida=None)  # já nasceu vencida
+    assert not pad.em_cima_da_hora(criada, prazo=date(2026, 11, 8), concluida=None)
+
+
+def test_em_cima_da_hora_quando_feita_no_dia_em_que_apareceu():
+    criada = date(2026, 11, 6)
+    assert pad.em_cima_da_hora(criada, prazo=None, concluida=criada)
+    assert not pad.em_cima_da_hora(criada, prazo=None, concluida=date(2026, 11, 7))
+    assert not pad.em_cima_da_hora(criada, prazo=None, concluida=None)
+
+
+def test_repetidas_juntam_titulos_iguais_sem_contar_caixa_acento_e_espaco():
+    sextas = [date(2026, 10, 23), date(2026, 10, 30), date(2026, 11, 6)]
+    tarefas = list(zip(["Relatório semanal", "relatorio  SEMANAL", " Relatório semanal "], sextas, strict=True))
+    (r,) = pad.repetidas_de_ultima_hora(tarefas)
+    assert (r.titulo, r.vezes, r.dia_da_semana) == ("Relatório semanal", 3, 4)  # 4 = sexta
+
+
+def test_repetidas_sem_dia_fixo_nao_dizem_o_dia():
+    dias = [date(2026, 10, 23), date(2026, 10, 27), date(2026, 11, 6)]
+    (r,) = pad.repetidas_de_ultima_hora([("Pagar boleto", d) for d in dias])
+    assert r.dia_da_semana is None
+
+
+def test_menos_de_tres_vezes_nao_e_padrao():
+    dias = [date(2026, 10, 23), date(2026, 10, 30)]
+    assert pad.repetidas_de_ultima_hora([("Relatório semanal", d) for d in dias]) == []
+
+
+def test_repetidas_ordenam_pela_mais_frequente():
+    dia = date(2026, 11, 6)
+    tarefas = [("Boleto", dia)] * 3 + [("Relatório", dia)] * 4
+    assert [(r.titulo, r.vezes) for r in pad.repetidas_de_ultima_hora(tarefas)] == [("Relatório", 4), ("Boleto", 3)]

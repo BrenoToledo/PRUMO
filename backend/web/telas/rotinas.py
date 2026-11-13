@@ -2,7 +2,7 @@
 
 Rotas do contrato:
 - GET `rotinas/` → `web:rotinas`, usa `services.rotinas_de`.
-- GET e POST `rotinas/nova/` → `web:nova_rotina`, chama `services.criar_rotina`.
+- GET e POST `rotinas/nova/` → `web:nova_rotina`, chama `services.criar_rotina`. No GET, `?nome=` preenche o nome.
 - GET e POST `rotinas/<pk>/editar/` → `web:editar_rotina`, chama `services.atualizar_rotina`.
 - POST `rotinas/<pk>/excluir/` → `web:excluir_rotina`, chama `services.excluir_rotina`.
 
@@ -31,6 +31,7 @@ TIPOS = [
     ("cada_n", "A cada N dias"),
     ("personalizada", "Personalizada"),
 ]
+NOME_MAX = 120
 NOVA = {"tipo": "diaria", "esforco": "baixo", "duracao_min": 30}
 DIAS = list(zip(rot.DIAS, ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"), strict=True))
 
@@ -38,7 +39,7 @@ DIAS = list(zip(rot.DIAS, ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"), st
 class RotinaForm(forms.Form):
     """Nome, área, recorrência, horário preferido, esforço e duração (M21); ao editar, também se está ativa."""
 
-    nome = forms.CharField(label="Nome", max_length=120, error_messages={"required": "Dê um nome à rotina."})
+    nome = forms.CharField(label="Nome", max_length=NOME_MAX, error_messages={"required": "Dê um nome à rotina."})
     area = forms.ModelChoiceField(
         label="Área",
         queryset=None,
@@ -138,7 +139,8 @@ def rotinas(request):
 @login_required
 def nova_rotina(request):
     if request.method == "GET":
-        return _form(request, RotinaForm(request.user, initial=NOVA))
+        nome = request.GET.get("nome", "")[:NOME_MAX]  # a tela Padrões (M27) sugere a rotina já com o nome
+        return _form(request, RotinaForm(request.user, initial=NOVA | {"nome": nome}))
     form = RotinaForm(request.user, request.POST)
     if _salvar(form, lambda dados: services.criar_rotina(request.user, dados)) is None:
         return _form(request, form, status=422)

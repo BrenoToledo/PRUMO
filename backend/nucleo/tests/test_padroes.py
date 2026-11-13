@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from freezegun import freeze_time
 
 from nucleo import services
-from nucleo.models import Bloco, Tarefa
+from nucleo.models import Area, Bloco, Rotina, Tarefa
 from nucleo.tests.apoio import nova_tarefa
 
 HOJE = "2026-11-12 15:00"  # quinta-feira, 12:00 em São Paulo
@@ -120,3 +120,86 @@ def test_calibracao_so_do_usuario(usuario, outra):
     for i in range(3):
         concluida(outra, f"De outra pessoa {i}", 2, 4)
     assert services.padroes(usuario)["calibracao"] == []
+
+
+# ---------------------------------------------------------------- última hora (#159)
+SEXTAS = ("2026-10-23", "2026-10-30", "2026-11-06")
+
+
+def criada_em(usuario, titulo, dia: str, **extra):
+    """Tarefa criada em `dia` às 9h de São Paulo."""
+    return nova_tarefa(usuario, titulo, criada_em=datetime.fromisoformat(f"{dia} 09:00").replace(tzinfo=SP), **extra)
+
+
+@freeze_time(HOJE)
+def test_ultima_hora_repetida_com_o_dia_da_semana(usuario):
+    for dia in SEXTAS:
+        criada_em(usuario, "Relatório semanal", dia, prazo=date.fromisoformat(dia))
+    (r,) = services.padroes(usuario)["ultima_hora"]
+    assert (r.titulo, r.vezes, r.dia_da_semana) == ("Relatório semanal", 3, 4)
+
+
+@freeze_time(HOJE)
+def test_ultima_hora_conta_a_feita_no_dia_em_que_apareceu(usuario):
+    for dia in SEXTAS:
+        feita = datetime.fromisoformat(f"{dia} 22:30").replace(tzinfo=SP)  # 22h30 em SP já é sábado em UTC
+        criada_em(usuario, "Pagar boleto", dia, status=Tarefa.Status.CONCLUIDA, concluida_em=feita)
+    (r,) = services.padroes(usuario)["ultima_hora"]
+    assert (r.titulo, r.vezes) == ("Pagar boleto", 3)
+
+
+@freeze_time(HOJE)
+def test_ultima_hora_ignora_rotina_cancelada_planejada_e_fora_da_janela(usuario):
+    rotina = Rotina.objects.create(
+        usuario=usuario,
+        area=Area.objects.get(usuario=usuario, nome="Educação"),
+        nome="Academia",
+        recorrencia="FREQ=DAILY",
+    )
+    for dia in SEXTAS:
+        prazo = date.fromisoformat(dia)
+        criada_em(usuario, "Academia", dia, prazo=prazo, rotina=rotina)
+        criada_em(usuario, "Cancelada", dia, prazo=prazo, status=Tarefa.Status.CANCELADA)
+        criada_em(usuario, "Com antecedência", dia, prazo=prazo + timedelta(days=5))
+    for dia in ("2026-10-02", "2026-10-09", "2026-10-14"):
+        criada_em(usuario, "Antes da janela", dia, prazo=date.fromisoformat(dia))
+    assert services.padroes(usuario)["ultima_hora"] == []
+
+
+@freeze_time(HOJE)
+def test_ultima_hora_so_do_usuario(usuario, outra):
+    for dia in SEXTAS:
+        criada_em(outra, "Relatório semanal", dia, prazo=date.fromisoformat(dia))
+    assert services.padroes(usuario)["ultima_hora"] == []
+
+
+# ---------------------------------------------------------------- muito adiadas (#159)
+@freeze_time(HOJE)
+def test_adiadas_tres_vezes_ou_mais_a_mais_adiada_primeiro(usuario):
+    nova_tarefa(usuario, "Adiada 2", adiamentos=2)
+    tres = nova_tarefa(usuario, "Adiada 3", adiamentos=3)
+    cinco = nova_tarefa(usuario, "Adiada 5", adiamentos=5)
+    assert services.padroes(usuario)["adiadas"] == [cinco, tres]
+
+
+@freeze_time(HOJE)
+def test_adiadas_ignora_fechadas_e_as_que_ja_foram_quebradas(usuario):
+    nova_tarefa(usuario, "Concluída", adiamentos=4, status=Tarefa.Status.CONCLUIDA)
+    nova_tarefa(usuario, "Cancelada", adiamentos=4, status=Tarefa.Status.CANCELADA)
+    mae = nova_tarefa(usuario, "Já quebrada", adiamentos=4)
+    nova_tarefa(usuario, "Parte 1", tarefa_pai=mae)
+    assert services.padroes(usuario)["adiadas"] == []
+
+
+@freeze_time(HOJE)
+def test_adiadas_mostra_no_maximo_cinco(usuario):
+    for i in range(7):
+        nova_tarefa(usuario, f"Adiada {i}", adiamentos=3 + i)
+    adiadas = services.padroes(usuario)["adiadas"]
+    assert [t.adiamentos for t in adiadas] == [9, 8, 7, 6, 5]
+
+
+@freeze_time(HOJE)
+def test_adiadas_so_do_usuario(usuario, outra):
+    nova_tarefa(outra, "De outra pessoa", adiamentos=4)
+    assert services.padroes(usuario)["adiadas"] == []
