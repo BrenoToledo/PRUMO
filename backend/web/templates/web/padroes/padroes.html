@@ -1,0 +1,58 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block titulo %}Padrões{% endblock %}
+{% block estilos %}
+<link rel="stylesheet" href="{% static 'web/telas/tarefas.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/revisao.css' %}">
+<link rel="stylesheet" href="{% static 'web/telas/padroes.css' %}">
+{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{% url 'web:revisao' %}">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+  Revisão do dia
+</a>
+{% include "web/_cabecalho.html" with titulo="Padrões" data="Últimas 4 semanas" sub=janela %}
+
+<div class="revisao">
+  <section class="revisao__cartao" aria-labelledby="titulo-horarios">
+    <h2 id="titulo-horarios" class="revisao__subtitulo">Aderência por horário</h2>
+    <ul class="padroes__periodos">
+      {% for p in periodos %}<li class="padroes__periodo">
+        <span class="padroes__nome">{{ p.nome }}</span>
+        <progress class="barra" value="{{ p.aderencia.feitos }}" max="{{ p.aderencia.planejados|default:1 }}" aria-label="Aderência: {{ p.nome }}">{{ p.aderencia.pct }}%</progress>
+        <span class="padroes__numero">{% if p.aderencia.planejados %}{{ p.aderencia.feitos }} de {{ p.aderencia.planejados }} bloco{{ p.aderencia.planejados|pluralize }} · {{ p.aderencia.pct }}%{% else %}sem blocos{% endif %}</span>
+      </li>{% endfor %}
+    </ul>
+    {% if frase_horarios %}
+    <p class="padroes__evidencia">{{ frase_horarios }}</p>
+    {% if ajustar_pico %}<a class="padroes__acao" href="{% url 'web:perfil' %}">Ajustar pico de energia</a>{% endif %}
+    {% else %}
+    <p class="revisao__dica">Ainda não dá para comparar horários: são precisos 5 blocos planejados em pelo menos dois períodos e uma diferença de 20 pontos entre eles.</p>
+    {% endif %}
+  </section>
+
+  <section class="revisao__cartao" aria-labelledby="titulo-estimativas">
+    <h2 id="titulo-estimativas" class="revisao__subtitulo">Estimativas</h2>
+    {% if estimativas %}
+    <ul class="padroes__itens">
+      {% for e in estimativas %}<li class="padroes__item">
+        <p class="padroes__evidencia">{{ e.frase }}</p>
+        <p class="revisao__dica">{{ e.numeros }}</p>
+      </li>{% endfor %}
+    </ul>
+    {% else %}
+    <p class="revisao__dica">Ainda não há evidência: é preciso concluir 3 tarefas com blocos feitos numa mesma área.</p>
+    {% endif %}
+  </section>
+
+  <section class="revisao__cartao" aria-labelledby="titulo-ultima-hora">
+    <h2 id="titulo-ultima-hora" class="revisao__subtitulo">Sempre de última hora</h2>
+    {% include "web/padroes/_sugestoes.html" with itens=ultima_hora acao="Criar rotina" vazio="Nada se repetiu em cima da hora nas últimas 4 semanas." %}
+  </section>
+
+  <section class="revisao__cartao" aria-labelledby="titulo-adiadas">
+    <h2 id="titulo-adiadas" class="revisao__subtitulo">Muito adiadas</h2>
+    {% include "web/padroes/_sugestoes.html" with itens=adiadas acao="Quebrar tarefa" vazio="Nenhuma tarefa aberta foi adiada 3 vezes ou mais." %}
+  </section>
+</div>
+{% endblock %}

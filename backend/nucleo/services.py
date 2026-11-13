@@ -28,6 +28,7 @@ from ia.provedores import ErroIA, Provedor, Resposta
 
 from . import calendario as cal
 from . import notificacoes as nt
+from . import padroes as pad
 from . import pessoas as pes
 from . import planejamento as plan
 from . import prioridade as motor
@@ -42,6 +43,7 @@ from .contratos import (
     ExpectativaEmRisco,
     ExportacaoDados,
     ListaRapida,
+    Padroes,
     PainelPessoas,
     PassoRevisao,
     PlanoDoDia,
@@ -2459,6 +2461,79 @@ def concluir_revisao_semanal(revisao: Revisao) -> Revisao:
     revisao.metricas["concluida_em"] = timezone.now().isoformat()
     revisao.save(update_fields=["metricas"])
     return revisao
+
+
+# --------------------------------------------------------------------------- padrões e sugestões (P22, #157–#159)
+def _janela_dos_padroes(dia: date) -> tuple[date, datetime, datetime]:
+    """Primeiro dia da janela e os instantes [de, ate) que cobrem os `JANELA_DIAS` dias antes de `dia`."""
+    inicio = dia - timedelta(days=pad.JANELA_DIAS)
+    return inicio, _limites_do_dia(inicio)[0], _limites_do_dia(dia)[0]
+
+
+def _aderencia_por_periodo(usuario, de: datetime, ate: datetime) -> list[pad.AderenciaPeriodo]:
+    blocos = Bloco.objects.filter(usuario=usuario, inicio_planejado__gte=de, inicio_planejado__lt=ate)
+    return pad.aderencia_por_periodo(
+        (timezone.localtime(inicio).hour, status == Bloco.Status.CONCLUIDO)
+        for inicio, status in blocos.values_list("inicio_planejado", "status")
+    )
+
+
+def _calibracao_por_area(usuario, de: datetime, ate: datetime) -> list[pad.Calibracao]:
+    """Só tarefas concluídas com bloco feito: concluir direto, sem foco, não diz nada sobre a estimativa."""
+    concluidas = Tarefa.objects.filter(
+        usuario=usuario,
+        status=Tarefa.Status.CONCLUIDA,
+        concluida_em__gte=de,
+        concluida_em__lt=ate,
+        blocos_feitos__gt=0,
+    )
+    return pad.calibracao_por_area(concluidas.values_list("area__nome", "blocos_estimados", "blocos_feitos"))
+
+
+def _repetidas_de_ultima_hora(usuario, de: datetime, ate: datetime) -> list[pad.UltimaHora]:
+    """Ocorrência de rotina já está prevista e tarefa cancelada não chegou a ser trabalho: nenhuma das duas conta."""
+    criadas = (
+        Tarefa.objects.filter(usuario=usuario, rotina__isnull=True, criada_em__gte=de, criada_em__lt=ate)
+        .exclude(status=Tarefa.Status.CANCELADA)
+        .order_by("criada_em", "pk")
+        .values_list("titulo", "criada_em", "prazo", "concluida_em")
+    )
+    em_cima = []
+    for titulo, criada_em, prazo, concluida_em in criadas:
+        criada = timezone.localdate(criada_em)
+        concluida = timezone.localdate(concluida_em) if concluida_em else None
+        if pad.em_cima_da_hora(criada, prazo, concluida):
+            em_cima.append((titulo, criada))
+    return pad.repetidas_de_ultima_hora(em_cima)
+
+
+def _muito_adiadas(usuario) -> list[Tarefa]:
+    """As mesmas condições de `motivo_para_quebrar`: aberta, adiada demais e ainda não quebrada."""
+    adiadas = (
+        Tarefa.objects.filter(
+            usuario=usuario, status=Tarefa.Status.ABERTA, adiamentos__gte=plan.ADIAMENTOS_PARA_QUEBRAR
+        )
+        .exclude(partes__status=Tarefa.Status.ABERTA)
+        .order_by("-adiamentos", "pk")
+    )
+    return list(adiadas[: pad.ADIADAS_NA_TELA])
+
+
+def padroes(usuario, dia: date | None = None) -> Padroes:
+    dia = dia or hoje()
+    inicio, de, ate = _janela_dos_padroes(dia)
+    aderencia = _aderencia_por_periodo(usuario, de, ate)
+    melhor, pior = pad.melhor_e_pior(aderencia)
+    return {
+        "inicio": inicio,
+        "fim": dia - timedelta(days=1),
+        "aderencia": aderencia,
+        "melhor_periodo": melhor,
+        "pior_periodo": pior,
+        "calibracao": _calibracao_por_area(usuario, de, ate),
+        "ultima_hora": _repetidas_de_ultima_hora(usuario, de, ate),
+        "adiadas": _muito_adiadas(usuario),
+    }
 
 
 # --------------------------------------------------------------------------- notificações (P19, #104–#106)

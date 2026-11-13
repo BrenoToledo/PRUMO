@@ -1,0 +1,20 @@
+/* Padrões e sugestões (M27): cartões com a evidência das últimas 4 semanas e uma ação. Reaproveita os cartões da revisão. */
+.padroes__periodos { list-style: none; margin: 0 0 var(--e3); padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.padroes__periodo { display: grid; grid-template-columns: 4.5em 1fr; align-items: center; column-gap: var(--e3); }
+.padroes__nome { font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.padroes__numero {
+  grid-column: 2; color: var(--texto-secundario); font-variant-numeric: tabular-nums;
+  font-size: var(--micro-tam); line-height: var(--micro-alt);
+}
+.padroes__evidencia { margin: 0; overflow-wrap: anywhere; }
+.padroes__acao {
+  display: inline-flex; align-items: center; min-height: 44px;
+  color: var(--primaria); text-decoration: none;
+  font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: var(--subtitulo-peso);
+}
+.padroes__acao:hover { text-decoration: underline; }
+.padroes__acao:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; border-radius: var(--raio-campo); }
+
+/* Itens de um cartão (estimativas, última hora, adiadas): evidência, números e, quando há, a ação. */
+.padroes__itens { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e3); }
+.padroes__item { display: flex; flex-direction: column; gap: var(--e1); }

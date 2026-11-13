@@ -1,0 +1,120 @@
+"""Regras puras dos padrões (P22, épico #39, tela M27): sem banco, só números e datas."""
+
+from datetime import date
+
+from nucleo import padroes as pad
+
+
+# ---------------------------------------------------------------- aderência por horário (#157)
+def test_percentual_arredonda_e_nao_divide_por_zero():
+    assert pad.percentual(2, 3) == 67
+    assert pad.percentual(4, 4) == 100
+    assert pad.percentual(0, 0) == 0
+
+
+def test_periodo_do_dia_pela_hora_local():
+    assert [pad.periodo_do_dia(h) for h in (0, 6, 11)] == ["manha"] * 3
+    assert [pad.periodo_do_dia(h) for h in (12, 15, 17)] == ["tarde"] * 3
+    assert [pad.periodo_do_dia(h) for h in (18, 21, 23)] == ["noite"] * 3
+
+
+def test_aderencia_por_periodo_devolve_sempre_os_tres_na_ordem():
+    blocos = [(8, True), (9, True), (10, False), (14, True), (15, False)]
+    manha, tarde, noite = pad.aderencia_por_periodo(blocos)
+    assert (manha.periodo, manha.planejados, manha.feitos, manha.pct) == ("manha", 3, 2, 67)
+    assert (tarde.periodo, tarde.planejados, tarde.feitos, tarde.pct) == ("tarde", 2, 1, 50)
+    assert (noite.periodo, noite.planejados, noite.feitos, noite.pct) == ("noite", 0, 0, 0)
+
+
+def test_melhor_e_pior_periodo_com_evidencia():
+    blocos = [(7, True)] * 9 + [(7, False)] + [(19, True)] * 4 + [(19, False)] * 6
+    melhor, pior = pad.melhor_e_pior(pad.aderencia_por_periodo(blocos))
+    assert (melhor.periodo, melhor.feitos, melhor.planejados) == ("manha", 9, 10)
+    assert (pior.periodo, pior.feitos, pior.planejados) == ("noite", 4, 10)
+
+
+def test_sem_amostra_em_dois_periodos_nao_ha_melhor_nem_pior():
+    blocos = [(7, True)] * 10 + [(19, False)] * 4  # a noite tem só 4 blocos
+    assert pad.melhor_e_pior(pad.aderencia_por_periodo(blocos)) == (None, None)
+
+
+def test_diferenca_pequena_nao_vira_sugestao():
+    blocos = [(7, True)] * 8 + [(7, False)] * 2 + [(14, True)] * 7 + [(14, False)] * 3  # 80% e 70%
+    assert pad.melhor_e_pior(pad.aderencia_por_periodo(blocos)) == (None, None)
+
+
+def test_periodo_com_pouca_amostra_fica_fora_da_comparacao():
+    # A tarde, com 1 de 1, teria 100%, mas um bloco só não é evidência.
+    blocos = [(7, True)] * 9 + [(7, False)] + [(14, True)] + [(19, True)] * 4 + [(19, False)] * 6
+    melhor, pior = pad.melhor_e_pior(pad.aderencia_por_periodo(blocos))
+    assert (melhor.periodo, pior.periodo) == ("manha", "noite")
+
+
+# ---------------------------------------------------------------- calibração de estimativas (#158)
+def test_calibracao_soma_por_area_e_calcula_o_desvio():
+    tarefas = [("Trabalho", 2, 3), ("Trabalho", 3, 4), ("Trabalho", 5, 7)]
+    (c,) = pad.calibracao_por_area(tarefas)
+    assert (c.area, c.tarefas, c.estimados, c.feitos) == ("Trabalho", 3, 10, 14)
+    assert c.desvio == 40  # fez 40% a mais do que estimou: subestima
+    assert c.relevante
+
+
+def test_calibracao_negativa_quando_superestima():
+    (c,) = pad.calibracao_por_area([("Casa", 4, 2), ("Casa", 4, 3), ("Casa", 2, 1)])
+    assert c.desvio == -40
+    assert c.relevante
+
+
+def test_calibracao_ignora_area_com_menos_de_tres_tarefas():
+    assert pad.calibracao_por_area([("Casa", 1, 3), ("Casa", 1, 3)]) == []
+
+
+def test_desvio_pequeno_nao_e_relevante():
+    (c,) = pad.calibracao_por_area([("Saúde", 5, 5), ("Saúde", 3, 3), ("Saúde", 2, 3)])
+    assert c.desvio == 10
+    assert not c.relevante
+
+
+def test_calibracao_ordena_pelo_maior_desvio():
+    tarefas = [("Casa", 2, 2)] * 3 + [("Trabalho", 2, 3)] * 3 + [("Saúde", 4, 1)] * 3
+    assert [c.area for c in pad.calibracao_por_area(tarefas)] == ["Saúde", "Trabalho", "Casa"]
+
+
+# ---------------------------------------------------------------- última hora (#159)
+def test_em_cima_da_hora_pelo_prazo():
+    criada = date(2026, 11, 6)
+    assert pad.em_cima_da_hora(criada, prazo=date(2026, 11, 6), concluida=None)  # prazo no mesmo dia
+    assert pad.em_cima_da_hora(criada, prazo=date(2026, 11, 7), concluida=None)  # prazo no dia seguinte
+    assert pad.em_cima_da_hora(criada, prazo=date(2026, 11, 5), concluida=None)  # já nasceu vencida
+    assert not pad.em_cima_da_hora(criada, prazo=date(2026, 11, 8), concluida=None)
+
+
+def test_em_cima_da_hora_quando_feita_no_dia_em_que_apareceu():
+    criada = date(2026, 11, 6)
+    assert pad.em_cima_da_hora(criada, prazo=None, concluida=criada)
+    assert not pad.em_cima_da_hora(criada, prazo=None, concluida=date(2026, 11, 7))
+    assert not pad.em_cima_da_hora(criada, prazo=None, concluida=None)
+
+
+def test_repetidas_juntam_titulos_iguais_sem_contar_caixa_acento_e_espaco():
+    sextas = [date(2026, 10, 23), date(2026, 10, 30), date(2026, 11, 6)]
+    tarefas = list(zip(["Relatório semanal", "relatorio  SEMANAL", " Relatório semanal "], sextas, strict=True))
+    (r,) = pad.repetidas_de_ultima_hora(tarefas)
+    assert (r.titulo, r.vezes, r.dia_da_semana) == ("Relatório semanal", 3, 4)  # 4 = sexta
+
+
+def test_repetidas_sem_dia_fixo_nao_dizem_o_dia():
+    dias = [date(2026, 10, 23), date(2026, 10, 27), date(2026, 11, 6)]
+    (r,) = pad.repetidas_de_ultima_hora([("Pagar boleto", d) for d in dias])
+    assert r.dia_da_semana is None
+
+
+def test_menos_de_tres_vezes_nao_e_padrao():
+    dias = [date(2026, 10, 23), date(2026, 10, 30)]
+    assert pad.repetidas_de_ultima_hora([("Relatório semanal", d) for d in dias]) == []
+
+
+def test_repetidas_ordenam_pela_mais_frequente():
+    dia = date(2026, 11, 6)
+    tarefas = [("Boleto", dia)] * 3 + [("Relatório", dia)] * 4
+    assert [(r.titulo, r.vezes) for r in pad.repetidas_de_ultima_hora(tarefas)] == [("Relatório", 4), ("Boleto", 3)]

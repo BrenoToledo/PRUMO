@@ -24,6 +24,7 @@
     {% else %}
     <p class="revisao__dica">Nenhum bloco planejado hoje.</p>
     {% endif %}
+    <a class="botao botao--texto revisao__padroes" href="{% url 'web:padroes' %}">Ver padrões</a>
   </section>
 
   {% if resumo.distracoes %}

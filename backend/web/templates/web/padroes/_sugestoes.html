@@ -1,0 +1,10 @@
+{% if itens %}
+<ul class="padroes__itens">
+  {% for item in itens %}<li class="padroes__item">
+    <p class="padroes__evidencia">{{ item.frase }}</p>
+    <a class="padroes__acao" href="{{ item.url }}">{{ acao }}</a>
+  </li>{% endfor %}
+</ul>
+{% else %}
+<p class="revisao__dica">{{ vazio }}</p>
+{% endif %}

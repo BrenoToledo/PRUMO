@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from datetime import datetime, time
 
     from .models import Bloco, Pessoa, Projeto, Revisao, Rotina, SugestaoIA, Tarefa, TarefaPessoa
+    from .padroes import AderenciaPeriodo, Calibracao, UltimaHora
     from .pessoas import Pontualidade
     from .revisao_semanal import Pergunta
 
@@ -163,6 +164,19 @@ class ResumoRevisaoDiaria(TypedDict):
     revisao: Revisao | None
 
 
+class Padroes(TypedDict):
+    """`services.padroes`: evidências das 4 semanas antes de hoje para a tela Padrões (M27). Só leitura."""
+
+    inicio: date  # primeiro dia da janela
+    fim: date  # último dia da janela (a véspera do dia pedido)
+    aderencia: list[AderenciaPeriodo]  # sempre manhã, tarde e noite, nessa ordem
+    melhor_periodo: AderenciaPeriodo | None  # só com evidência suficiente; senão None
+    pior_periodo: AderenciaPeriodo | None
+    calibracao: list[Calibracao]  # por área com 3 tarefas concluídas ou mais, maior desvio primeiro
+    ultima_hora: list[UltimaHora]  # títulos repetidos em cima da hora, o mais repetido primeiro
+    adiadas: list[Tarefa]  # abertas e adiadas 3 vezes ou mais, sem partes abertas; até 5
+
+
 class PropostaReplanejamento(TypedDict):
     """`services.meu_dia_quebrou`: o que fica hoje, o que muda de dia e quem é afetado (M13, M14)."""
 
@@ -297,6 +311,8 @@ SERVICOS: dict[str, str] = {
     "excluir_area": "(area: 'Area') -> 'None'",
     # Desktop (P9): painel de prioridades de Hoje
     "prioridades_da_semana": "(usuario, limite: 'int' = 4) -> 'list[Tarefa]'",
+    # Padrões (P22, épico #39): evidências das 4 semanas antes de `dia` para a M27
+    "padroes": "(usuario, dia: 'date | None' = None) -> 'Padroes'",
     # Seus dados (#66, épico LGPD #38): exportar tudo em JSON
     "exportar_dados": "(usuario) -> 'ExportacaoDados'",
     "contagem_dos_dados": "(usuario) -> 'dict[str, int]'",
