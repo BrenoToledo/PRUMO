@@ -50,6 +50,9 @@
 .revisao__chip--perigo { background: color-mix(in srgb, var(--prioridade-critica) 12%, transparent); color: var(--prioridade-critica); }
 .revisao__chip--neutro { background: var(--borda); color: var(--texto-secundario); }
 
+/* Link para a tela Padrões (M27), no pé do planejado vs. real. */
+.revisao__padroes { margin: var(--e2) 0 0 calc(-1 * var(--e2)); min-height: 44px; color: var(--primaria); text-decoration: none; }
+
 .revisao__distracoes { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); color: var(--texto); text-decoration: none; }
 .revisao__distracoes > span { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; overflow-wrap: anywhere; }
 .revisao__distracoes svg { flex: none; width: 20px; height: 20px; color: var(--texto-secundario); }

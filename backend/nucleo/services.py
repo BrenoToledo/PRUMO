@@ -28,6 +28,7 @@ from ia.provedores import ErroIA, Provedor, Resposta
 
 from . import calendario as cal
 from . import notificacoes as nt
+from . import padroes as pad
 from . import pessoas as pes
 from . import planejamento as plan
 from . import prioridade as motor
@@ -42,6 +43,7 @@ from .contratos import (
     ExpectativaEmRisco,
     ExportacaoDados,
     ListaRapida,
+    Padroes,
     PainelPessoas,
     PassoRevisao,
     PlanoDoDia,
@@ -2459,6 +2461,38 @@ def concluir_revisao_semanal(revisao: Revisao) -> Revisao:
     revisao.metricas["concluida_em"] = timezone.now().isoformat()
     revisao.save(update_fields=["metricas"])
     return revisao
+
+
+# --------------------------------------------------------------------------- padrões e sugestões (P22, #157–#159)
+def _janela_dos_padroes(dia: date) -> tuple[date, datetime, datetime]:
+    """Primeiro dia da janela e os instantes [de, ate) que cobrem os `JANELA_DIAS` dias antes de `dia`."""
+    inicio = dia - timedelta(days=pad.JANELA_DIAS)
+    return inicio, _limites_do_dia(inicio)[0], _limites_do_dia(dia)[0]
+
+
+def _aderencia_por_periodo(usuario, de: datetime, ate: datetime) -> list[pad.AderenciaPeriodo]:
+    blocos = Bloco.objects.filter(usuario=usuario, inicio_planejado__gte=de, inicio_planejado__lt=ate)
+    return pad.aderencia_por_periodo(
+        (timezone.localtime(inicio).hour, status == Bloco.Status.CONCLUIDO)
+        for inicio, status in blocos.values_list("inicio_planejado", "status")
+    )
+
+
+def padroes(usuario, dia: date | None = None) -> Padroes:
+    dia = dia or hoje()
+    inicio, de, ate = _janela_dos_padroes(dia)
+    aderencia = _aderencia_por_periodo(usuario, de, ate)
+    melhor, pior = pad.melhor_e_pior(aderencia)
+    return {
+        "inicio": inicio,
+        "fim": dia - timedelta(days=1),
+        "aderencia": aderencia,
+        "melhor_periodo": melhor,
+        "pior_periodo": pior,
+        "calibracao": [],
+        "ultima_hora": [],
+        "adiadas": [],
+    }
 
 
 # --------------------------------------------------------------------------- notificações (P19, #104–#106)

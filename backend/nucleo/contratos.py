@@ -311,6 +311,8 @@ SERVICOS: dict[str, str] = {
     "excluir_area": "(area: 'Area') -> 'None'",
     # Desktop (P9): painel de prioridades de Hoje
     "prioridades_da_semana": "(usuario, limite: 'int' = 4) -> 'list[Tarefa]'",
+    # Padrões (P22, épico #39): evidências das 4 semanas antes de `dia` para a M27
+    "padroes": "(usuario, dia: 'date | None' = None) -> 'Padroes'",
     # Seus dados (#66, épico LGPD #38): exportar tudo em JSON
     "exportar_dados": "(usuario) -> 'ExportacaoDados'",
     "contagem_dos_dados": "(usuario) -> 'dict[str, int]'",
