@@ -65,7 +65,7 @@
       </ul>
     </aside>{% endif %}
   </div>
-  <p class="semana__dica">Use “Mover” em cada tarefa ou, no computador, arraste para outro dia (ou em cima de outra tarefa, para trocar as duas). Um dia pode passar de 100%, mas o que não couber nos horários livres fica de fora ao aprovar.</p>
+  <p class="semana__dica">Use “Mover” em cada tarefa ou, no computador, arraste para outro dia (ou em cima de outra tarefa, para trocar as duas). Um dia pode passar de 100%: o que você pôs nele entra primeiro, e o cartão avisa quantos blocos ficam de fora ao aprovar.</p>
   <div class="semana__acoes semana__acoes--proposta">
     <form method="post" action="{% url 'web:descartar_semana' %}">
       {% csrf_token %}

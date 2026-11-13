@@ -78,14 +78,26 @@ def _proposta(usuario, sugestao, rotinas: dict[str, list]) -> dict:
     tarefas = Tarefa.objects.filter(usuario=usuario, pk__in=ids, status=Tarefa.Status.ABERTA).select_related("area")
     por_id = {t.pk: t for t in tarefas}
 
-    def itens(alocadas):
-        return [{"tarefa": por_id[a["tarefa"]], "blocos": a["blocos"]} for a in alocadas if a["tarefa"] in por_id]
+    def itens(alocadas, cabem=None):
+        """`fora`: os blocos que não entram no dia se a proposta for aprovada como está (#161)."""
+        cabem = cabem or {}
+        return [
+            {
+                "tarefa": por_id[a["tarefa"]],
+                "blocos": a["blocos"],
+                "fora": a["blocos"] - cabem.get(a["tarefa"], a["blocos"]),
+            }
+            for a in alocadas
+            if a["tarefa"] in por_id
+        ]
+
+    encaixe = services.encaixe_da_proposta(sugestao)
 
     dias = []
     for iso, alocadas in atual["dias"].items():
         dia = date.fromisoformat(iso)
         capacidade = sugestao.conteudo["capacidade"].get(iso, 0)
-        lista = itens(alocadas)
+        lista = itens(alocadas, encaixe[iso])
         blocos = sum(i["blocos"] for i in lista)
         pct = _pct(blocos, capacidade)
         dias.append(
@@ -323,6 +335,16 @@ def mover_na_semana(request):
     return _parcial_ou_volta(request)
 
 
+NOMES_NA_MENSAGEM = 3
+
+
+def _nomes(titulos: list[str]) -> str:
+    """ "A", "A e B", "A, B e C" ou, passando de três, "A, B, C e mais 2"."""
+    if len(titulos) > NOMES_NA_MENSAGEM:
+        return f"{', '.join(titulos[:NOMES_NA_MENSAGEM])} e mais {len(titulos) - NOMES_NA_MENSAGEM}"
+    return " e ".join(filter(None, [", ".join(titulos[:-1]), titulos[-1]]))
+
+
 @require_POST
 @login_required
 def aprovar_semana(request):
@@ -332,9 +354,10 @@ def aprovar_semana(request):
     resultado = services.aprovar_semana(sugestao)
     n = resultado["blocos"]
     texto = f"Semana aprovada: {n} bloco{'s' if n != 1 else ''} de foco."
-    k = len(resultado["nao_couberam"])
-    if k:
-        texto += f" {k} tarefa{'s' if k != 1 else ''} não coube{'ram' if k != 1 else ''} nos horários livres."
+    fora = resultado["nao_couberam"]
+    if fora:
+        titulos = dict(Tarefa.objects.filter(usuario=request.user, pk__in=fora).values_list("pk", "titulo"))
+        texto += f" Não couberam por inteiro nos horários livres: {_nomes([titulos[i] for i in fora if i in titulos])}."
     messages.success(request, texto)
     return redirect(ROTA)
 

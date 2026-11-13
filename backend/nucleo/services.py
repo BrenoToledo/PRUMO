@@ -10,8 +10,8 @@ import socket
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections import defaultdict
-from collections.abc import Callable
+from collections import Counter, defaultdict
+from collections.abc import Callable, Collection
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
@@ -339,7 +339,9 @@ def _a_partir_de(usuario, dia: date, jornada: plan.Jornada) -> datetime:
     return plan.inicio_do_plano(dia, jornada, agora=timezone.now(), ocupado_ate=ocupado_ate, tz=tz)
 
 
-def _gravar_plano(usuario, dia: date, candidatas: list[plan.Candidata], por_id: dict[int, Tarefa]) -> plan.Plano:
+def _gravar_plano(
+    usuario, dia: date, candidatas: list[plan.Candidata], por_id: dict[int, Tarefa], na_frente: Collection[int] = ()
+) -> plan.Plano:
     """Troca os blocos ainda não iniciados do dia pelos de `candidatas`, com horário (`plan.montar_plano_do_dia`)."""
     _blocos_do_dia(usuario, dia).filter(status=Bloco.Status.PLANEJADO).delete()
     if dia.weekday() not in DIAS_UTEIS:
@@ -348,7 +350,9 @@ def _gravar_plano(usuario, dia: date, candidatas: list[plan.Candidata], por_id: 
     tz = timezone.get_current_timezone()
     a_partir_de = _a_partir_de(usuario, dia, jornada)
     ocupados = _compromissos(usuario, dia, dia).get(dia, [])
-    resultado = plan.montar_plano_do_dia(dia, jornada, candidatas, tz=tz, a_partir_de=a_partir_de, ocupados=ocupados)
+    resultado = plan.montar_plano_do_dia(
+        dia, jornada, candidatas, tz=tz, a_partir_de=a_partir_de, ocupados=ocupados, na_frente=na_frente
+    )
     for slot in resultado.slots:
         Bloco.objects.create(
             usuario=usuario, tarefa=por_id[slot.tarefa_id], inicio_planejado=slot.inicio, fim_planejado=slot.fim
@@ -1854,33 +1858,68 @@ def mover_na_proposta(sugestao: SugestaoIA, tarefa: int, *, de: date | None, par
     return _gravar_atual(sugestao, dias, fora)
 
 
+def _abertas_da_proposta(sugestao: SugestaoIA) -> dict[int, Tarefa]:
+    """As tarefas dos dias da proposta que continuam abertas (as fechadas no meio do caminho saem)."""
+    ids = {a["tarefa"] for alocadas in sugestao.conteudo["atual"]["dias"].values() for a in alocadas}
+    return {t.id: t for t in _abertas_no_dia(sugestao.usuario, date.max).filter(pk__in=ids)}
+
+
+def _candidatas_do_dia(alocadas: list[dict], por_id: dict[int, Tarefa]) -> list[plan.Candidata]:
+    return [
+        plan.Candidata(t.id, t.prioridade, t.esforco, a["blocos"], t.prazo, t.prazo_rigido)
+        for a in alocadas
+        if (t := por_id.get(a["tarefa"])) is not None
+    ]
+
+
+def _postas_pelo_usuario(conteudo: dict, iso: str) -> set[int]:
+    """As tarefas que o usuário pôs no dia: têm ali mais blocos do que a proposta original tinha dado (#161)."""
+    antes = {a["tarefa"]: a["blocos"] for a in conteudo["original"]["dias"].get(iso, [])}
+    return {a["tarefa"] for a in conteudo["atual"]["dias"][iso] if a["blocos"] > antes.get(a["tarefa"], 0)}
+
+
+def encaixe_da_proposta(sugestao: SugestaoIA) -> dict[str, dict[int, int]]:
+    """Por dia, quantos blocos de cada tarefa cabem se a proposta for aprovada como está (#161).
+
+    Usa a capacidade guardada na proposta e a mesma ordem da aprovação: o que o usuário pôs no dia entra primeiro.
+    """
+    conteudo = sugestao.conteudo
+    por_id = _abertas_da_proposta(sugestao)
+    return {
+        iso: plan.blocos_que_cabem(
+            _candidatas_do_dia(alocadas, por_id),
+            conteudo["capacidade"].get(iso, 0),
+            date.fromisoformat(iso),
+            _postas_pelo_usuario(conteudo, iso),
+        )
+        for iso, alocadas in conteudo["atual"]["dias"].items()
+    }
+
+
 @transaction.atomic
 def aprovar_semana(sugestao: SugestaoIA) -> dict:
     """Vira blocos com horário, dia a dia (#80): troca os planejados e não iniciados desses dias.
 
-    Devolve `{"blocos": criados, "nao_couberam": [ids]}` (o que a agenda do dia não comportou). A sugestão fica
-    aceita, ou editada se a versão atual mudou, com a versão final em `resposta`.
+    O que o usuário pôs num dia entra antes do que a proposta tinha posto ali (#161). Devolve
+    `{"blocos": criados, "nao_couberam": [ids]}`: as tarefas que a agenda do dia não comportou por inteiro. A
+    sugestão fica aceita, ou editada se a versão atual mudou, com a versão final em `resposta`.
     """
     if sugestao.tipo != TIPO_SEMANA or sugestao.status != SugestaoIA.Status.PENDENTE:
         raise ValueError("esta proposta já foi respondida")
-    usuario = sugestao.usuario
-    atual = sugestao.conteudo["atual"]
-    ids = {a["tarefa"] for alocadas in atual["dias"].values() for a in alocadas}
-    por_id = {t.id: t for t in _abertas_no_dia(usuario, date.max).filter(pk__in=ids)}
+    conteudo = sugestao.conteudo
+    atual = conteudo["atual"]
+    por_id = _abertas_da_proposta(sugestao)
     criados, nao_couberam = 0, []
     for iso, alocadas in atual["dias"].items():
         dia = date.fromisoformat(iso)
         if dia < hoje():
             continue
-        candidatas = [
-            plan.Candidata(t.id, t.prioridade, t.esforco, a["blocos"], t.prazo, t.prazo_rigido)
-            for a in alocadas
-            if (t := por_id.get(a["tarefa"])) is not None
-        ]
-        resultado = _gravar_plano(usuario, dia, candidatas, por_id)
+        candidatas = _candidatas_do_dia(alocadas, por_id)
+        resultado = _gravar_plano(sugestao.usuario, dia, candidatas, por_id, _postas_pelo_usuario(conteudo, iso))
         criados += len(resultado.slots)
-        nao_couberam += [i for i in resultado.nao_couberam if i not in nao_couberam]
-    igual = atual == sugestao.conteudo["original"]
+        gravados = Counter(slot.tarefa_id for slot in resultado.slots)
+        nao_couberam += [c.id for c in candidatas if gravados[c.id] < c.blocos_restantes and c.id not in nao_couberam]
+    igual = atual == conteudo["original"]
     _responder(sugestao, SugestaoIA.Status.ACEITA if igual else SugestaoIA.Status.EDITADA, atual)
     return {"blocos": criados, "nao_couberam": nao_couberam}
 

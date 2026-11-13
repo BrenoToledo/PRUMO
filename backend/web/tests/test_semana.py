@@ -209,6 +209,51 @@ def test_api_sem_proposta_e_404(api, tarefas):
     assert api.post("/api/semana/aprovar/").status_code == 404
 
 
+# ---------------------------------------------------- a escolha do usuário vale ao aprovar (#161)
+SEXTA = date(2026, 10, 23)
+
+
+@freeze_time(SEG)
+def test_proposta_intacta_nao_avisa_nada_de_fora(logado, usuario, tarefas):
+    services.propor_semana(usuario)
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    assert "de fora ao aprovar" not in html.split('class="semana__dica"')[0]
+
+
+@freeze_time(SEG)
+def test_proposta_avisa_no_cartao_o_que_fica_de_fora(logado, usuario, tarefas):
+    sugestao = services.propor_semana(usuario)
+    services.mover_na_proposta(sugestao, tarefas[4].pk, de=None, para=SEXTA)
+
+    html = logado.get(reverse("web:semana")).content.decode()
+
+    # sexta: a trazida pede 4 e cabem 2; a Tarefa 2 cabe; a Tarefa 3 perde os 2
+    assert html.count("2 blocos ficam de fora ao aprovar") == 2
+    assert "1 bloco fica de fora ao aprovar" not in html
+
+
+@freeze_time(SEG)
+def test_aprovar_diz_o_nome_das_que_nao_couberam(logado, usuario, tarefas):
+    sugestao = services.propor_semana(usuario)
+    services.mover_na_proposta(sugestao, tarefas[4].pk, de=None, para=SEXTA)
+
+    html = logado.post(reverse("web:aprovar_semana"), follow=True).content.decode()
+
+    assert "Não couberam por inteiro nos horários livres: Tarefa 3 e Tarefa 4." in html
+
+
+@freeze_time(SEG)
+def test_aprovar_sem_sobra_nao_fala_do_que_nao_coube(logado, usuario, tarefas):
+    services.propor_semana(usuario)
+
+    html = logado.post(reverse("web:aprovar_semana"), follow=True).content.decode()
+
+    assert "Semana aprovada: 15 blocos de foco." in html
+    assert "Não couberam por inteiro" not in html
+
+
 # ---------------------------------------------------- cancelar e "não couberam" (backlog 4)
 @freeze_time(SEG)
 def test_proposta_tem_cancelar_ao_lado_de_aprovar(logado, tarefas):

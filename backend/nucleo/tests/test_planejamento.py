@@ -35,6 +35,36 @@ def test_plano_respeita_capacidade_limite_por_tarefa_e_ignora_leves():
     assert plano.ocupacao == 1.0
 
 
+# ---------------------------------------------------------------- a escolha do usuário entra na frente (#161)
+CANDIDATAS = [
+    p.Candidata(1, prioridade=90, esforco="alto", blocos_restantes=5),
+    p.Candidata(2, prioridade=70, esforco="medio", blocos_restantes=1),
+    p.Candidata(3, prioridade=95, esforco="baixo", blocos_restantes=1),
+    p.Candidata(4, prioridade=40, esforco="medio", blocos_restantes=2),
+]
+
+
+def test_blocos_que_cabem_segue_a_ordem_do_plano():
+    assert p.blocos_que_cabem(CANDIDATAS, 3, SEG) == {1: 2, 2: 1, 4: 0}  # a leve (3) nem entra na conta
+
+
+def test_na_frente_entra_antes_das_de_maior_prioridade():
+    assert p.blocos_que_cabem(CANDIDATAS, 3, SEG, na_frente={4}) == {4: 2, 1: 1, 2: 0}
+
+
+def test_sem_capacidade_nada_cabe():
+    assert p.blocos_que_cabem(CANDIDATAS, 0, SEG, na_frente={4}) == {4: 0, 1: 0, 2: 0}
+
+
+def test_plano_poe_na_frente_a_escolha_do_usuario():
+    plano = p.montar_plano_do_dia(SEG, J, CANDIDATAS, na_frente={4})
+    ids = [s.tarefa_id for s in plano.slots]
+    assert len(ids) == plano.capacidade == 3  # a capacidade não muda
+    assert ids.count(4) == 2
+    assert ids.count(1) == 1
+    assert plano.nao_couberam == [2]
+
+
 def test_esforco_alto_vai_para_o_pico_de_energia():
     cands = [p.Candidata(1, 90, "medio", 1), p.Candidata(2, 80, "alto", 1)]
     manha = p.montar_plano_do_dia(SEG, J, cands)

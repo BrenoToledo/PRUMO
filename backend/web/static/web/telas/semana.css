@@ -52,6 +52,7 @@
 .tarefa-semana.arrastando { opacity: .4; }
 .tarefa-semana__titulo { min-width: 0; overflow-wrap: anywhere; }
 .tarefa-semana__hora, .tarefa-semana__blocos { color: var(--texto-secundario); }
+.tarefa-semana__fora { color: var(--prioridade-critica); font-weight: var(--legenda-peso); }
 .tarefa-semana__mover summary { cursor: pointer; color: var(--primaria); list-style: none; }
 .tarefa-semana__mover summary::-webkit-details-marker { display: none; }
 .tarefa-semana__mover form { display: flex; flex-wrap: wrap; gap: var(--e2); margin-top: var(--e1); }
