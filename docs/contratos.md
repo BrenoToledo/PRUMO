@@ -39,6 +39,7 @@ Toda branch parte de `contratos-api`. A interface usa os serviços reais quando 
 | `claude/project-thread-0nn6nm` (calendário: navegar, visões e arrastar) | #99, #100, #101 | backend + interface | main (P1–P17) | `web/telas/semana.py`, `web/templates/web/semana/`, `web/static/web/telas/semana.css`, `semana.js`, `nucleo/tests/test_calendario_visoes.py`, `web/tests/test_calendario_visoes.py`; em `planejamento.py` só `VISOES`, `dias_da_visao`, `vizinhos` e `motivo_para_nao_encaixar`; em `services.py` só `agenda_do_periodo` (que `semana_planejada` passa a usar), `mover_bloco`, `trocar_blocos` e `trocar_na_proposta` |
 | `claude/project-thread-mpmxzo` (P18 · Revisão semanal) | #91, #92, #93 | backend + interface | main (P1–P17 e calendário) | `nucleo/revisao_semanal.py`, `web/telas/revisao_semanal.py`, `web/templates/web/revisao_semanal/`, `web/static/web/telas/revisao_semanal.css`, `nucleo/tests/test_revisao_semanal*.py`, `web/tests/test_revisao_semanal.py`; em `revisao` só o link "Revisão semanal" da M25; sem migração (usa `Revisao` tipo `semanal`) |
 | `claude/project-thread-mpmxzo` (P19 · Notificações) | #104, #105, #106 | backend + interface | main (P1–P18) | `nucleo/notificacoes.py`, `nucleo/webpush.py`, `web/telas/notificacoes.py`, `web/templates/web/notificacoes/`, `web/static/web/telas/notificacoes.css`, `notificacoes.js`, `nucleo/tests/test_notificacoes*.py`, `nucleo/tests/test_webpush.py`, `web/tests/test_notificacoes.py`; em `pwa` só o `push` e o clique no `sw.js`; em `perfil` só o link "Notificações"; em `plano` só o sino no topo de Hoje; `config/settings.py` (VAPID e agenda do Celery), `docker-compose.yml` e `deploy/docker-compose.yml` (serviço `beat`), `.env.example` (VAPID), migração `0011` |
+| `claude/project-thread-734f4a` (P22 · Padrões) | #157, #158, #159 | backend + interface | main (P1–P21) | `nucleo/padroes.py`, `web/telas/padroes.py`, `web/templates/web/padroes/`, `web/static/web/telas/padroes.css`, `nucleo/tests/test_padroes*.py`, `web/tests/test_padroes.py`; em `revisao` só o link "Ver padrões" da M25; em `rotinas` só o nome preenchido por `?nome=` em Nova rotina; em `services.py` só `padroes`; sem migração |
 
 Arquivos comuns (`base.html`, `app.css`, `app.js`, `web/urls.py`, `views.py`) **não** são editados pelas etapas. Para isso existem pontos de extensão:
 
@@ -467,6 +468,28 @@ Serviços novos (`nucleo/services.py`):
 - `criar_tarefa_no_horario(usuario, titulo, area, inicio)`: cria tarefa (esforço médio, 1 bloco), evento `CRIADA`, depois `agendar_bloco`; tudo numa transação.
 
 Regras: toda rota filtra pelo usuário autenticado; o filtro de área ignora áreas de outra pessoa; o popup e o formulário de criar ficam num único `<dialog id="detalhe-bloco">` em `_semana.html`.
+
+## Padrões e sugestões (P22, Fase 2)
+
+Tela M27 (épico #39; histórias #157, #158 e #159). Só leitura: nada é aplicado sozinho, cada cartão mostra a evidência e leva a uma ação que o usuário confirma em outra tela. Sem migração e sem rota REST.
+
+| Rota (nome) | Caminho | Método | Serviço |
+| --- | --- | --- | --- |
+| `web:padroes` | `/revisao/padroes/` | GET | `padroes` |
+| (preenchimento) `web:nova_rotina` | `/rotinas/nova/?nome=…` | GET | leitura; o nome só preenche o campo |
+
+`services.padroes(usuario, dia=None) -> Padroes` olha a **janela** de 28 dias que termina na véspera de `dia` (hoje fica de fora, porque o dia ainda está em andamento):
+
+| Chave | Tipo | Regra |
+| --- | --- | --- |
+| `inicio`, `fim` | `date` | Primeiro e último dia da janela |
+| `aderencia` | `list[AderenciaPeriodo]` | Sempre manhã (antes das 12h), tarde (12h às 18h) e noite, nessa ordem, pela hora local do início planejado. `planejados` conta todos os blocos do período, como a revisão diária; `feitos` são os `concluido` |
+| `melhor_periodo`, `pior_periodo` | `AderenciaPeriodo \| None` | Só com evidência: pelo menos dois períodos com 5 blocos ou mais e 20 pontos percentuais entre o melhor e o pior. Sem isso, os dois são `None` |
+| `calibracao` | `list[Calibracao]` | Por área, das tarefas concluídas na janela com pelo menos um bloco feito; entra a área com 3 tarefas ou mais, a de maior desvio primeiro. `desvio` é o percentual de blocos feitos acima (positivo, subestimou) ou abaixo (negativo) do estimado; `relevante` a partir de 20% |
+| `ultima_hora` | `list[UltimaHora]` | Títulos que apareceram 3 vezes ou mais em cima da hora na janela, o mais repetido primeiro. Em cima da hora: tarefa sem rotina, não cancelada, criada no dia do prazo ou na véspera (ou depois dele), ou concluída no dia em que foi criada. Títulos iguais sem contar maiúsculas, acentos e espaços. `dia_da_semana` (0 = segunda) só quando todas caíram no mesmo dia |
+| `adiadas` | `list[Tarefa]` | Abertas, com `adiamentos >= planejamento.ADIAMENTOS_PARA_QUEBRAR`, sem partes abertas; a mais adiada primeiro, até 5. Retrato de agora, não da janela |
+
+As regras puras ficam em `nucleo/padroes.py` (sem Django); `AderenciaPeriodo`, `Calibracao` e `UltimaHora` são dataclasses de lá.
 
 ## Mudar um contrato
 
