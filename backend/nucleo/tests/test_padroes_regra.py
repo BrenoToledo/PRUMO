@@ -46,3 +46,33 @@ def test_periodo_com_pouca_amostra_fica_fora_da_comparacao():
     blocos = [(7, True)] * 9 + [(7, False)] + [(14, True)] + [(19, True)] * 4 + [(19, False)] * 6
     melhor, pior = pad.melhor_e_pior(pad.aderencia_por_periodo(blocos))
     assert (melhor.periodo, pior.periodo) == ("manha", "noite")
+
+
+# ---------------------------------------------------------------- calibração de estimativas (#158)
+def test_calibracao_soma_por_area_e_calcula_o_desvio():
+    tarefas = [("Trabalho", 2, 3), ("Trabalho", 3, 4), ("Trabalho", 5, 7)]
+    (c,) = pad.calibracao_por_area(tarefas)
+    assert (c.area, c.tarefas, c.estimados, c.feitos) == ("Trabalho", 3, 10, 14)
+    assert c.desvio == 40  # fez 40% a mais do que estimou: subestima
+    assert c.relevante
+
+
+def test_calibracao_negativa_quando_superestima():
+    (c,) = pad.calibracao_por_area([("Casa", 4, 2), ("Casa", 4, 3), ("Casa", 2, 1)])
+    assert c.desvio == -40
+    assert c.relevante
+
+
+def test_calibracao_ignora_area_com_menos_de_tres_tarefas():
+    assert pad.calibracao_por_area([("Casa", 1, 3), ("Casa", 1, 3)]) == []
+
+
+def test_desvio_pequeno_nao_e_relevante():
+    (c,) = pad.calibracao_por_area([("Saúde", 5, 5), ("Saúde", 3, 3), ("Saúde", 2, 3)])
+    assert c.desvio == 10
+    assert not c.relevante
+
+
+def test_calibracao_ordena_pelo_maior_desvio():
+    tarefas = [("Casa", 2, 2)] * 3 + [("Trabalho", 2, 3)] * 3 + [("Saúde", 4, 1)] * 3
+    assert [c.area for c in pad.calibracao_por_area(tarefas)] == ["Saúde", "Trabalho", "Casa"]

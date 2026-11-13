@@ -7,7 +7,7 @@ from freezegun import freeze_time
 
 from nucleo.models import Bloco, Perfil
 from nucleo.tests.apoio import nova_tarefa
-from nucleo.tests.test_padroes import bloco
+from nucleo.tests.test_padroes import bloco, concluida
 
 HOJE = "2026-11-12 15:00"  # quinta-feira, 12:00 em São Paulo
 ONTEM = date(2026, 11, 11)
@@ -101,3 +101,36 @@ def test_nao_mostra_blocos_de_outro_usuario(logado, outra):
     html = pagina(logado)
     assert "9 de 10" not in html
     assert html.count("sem blocos") == 3
+
+
+# ---------------------------------------------------------------- calibração de estimativas (#158)
+@freeze_time(HOJE)
+def test_calibracao_diz_quanto_subestima(logado, usuario):
+    for i, (estimados, feitos) in enumerate([(2, 3), (3, 4), (5, 7)]):
+        concluida(usuario, f"Integração {i}", estimados, feitos)
+    html = pagina(logado)
+    assert "Estimativas" in html
+    assert "Você subestima tarefas de Educação em 40%." in html
+    assert "3 tarefas: 10 blocos estimados, 14 feitos" in html
+
+
+@freeze_time(HOJE)
+def test_calibracao_diz_quanto_superestima(logado, usuario):
+    for i in range(3):
+        concluida(usuario, f"Mais rápida {i}", 4, 2)
+    assert "Você superestima tarefas de Educação em 50%." in pagina(logado)
+
+
+@freeze_time(HOJE)
+def test_calibracao_que_bate(logado, usuario):
+    for i in range(3):
+        concluida(usuario, f"Na medida {i}", 2, 2)
+    assert "Suas estimativas de Educação estão batendo." in pagina(logado)
+
+
+@freeze_time(HOJE)
+def test_calibracao_sem_evidencia_diz_o_que_falta(logado, usuario):
+    concluida(usuario, "Uma só", 2, 3)
+    html = pagina(logado)
+    assert "Ainda não há evidência" in html
+    assert "subestima" not in html

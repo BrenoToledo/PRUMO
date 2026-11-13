@@ -66,3 +66,39 @@ def melhor_e_pior(aderencias: Iterable[AderenciaPeriodo]) -> tuple[AderenciaPeri
     if melhor.pct - pior.pct < PONTOS_PARA_SUGERIR:
         return None, None
     return melhor, pior
+
+
+# --------------------------------------------------------------------------- calibração de estimativas (#158)
+TAREFAS_PARA_CALIBRAR = 3  # com menos tarefas concluídas, a área ainda não diz nada
+DESVIO_RELEVANTE = 20  # em %, para cima ou para baixo
+
+
+@dataclass(frozen=True)
+class Calibracao:
+    """Blocos estimados e feitos das tarefas concluídas de uma área."""
+
+    area: str
+    tarefas: int
+    estimados: int
+    feitos: int
+
+    @property
+    def desvio(self) -> int:
+        """Quanto os blocos feitos passaram do estimado, em %: positivo subestimou, negativo superestimou."""
+        return round((self.feitos - self.estimados) * 100 / self.estimados) if self.estimados else 0
+
+    @property
+    def relevante(self) -> bool:
+        return abs(self.desvio) >= DESVIO_RELEVANTE
+
+
+def calibracao_por_area(tarefas: Iterable[tuple[str, int, int]]) -> list[Calibracao]:
+    """`tarefas`: (área, blocos estimados, blocos feitos) de cada tarefa concluída. O maior desvio vem primeiro."""
+    somas: dict[str, list[int]] = {}
+    for area, estimados, feitos in tarefas:
+        soma = somas.setdefault(area, [0, 0, 0])
+        soma[0] += 1
+        soma[1] += estimados
+        soma[2] += feitos
+    areas = [Calibracao(area, *soma) for area, soma in somas.items() if soma[0] >= TAREFAS_PARA_CALIBRAR]
+    return sorted(areas, key=lambda c: (-abs(c.desvio), c.area))

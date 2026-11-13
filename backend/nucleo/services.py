@@ -2478,6 +2478,18 @@ def _aderencia_por_periodo(usuario, de: datetime, ate: datetime) -> list[pad.Ade
     )
 
 
+def _calibracao_por_area(usuario, de: datetime, ate: datetime) -> list[pad.Calibracao]:
+    """Só tarefas concluídas com bloco feito: concluir direto, sem foco, não diz nada sobre a estimativa."""
+    concluidas = Tarefa.objects.filter(
+        usuario=usuario,
+        status=Tarefa.Status.CONCLUIDA,
+        concluida_em__gte=de,
+        concluida_em__lt=ate,
+        blocos_feitos__gt=0,
+    )
+    return pad.calibracao_por_area(concluidas.values_list("area__nome", "blocos_estimados", "blocos_feitos"))
+
+
 def padroes(usuario, dia: date | None = None) -> Padroes:
     dia = dia or hoje()
     inicio, de, ate = _janela_dos_padroes(dia)
@@ -2489,7 +2501,7 @@ def padroes(usuario, dia: date | None = None) -> Padroes:
         "aderencia": aderencia,
         "melhor_periodo": melhor,
         "pior_periodo": pior,
-        "calibracao": [],
+        "calibracao": _calibracao_por_area(usuario, de, ate),
         "ultima_hora": [],
         "adiadas": [],
     }

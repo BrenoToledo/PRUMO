@@ -30,5 +30,19 @@
     <p class="revisao__dica">Ainda não dá para comparar horários: são precisos 5 blocos planejados em pelo menos dois períodos e uma diferença de 20 pontos entre eles.</p>
     {% endif %}
   </section>
+
+  <section class="revisao__cartao" aria-labelledby="titulo-estimativas">
+    <h2 id="titulo-estimativas" class="revisao__subtitulo">Estimativas</h2>
+    {% if estimativas %}
+    <ul class="padroes__itens">
+      {% for e in estimativas %}<li class="padroes__item">
+        <p class="padroes__evidencia">{{ e.frase }}</p>
+        <p class="revisao__dica">{{ e.numeros }}</p>
+      </li>{% endfor %}
+    </ul>
+    {% else %}
+    <p class="revisao__dica">Ainda não há evidência: é preciso concluir 3 tarefas com blocos feitos numa mesma área.</p>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}

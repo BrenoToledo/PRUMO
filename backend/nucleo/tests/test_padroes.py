@@ -1,12 +1,12 @@
 """Serviço `padroes` (P22, épico #39, tela M27): o que o banco diz sobre as 4 semanas antes de hoje."""
 
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from freezegun import freeze_time
 
 from nucleo import services
-from nucleo.models import Bloco
+from nucleo.models import Bloco, Tarefa
 from nucleo.tests.apoio import nova_tarefa
 
 HOJE = "2026-11-12 15:00"  # quinta-feira, 12:00 em São Paulo
@@ -80,3 +80,43 @@ def test_sem_blocos_nao_ha_sugestao(usuario):
 def test_aderencia_so_do_usuario(usuario, outra):
     bloco(nova_tarefa(outra), date(2026, 11, 11), 8)
     assert services.padroes(usuario)["aderencia"][0].planejados == 0
+
+
+# ---------------------------------------------------------------- calibração de estimativas (#158)
+def concluida(usuario, titulo, estimados, feitos, em="2026-11-10 15:00", **extra):
+    """Tarefa concluída em `em`, com `estimados` blocos estimados e `feitos` blocos feitos."""
+    return nova_tarefa(
+        usuario,
+        titulo,
+        blocos_estimados=estimados,
+        blocos_feitos=feitos,
+        status=Tarefa.Status.CONCLUIDA,
+        concluida_em=datetime.fromisoformat(em).replace(tzinfo=UTC),
+        **extra,
+    )
+
+
+@freeze_time(HOJE)
+def test_calibracao_por_area_das_tarefas_concluidas_na_janela(usuario):
+    for i, (estimados, feitos) in enumerate([(2, 3), (3, 4), (5, 7)]):
+        concluida(usuario, f"Integração {i}", estimados, feitos)
+    (c,) = services.padroes(usuario)["calibracao"]
+    assert (c.area, c.tarefas, c.estimados, c.feitos, c.desvio) == ("Educação", 3, 10, 14, 40)
+
+
+@freeze_time(HOJE)
+def test_calibracao_ignora_o_que_nao_e_evidencia(usuario):
+    concluida(usuario, "Dentro da janela 1", 2, 3)
+    concluida(usuario, "Dentro da janela 2", 2, 3)
+    concluida(usuario, "Sem bloco feito", 2, 0)  # concluída direto, sem foco: não diz nada sobre a estimativa
+    concluida(usuario, "Antes da janela", 2, 3, em="2026-10-14 15:00")
+    concluida(usuario, "Hoje", 2, 3, em="2026-11-12 14:00")
+    nova_tarefa(usuario, "Ainda aberta", blocos_estimados=2, blocos_feitos=3)
+    assert services.padroes(usuario)["calibracao"] == []  # só 2 tarefas valem, e a área precisa de 3
+
+
+@freeze_time(HOJE)
+def test_calibracao_so_do_usuario(usuario, outra):
+    for i in range(3):
+        concluida(outra, f"De outra pessoa {i}", 2, 4)
+    assert services.padroes(usuario)["calibracao"] == []

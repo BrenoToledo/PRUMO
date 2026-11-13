@@ -30,6 +30,17 @@ def _frase_dos_horarios(melhor, pior) -> str:
     )
 
 
+def _estimativa(c) -> dict:
+    """A calibração de uma área em duas linhas: o que acontece e os números que mostram isso."""
+    if not c.relevante:
+        frase = f"Suas estimativas de {c.area} estão batendo."
+    elif c.desvio > 0:
+        frase = f"Você subestima tarefas de {c.area} em {c.desvio}%."
+    else:
+        frase = f"Você superestima tarefas de {c.area} em {-c.desvio}%."
+    return {"frase": frase, "numeros": f"{c.tarefas} tarefas: {c.estimados} blocos estimados, {c.feitos} feitos"}
+
+
 @require_GET
 @login_required
 def padroes(request):
@@ -41,6 +52,7 @@ def padroes(request):
         "janela": f"{date_format(dados['inicio'], FORMATO_DIA)} a {date_format(dados['fim'], FORMATO_DIA)}",
         "periodos": [{"nome": NOMES[a.periodo], "aderencia": a} for a in dados["aderencia"]],
         "frase_horarios": _frase_dos_horarios(melhor, dados["pior_periodo"]),
+        "estimativas": [_estimativa(c) for c in dados["calibracao"]],
         "ajustar_pico": melhor is not None and melhor.periodo != services.perfil_de(request.user).pico_energia,
     }
     return render(request, "web/padroes/padroes.html", contexto)
