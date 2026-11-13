@@ -14,7 +14,7 @@
 .semana__barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--e2); margin-top: var(--e2); }
 .semana__nav { display: flex; gap: var(--e2); }
 .semana__nav .botao { text-decoration: none; }
-.semana__visoes { display: inline-flex; padding: 2px; gap: 2px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo); }
+.semana__visoes { display: inline-flex; padding: 2px; gap: 2px; background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo); }
 .semana__visao {
   padding: var(--e1) var(--e3); border-radius: var(--raio-campo); color: var(--texto-secundario); text-decoration: none;
   font-size: var(--legenda-tam); line-height: var(--legenda-alt);
@@ -27,7 +27,7 @@
 .semana__dias { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e3); }
 
 .dia, .nao-couberam {
-  padding: var(--e3) var(--e4); background: var(--superficie);
+  padding: var(--e3) var(--e4); background-color: var(--superficie);
   border: 1px solid var(--borda); border-radius: var(--raio-card);
 }
 .dia.solta-aqui, .nao-couberam.solta-aqui { border-color: var(--primaria); background: var(--primaria-suave); }
@@ -57,7 +57,7 @@
 .tarefa-semana__mover form { display: flex; flex-wrap: wrap; gap: var(--e2); margin-top: var(--e1); }
 .tarefa-semana__mover select {
   min-height: 32px; padding: 0 var(--e2); font: inherit; color: var(--texto);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
 }
 
 /* Rotinas: o mesmo card dos blocos (classes tarefa-semana), fixo no dia e com o ícone de repetição na hora */
@@ -81,7 +81,7 @@
 .tarefa-semana.solta-aqui { outline: 2px solid var(--primaria); }
 .tarefa-semana__mover input {
   min-height: 32px; padding: 0 var(--e2); font: inherit; color: var(--texto);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
 }
 
 /* Agenda estilo Google (P20): passado esmaecido e hoje em destaque (#109); a linha do agora só existe na grade */
@@ -102,7 +102,7 @@
 .mes__semana li { padding: var(--e1); color: var(--texto-secundario); font-size: var(--legenda-tam); text-align: center; }
 .mes__dia {
   display: flex; flex-direction: column; gap: 2px; min-height: 56px; min-width: 0; padding: var(--e1);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
 }
 .mes__dia--fora { opacity: .5; }
 .mes__dia--hoje { border-color: var(--primaria); }
@@ -193,7 +193,7 @@
 .tarefa-semana__feito-form { display: inline; margin: 0; }
 .tarefa-semana__feito { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--cor-area, var(--primaria)); background: transparent; padding: 0; margin-right: var(--e1); vertical-align: middle; cursor: pointer; }
 .tarefa-semana__feito--ok { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--cor-area, var(--primaria)); margin-right: var(--e1); vertical-align: middle; }
-.detalhe-bloco { border: 1px solid var(--borda); border-radius: 12px; background: var(--superficie); color: var(--texto); padding: var(--e3); max-width: 420px; width: calc(100% - 32px); }
+.detalhe-bloco { border: 1px solid var(--borda); border-radius: 12px; background-color: var(--superficie); color: var(--texto); padding: var(--e3); max-width: 420px; width: calc(100% - 32px); }
 .detalhe-bloco__titulo { font-size: var(--subtitulo-tam, 18px); margin: 0 0 var(--e2); }
 .detalhe-bloco__corpo p { margin: var(--e1) 0; color: var(--texto-secundario); font-size: var(--legenda-tam); }
 .detalhe-bloco__acoes { display: flex; gap: var(--e2); flex-wrap: wrap; margin-top: var(--e3); }

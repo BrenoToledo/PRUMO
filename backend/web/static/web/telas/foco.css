@@ -33,7 +33,7 @@
 
 .foco__intencao { display: flex; flex-direction: column; gap: 2px; }
 .foco__caixa {
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
   padding: var(--e3) var(--e4); display: flex; flex-direction: column; gap: var(--e1);
 }
 .foco__acoes { margin-top: auto; display: flex; gap: var(--e3); }
@@ -44,7 +44,7 @@
 .foco__dialogo {
   width: calc(100% - 2 * var(--e6)); max-width: 400px;
   border: 1px solid var(--borda); border-radius: var(--raio-card);
-  background: var(--superficie); color: var(--texto); padding: var(--e6);
+  background-color: var(--superficie); color: var(--texto); padding: var(--e6);
 }
 .foco__dialogo::backdrop { background: rgb(0 0 0 / .4); }
 .foco__dialogo h2 { margin: 0 0 var(--e1); font-size: var(--titulo-tam); line-height: var(--titulo-alt); font-weight: var(--titulo-peso); }
@@ -61,9 +61,8 @@
 .foco__campo {
   width: 100%; padding: var(--e3); resize: vertical;
   border: 1px solid var(--primaria); border-radius: var(--raio-campo);
-  background: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px; line-height: var(--corpo-alt);
+  background-color: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px; line-height: var(--corpo-alt);
 }
-.foco__campo:focus-visible { outline: 2px solid var(--primaria); outline-offset: -1px; }
 .foco__anotadas { padding: var(--e3) var(--e4); border-radius: var(--raio-campo); background: var(--primaria-suave); }
 .foco__anotadas ul { margin: var(--e1) 0 0; padding-left: var(--e4); }
 .foco__motivos { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--e2); }
@@ -87,7 +86,7 @@
 .fim__numeros { display: flex; gap: var(--e2); }
 .fim__numero {
   flex: 1; text-align: center; padding: var(--e3);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
   display: flex; flex-direction: column;
 }
 .fim__numero strong {
@@ -107,7 +106,7 @@
 }
 .fim__opcao {
   display: flex; align-items: center; gap: var(--e3); min-height: 56px; padding: var(--e3) var(--e4); cursor: pointer;
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
 }
 .fim__opcao input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--primaria); }
 .fim__opcao:has(input:checked) { background: var(--primaria-suave); border-color: var(--primaria); }
@@ -117,7 +116,7 @@
 .fim__restantes {
   display: flex; align-items: center; justify-content: space-between; gap: var(--e3);
   padding: var(--e2) var(--e2) var(--e2) var(--e4);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
 }
 .fim__form:not(:has(input[value="avancou"]:checked)) .fim__restantes { display: none; }
 .fim__contador { display: flex; align-items: center; gap: var(--e1); }

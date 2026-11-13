@@ -14,13 +14,13 @@
 .plano__confirmar {
   position: absolute; right: 0; top: calc(100% + var(--e2)); z-index: 5; width: min(300px, 80vw);
   display: flex; flex-direction: column; align-items: flex-end; gap: var(--e3); padding: var(--e4);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
   box-shadow: 0 4px 12px rgb(0 0 0 / .12);
 }
 .plano__confirmar p { margin: 0; font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
 
 .capacidade {
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
   padding: var(--e3) var(--e4); display: flex; flex-direction: column; gap: var(--e2);
 }
 .capacidade__linha { display: flex; justify-content: space-between; gap: var(--e3); flex-wrap: wrap; }
@@ -47,7 +47,7 @@
 .plano__blocos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e3); }
 
 .card-bloco {
-  background: var(--superficie); border: 1px solid var(--borda); border-left: 4px solid var(--cor-area);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-left: 4px solid var(--cor-area);
   border-radius: var(--raio-card); padding: var(--e3) var(--e4);
   display: flex; flex-direction: column; gap: var(--e1);
 }
@@ -84,7 +84,7 @@
   display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px;
   border-radius: var(--raio-chip); color: var(--texto-secundario);
 }
-.botao-icone:hover { color: var(--texto); background: var(--superficie); }
+.botao-icone:hover { color: var(--texto); background-color: var(--superficie); }
 .botao-icone:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
 
 /* Eventos do calendário (#73): compromissos entre os blocos, sem cor de área nem ações. */

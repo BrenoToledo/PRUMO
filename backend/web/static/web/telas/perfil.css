@@ -18,15 +18,14 @@
 .perfil__campo input {
   width: 100%; min-height: 48px; padding: 0 var(--e3);
   border: 1px solid var(--borda); border-radius: var(--raio-campo);
-  background: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px;
+  background-color: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px;
 }
-.perfil__campo input:focus-visible { outline: 2px solid var(--primaria); outline-offset: -1px; }
 .perfil__erro { margin: 0; color: var(--prioridade-critica); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
 
 .perfil__opcoes { display: flex; flex-direction: column; gap: var(--e3); }
 .opcao {
   display: flex; align-items: center; gap: var(--e3); min-height: 52px; padding: var(--e3) var(--e4);
-  border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--superficie); cursor: pointer;
+  border: 1px solid var(--borda); border-radius: var(--raio-card); background-color: var(--superficie); cursor: pointer;
 }
 .opcao input { accent-color: var(--primaria); width: 20px; height: 20px; margin: 0; flex: none; }
 .opcao:has(input:checked) { border-color: var(--primaria); background: var(--primaria-suave); }
@@ -38,7 +37,7 @@
 .chip-opcao input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .chip-opcao span {
   display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--e3);
-  border: 1px solid var(--borda); border-radius: var(--raio-chip); background: var(--superficie);
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); background-color: var(--superficie);
   font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: var(--micro-peso);
 }
 .chip-opcao input:checked + span { background: var(--primaria); border-color: var(--primaria); color: var(--texto-na-primaria); }

@@ -162,7 +162,8 @@ def financas(request):
         )
     mes = _mes_escolhido(request)
     painel = _painel(request.user, grupos[0]["household"], mes) if grupos else None
-    return render(request, "web/financas/financas.html", {"grupos": grupos, "painel": painel, "mes": mes})
+    contexto = {"aba": "financas", "grupos": grupos, "painel": painel, "mes": mes}
+    return render(request, "web/financas/financas.html", contexto)
 
 
 urlpatterns = [

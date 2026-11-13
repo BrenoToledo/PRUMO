@@ -2,11 +2,18 @@
 /* Filtros: mesmos campos de .campo; no computador, busca + 5 filtros + botão numa linha. */
 .filtros { display: grid; gap: var(--e2); grid-template-columns: 1fr; margin: 0 0 var(--e4); }
 .filtros .campo { margin: 0; color: var(--texto-secundario); }
-.filtros .campo select { min-height: 44px; padding: var(--e2) var(--e3); border: 1px solid var(--borda); border-radius: var(--raio-campo); background: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px; }
-.filtros .campo input:focus-visible, .filtros .campo select:focus-visible { outline: 2px solid var(--primaria); outline-offset: -1px; }
+.filtros .campo select { min-height: 44px; padding: var(--e2) var(--e3); border: 1px solid var(--borda); border-radius: var(--raio-campo); background-color: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px; }
 .filtros .botao { justify-self: start; transition: background var(--transicao), border-color var(--transicao); }
 .filtros .botao:hover { border-color: var(--primaria); }
-@media (min-width: 720px) { .filtros { grid-template-columns: minmax(200px, 2fr) repeat(5, minmax(0, 1fr)) auto; align-items: end; } }
+/* Celular: busca na largura toda e filtros dois a dois. Computador: busca e botão na primeira linha, os cinco filtros na segunda. */
+.filtros { grid-template-columns: 1fr 1fr; }
+.filtros .campo:first-child, .filtros .botao { grid-column: 1 / -1; }
+.filtros .botao { justify-self: stretch; }
+@media (min-width: 720px) {
+  .filtros { grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: end; }
+  .filtros .campo:first-child { grid-column: 1 / 5; grid-row: 1; }
+  .filtros .botao { grid-column: 5; grid-row: 1; }
+}
 
 .contagem { margin: 0 0 var(--e2); color: var(--texto-secundario); font-size: var(--legenda-tam); }
 .lista-tarefas { list-style: none; margin: 0 0 var(--e12); padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
@@ -25,7 +32,7 @@
 .lista-tarefas__bolinha:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
 .lista-tarefas__item {
   flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--e1); padding: var(--e2) var(--e4);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
   color: var(--texto); text-decoration: none;
   transition: border-color var(--transicao), background var(--transicao);
 }

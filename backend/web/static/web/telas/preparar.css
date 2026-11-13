@@ -25,7 +25,7 @@
 }
 
 .preparar__passo {
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
   padding: var(--e3) var(--e4); display: flex; flex-direction: column; gap: var(--e1);
 }
 .preparar__passo-topo { display: flex; align-items: center; justify-content: space-between; }
@@ -37,7 +37,7 @@
 
 .preparar__item {
   position: relative; display: flex; align-items: flex-start; gap: var(--e3); cursor: pointer;
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
   padding: var(--e3) var(--e4); transition: background var(--transicao), border-color var(--transicao);
 }
 .preparar__item input { position: absolute; opacity: 0; pointer-events: none; }
@@ -60,7 +60,7 @@
 .preparar__duracao input { position: absolute; opacity: 0; pointer-events: none; }
 .preparar__duracao span {
   display: inline-block; padding: var(--e1) var(--e3); border-radius: var(--raio-chip);
-  border: 1px solid var(--borda); background: var(--superficie);
+  border: 1px solid var(--borda); background-color: var(--superficie);
   font-size: var(--legenda-tam); line-height: var(--legenda-alt);
 }
 .preparar__duracao input:checked + span {

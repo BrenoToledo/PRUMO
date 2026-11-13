@@ -1,12 +1,12 @@
 /* Pessoas (M22, M23): quem espera de você, o aguardando com cobrança e o detalhe com pontualidade. */
 .pessoas__busca {
   display: flex; align-items: center; gap: var(--e2); margin: 0 0 var(--e4); padding: 0 var(--e3);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
 }
 .pessoas__busca svg { flex: none; width: 18px; height: 18px; color: var(--texto-secundario); }
 .pessoas__busca input { flex: 1; min-width: 0; min-height: 44px; border: 0; background: none; color: var(--texto); font: inherit; }
-.pessoas__busca input:focus { outline: none; }
-.pessoas__busca:focus-within { outline: 2px solid var(--primaria); outline-offset: -1px; }
+.pessoas__busca input, .pessoas__busca input:focus-visible { border: 0; box-shadow: none; outline: none; }
+.pessoas__busca:focus-within { border-color: var(--primaria); box-shadow: var(--anel); }
 .pessoas__secao, .pessoa__secao {
   display: flex; align-items: baseline; gap: var(--e2); margin: var(--e4) 0 var(--e2); color: var(--texto);
   font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso);
@@ -29,7 +29,7 @@
 
 .pessoa-card {
   display: flex; align-items: center; gap: var(--e3); padding: var(--e3) var(--e4);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
   color: var(--texto); text-decoration: none;
   transition: border-color var(--transicao), background var(--transicao);
 }
@@ -51,15 +51,20 @@ a.pessoa-card:focus-visible { outline: 2px solid var(--primaria); outline-offset
 .pessoa-card__nome { overflow-wrap: anywhere; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); color: var(--texto); text-decoration: none; }
 .pessoa-card__meta { overflow-wrap: anywhere; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); text-decoration: none; }
 .pessoa-card__acoes { display: flex; flex-direction: column; align-items: flex-end; gap: var(--e2); flex: none; }
+.pessoa-card--aguardando { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+.pessoa-card--aguardando .pessoa-card__acoes {
+  grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between;
+  padding-top: var(--e3); border-top: 1px solid var(--borda);
+}
 
 .selo {
   display: inline-flex; align-items: center; flex: none; padding: 2px var(--e2); border-radius: var(--raio-chip);
   background: var(--borda); color: var(--texto);
   font-size: var(--micro-tam); line-height: var(--micro-alt); font-weight: var(--micro-peso);
 }
-.selo--risco { background: color-mix(in srgb, var(--aviso) 15%, transparent); color: #9A4A03; }
-.selo--espera { background: color-mix(in srgb, var(--prioridade-alta) 12%, transparent); color: #9A3412; }
-.selo--ok { background: color-mix(in srgb, var(--sucesso) 15%, transparent); color: #166534; }
+.selo--risco { background: color-mix(in srgb, var(--aviso) 15%, transparent); color: color-mix(in srgb, var(--aviso) 72%, var(--texto)); }
+.selo--espera { background: color-mix(in srgb, var(--prioridade-alta) 12%, transparent); color: color-mix(in srgb, var(--prioridade-alta) 72%, var(--texto)); }
+.selo--ok { background: color-mix(in srgb, var(--sucesso) 15%, transparent); color: color-mix(in srgb, var(--sucesso) 72%, var(--texto)); }
 
 .pessoa__topo .botao, .pessoa__canais .botao { text-decoration: none; }
 .pessoa__topo { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); }
@@ -70,14 +75,14 @@ a.pessoa-card:focus-visible { outline: 2px solid var(--primaria); outline-offset
 .pontualidade__numeros { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--e2); margin: 0; }
 .pontualidade__numeros div {
   display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; padding: var(--e3) var(--e2);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); text-align: center;
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1); text-align: center;
 }
 .pontualidade__numeros dt { color: var(--texto-secundario); font-size: var(--micro-tam); line-height: var(--micro-alt); }
 .pontualidade__numeros dd { margin: 0; color: var(--primaria); font-size: var(--titulo-tam); line-height: var(--titulo-alt); font-weight: var(--titulo-peso); }
 
 .pessoa-item {
   display: flex; align-items: center; justify-content: space-between; gap: var(--e3); padding: var(--e3) var(--e4);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
   color: var(--texto); text-decoration: none;
 }
 .pessoa-item__titulo { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--texto); text-decoration: none; }
@@ -92,7 +97,7 @@ a.pessoa-card:focus-visible { outline: 2px solid var(--primaria); outline-offset
 .vinculos__novo summary { display: inline-flex; list-style: none; cursor: pointer; color: var(--primaria); }
 .vinculos__novo summary::-webkit-details-marker { display: none; }
 .vinculos__novo form { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--e2); margin-top: var(--e2); }
-.vinculos__novo select { min-height: 36px; padding: 0 var(--e2); border: 1px solid var(--borda); border-radius: var(--raio-campo); background: var(--superficie); color: var(--texto); font: inherit; font-size: var(--legenda-tam); }
+.vinculos__novo select { min-height: 36px; padding: 0 var(--e2); border: 1px solid var(--borda); border-radius: var(--raio-campo); background-color: var(--superficie); color: var(--texto); font: inherit; font-size: var(--legenda-tam); }
 
 @media (min-width: 900px) {
   .pessoa__pontualidade { grid-template-columns: 1fr 1fr; }
@@ -103,17 +108,16 @@ a.pessoa-card:focus-visible { outline: 2px solid var(--primaria); outline-offset
 .mensagem__motivo { margin: 0 0 var(--e4); }
 .mensagem__texto {
   width: 100%; min-height: 160px; padding: var(--e3) var(--e4); resize: vertical;
-  border: 1px solid var(--primaria); border-radius: var(--raio-card); background: var(--superficie); color: var(--texto);
+  border: 1px solid var(--primaria); border-radius: var(--raio-card); background-color: var(--superficie); color: var(--texto);
   font: inherit; font-size: var(--corpo-tam); line-height: var(--corpo-alt);
 }
-.mensagem__texto:focus { outline: 2px solid var(--primaria); outline-offset: 1px; }
 .mensagem__aviso {
   margin: 0; padding: var(--e3) var(--e4); border-radius: var(--raio-card); background: var(--primaria-suave);
   font-size: var(--legenda-tam); line-height: var(--legenda-alt);
 }
 .mensagem__lembrar {
   display: flex; align-items: center; justify-content: space-between; gap: var(--e3); padding: var(--e3) var(--e4);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
 }
 .mensagem__lembrar input { width: 22px; height: 22px; accent-color: var(--primaria); }
 .mensagem__acoes { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: var(--e3); margin-top: var(--e3); }

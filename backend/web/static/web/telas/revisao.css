@@ -4,7 +4,7 @@
 .revisao__numeros { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--e2); }
 .revisao__numero {
   flex: 1; min-width: 0; text-align: center; padding: var(--e3) var(--e2);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
   display: flex; flex-direction: column;
 }
 .revisao__numero strong {
@@ -15,7 +15,7 @@
 
 .revisao__cartao {
   padding: var(--e3) var(--e4);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
 }
 .revisao__subtitulo { margin: 0 0 var(--e2); font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
 .revisao__dica { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
@@ -33,7 +33,7 @@
 }
 .revisao__linha::after {
   content: ""; position: absolute; left: 1px; top: 50%; width: 8px; height: 8px; margin-top: -4px;
-  border-radius: 50%; background: var(--superficie); border: 2px solid var(--texto-secundario);
+  border-radius: 50%; background-color: var(--superficie); border: 2px solid var(--texto-secundario);
 }
 .revisao__linha:has(.revisao__chip--feito)::after { background: var(--primaria); border-color: var(--primaria); }
 .revisao__linha:has(.revisao__chip--aviso)::after { border-color: var(--aviso); }
@@ -68,7 +68,7 @@
 .revisao__atencao legend { padding: 0; margin-bottom: var(--e2); }
 .revisao__pilula {
   position: relative; display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--e3);
-  border: 1px solid var(--borda); border-radius: var(--raio-chip); background: var(--superficie); cursor: pointer;
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); background-color: var(--superficie); cursor: pointer;
   font-size: var(--legenda-tam); line-height: var(--legenda-alt);
 }
 .revisao__pilula input { position: absolute; opacity: 0; pointer-events: none; }

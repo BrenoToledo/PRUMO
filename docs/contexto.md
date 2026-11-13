@@ -72,9 +72,9 @@ Prumo é um gerenciador de tarefas e de atenção com IA. Nasceu de uma leitura 
 
 ## Design system (resumo)
 
-Cores (claro / escuro): primária `#0F766E` / `#2DD4BF`, primária suave `#CCFBF1` / `#134E4A`, fundo `#FAFAF7` / `#121413`, superfície `#FFFFFF` / `#1B1E1D`, borda `#E5E4DF` / `#2A2E2C`, texto `#1C1C1A` / `#ECECE8`, texto secundário `#6B6A65` / `#9A9C98`. Prioridade: crítica `#DC2626`, alta `#EA580C`, média `#CA8A04`, baixa `#64748B`. Áreas: Trabalho `#3B82F6`, Educação `#EC4899`, Saúde `#10B981`, Família `#F59E0B`, Religião `#8B5CF6`, Finanças `#84CC16`, Casa `#F97316`, Pessoal `#06B6D4`.
+Cores (claro / escuro): primária `#0F766E` / `#2DD4BF`, primária forte (hover) `#0B5E57` / `#5EEAD4`, primária suave `#DDF4EF` / `#153F3B`, fundo `#FAFAF7` / `#121413`, superfície `#FFFFFF` / `#1B1E1D`, superfície de apoio `#F4F3EE` / `#232726`, borda `#E7E5DF` / `#2B2F2D`, borda forte (campos e botões) `#D3D1C9` / `#3D423F`, texto `#1C1C1A` / `#ECECE8`, texto secundário `#6B6A65` / `#9FA19D`. Profundidade em três degraus (`--sombra-1` cartões, `--sombra-2` destaque, `--sombra-3` folhas) e `--anel` no foco dos campos. Prioridade: crítica `#DC2626`, alta `#EA580C`, média `#CA8A04`, baixa `#64748B`. Áreas: Trabalho `#3B82F6`, Educação `#EC4899`, Saúde `#10B981`, Família `#F59E0B`, Religião `#8B5CF6`, Finanças `#84CC16`, Casa `#F97316`, Pessoal `#06B6D4`.
 
-Tipografia Inter: Display 28/34 SemiBold, Título 20/28, Subtítulo 16/24 SemiBold, Corpo 16/24 (15/22 no desktop), Legenda 13/18, Micro 11/16 Medium, Timer 44/52 com números tabulares. Grade de 4 px; raio 8 em botões e campos, 12 em cards, 999 em chips. Uma ação principal por tela. Hover só no desktop.
+Tipografia Inter: Display 28/34 Bold, Título 20/28, Subtítulo 16/24 SemiBold, Corpo 16/24 (15/22 no desktop), Legenda 13/18, Micro 11/16 Medium, Timer 44/52 com números tabulares. Grade de 4 px; raio 10 em botões e campos, 14 em cards, 20 em folhas, 999 em chips. Menu do celular: quatro destinos (Hoje, Entrada, Tarefas, Projetos) e "Mais" com o resto, os ajustes, o tema e o Sair. Uma ação principal por tela. Hover só no desktop.
 
 ## Estado atual
 

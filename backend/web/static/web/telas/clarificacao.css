@@ -1,6 +1,6 @@
 /* Clarificação de um item da caixa de entrada (M16). */
 .clarificacao {
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
   padding: var(--e4); display: flex; flex-direction: column; gap: var(--e4);
   margin-bottom: var(--e12);
 }
@@ -20,10 +20,9 @@
 .clarificacao__campo select {
   width: 100%; min-height: 44px; padding: var(--e2) var(--e3);
   font-family: inherit; font-size: 16px; line-height: 24px; color: var(--texto);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo);
 }
 .clarificacao__campo input:focus,
-.clarificacao__campo select:focus { outline: 2px solid var(--primaria); outline-offset: -1px; }
 .clarificacao__campo input[aria-invalid="true"] { border-color: var(--prioridade-critica); }
 .clarificacao__campo .erro { margin: 0; }
 .clarificacao__linha { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); }
@@ -32,7 +31,7 @@
 .clarificacao__area input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .clarificacao__area span {
   display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 var(--e3);
-  border: 1px solid var(--borda); border-radius: var(--raio-chip); background: var(--superficie);
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); background-color: var(--superficie);
   font-size: var(--legenda-tam); line-height: var(--legenda-alt);
 }
 .clarificacao__area span::before {
@@ -76,7 +75,7 @@
 .chip-pessoa {
   display: inline-flex; align-items: center; gap: var(--e2);
   padding: var(--e1) var(--e1) var(--e1) var(--e3);
-  border: 1px solid var(--borda); border-radius: var(--raio-chip); background: var(--superficie);
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); background-color: var(--superficie);
 }
 .chip-pessoa__nome { font-weight: 600; white-space: nowrap; }
 .chip-pessoa select { border: 0; background: transparent; font: inherit; color: var(--texto-secundario); padding: 0; }

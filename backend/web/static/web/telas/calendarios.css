@@ -11,7 +11,7 @@
 .calendarios__titulo { margin: 0 0 var(--e1); font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
 .calendarios__novo input {
   padding: var(--e2) var(--e3); border: 1px solid var(--borda); border-radius: var(--raio-campo);
-  background: var(--superficie); color: var(--texto); font: inherit;
+  background-color: var(--superficie); color: var(--texto); font: inherit;
 }
 .calendarios__novo input[aria-invalid="true"] { border-color: var(--prioridade-critica); }
 .calendarios__novo .botao { align-self: flex-start; }
