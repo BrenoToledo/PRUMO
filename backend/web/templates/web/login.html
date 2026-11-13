@@ -4,7 +4,7 @@
 <main class="login">
   <form class="login__card" method="post" action="{% url 'web:login' %}">
     {% csrf_token %}
-    <h1 class="login__marca">Prumo</h1>
+    <h1 class="login__marca">{% include "web/_marca.html" %}</h1>
     <p class="login__sub">Entre para ver o seu dia.</p>
     {% if form.errors %}
       <p class="erro" role="alert">Usuário ou senha incorretos.</p>

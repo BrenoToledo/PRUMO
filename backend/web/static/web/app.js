@@ -37,6 +37,30 @@
       });
     }
 
+    // Menu do celular: "Mais" abre a folha com as outras páginas, o tema e o Sair. Fecha ao tocar fora ou com Esc.
+    const nav = document.querySelector(".nav");
+    const botaoMais = document.querySelector("[data-nav-mais]");
+    function alternarMais(abrir) {
+      if (abrir) nav.dataset.maisAberto = "";
+      else delete nav.dataset.maisAberto;
+      botaoMais.setAttribute("aria-expanded", String(abrir));
+    }
+    if (nav && botaoMais) {
+      botaoMais.addEventListener("click", function () {
+        alternarMais(!("maisAberto" in nav.dataset));
+      });
+      document.addEventListener("click", function (e) {
+        const dentro = e.target.closest("#nav-mais, [data-nav-mais]");
+        if (!dentro && "maisAberto" in nav.dataset) alternarMais(false);
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && "maisAberto" in nav.dataset) {
+          alternarMais(false);
+          botaoMais.focus();
+        }
+      });
+    }
+
     // Enter salva; Shift+Enter quebra a linha.
     document.addEventListener("keydown", function (e) {
       if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.target === campo()) {

@@ -19,14 +19,14 @@
 .revisao-semanal__quem svg { width: 16px; height: 16px; }
 .revisao-semanal__resposta {
   display: grid; gap: var(--e1); padding: var(--e3);
-  border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--superficie);
+  border: 1px solid var(--borda); border-radius: var(--raio-card); background-color: var(--superficie);
 }
 .revisao-semanal__resposta p { margin: 0; }
 .revisao-semanal .campo input { width: 100%; }
 .revisao-semanal__chips { display: flex; flex-wrap: wrap; gap: var(--e2); }
 .revisao-semanal__chip {
   min-height: 36px; padding: 0 var(--e3); border: 1px solid var(--borda); border-radius: var(--raio-chip);
-  background: var(--superficie); font: inherit; color: var(--texto); cursor: pointer;
+  background-color: var(--superficie); font: inherit; color: var(--texto); cursor: pointer;
 }
 .revisao-semanal__chip:hover, .revisao-semanal__chip:focus-visible { border-color: var(--primaria); color: var(--primaria); }
 .revisao-semanal__acoes { display: flex; justify-content: space-between; gap: var(--e3); margin-top: var(--e3); }

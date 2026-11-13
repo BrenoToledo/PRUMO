@@ -12,7 +12,7 @@ kbd {
   .painel-hoje {
     position: fixed; top: 0; right: 0; bottom: 0; width: 320px; overflow-y: auto;
     display: flex; flex-direction: column; gap: var(--e3);
-    padding: var(--e12) var(--e6); background: var(--superficie); border-left: 1px solid var(--borda);
+    padding: var(--e12) var(--e6); background-color: var(--superficie); border-left: 1px solid var(--borda);
   }
   .painel-hoje__topo { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e2); }
   .painel-hoje__cabecalho {

@@ -18,7 +18,7 @@
 
 .quebrou__opcao {
   display: flex; align-items: center; gap: var(--e3); min-height: 56px; padding: var(--e3) var(--e4);
-  border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--superficie); cursor: pointer;
+  border: 1px solid var(--borda); border-radius: var(--raio-card); background-color: var(--superficie); cursor: pointer;
 }
 .quebrou__opcao input { accent-color: var(--primaria); width: 20px; height: 20px; margin: 0; flex: none; }
 .quebrou__opcao:has(input:checked) { border-color: var(--primaria); background: var(--primaria-suave); }
@@ -30,7 +30,7 @@
 .quebrou__chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .quebrou__chip span {
   display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--e3);
-  border: 1px solid var(--borda); border-radius: var(--raio-chip); background: var(--superficie);
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); background-color: var(--superficie);
   font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: var(--micro-peso);
 }
 .quebrou__chip input:checked + span { background: var(--primaria); border-color: var(--primaria); color: var(--texto-na-primaria); }
@@ -47,7 +47,7 @@
 
 .proposta__lista {
   list-style: none; margin: 0 0 var(--e4); padding: var(--e2) var(--e4);
-  border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--superficie);
+  border: 1px solid var(--borda); border-radius: var(--raio-card); background-color: var(--superficie);
 }
 .proposta__item { display: flex; flex-direction: column; padding: var(--e2) 0; }
 .proposta__titulo { font-weight: var(--subtitulo-peso); }

@@ -77,6 +77,7 @@ def _contexto(request, form, salvo=False):
         atual = None
     folgas = sorted({*FOLGAS, *([atual] if atual is not None and 0 <= atual <= 0.9 else [])})
     return {
+        "aba": "perfil",
         "form": form,
         "salvo": salvo,
         "folgas": [

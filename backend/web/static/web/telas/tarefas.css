@@ -9,7 +9,7 @@
 .leve {
   display: flex; align-items: center; gap: var(--e3);
   min-height: 52px; padding: var(--e2) var(--e4);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
 }
 .leve form { display: flex; }
 .leve__circulo {
@@ -49,7 +49,7 @@
 
 .cartao {
   margin: 0; padding: var(--e3) var(--e4);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
 }
 .rotulo {
   margin: 0 0 var(--e1); color: var(--texto-secundario); text-transform: uppercase; letter-spacing: .04em;
@@ -124,9 +124,8 @@
 .form-tarefa input:not([type="checkbox"], [type="radio"]), .form-tarefa select {
   width: 100%; min-height: 44px; padding: 0 var(--e3);
   border: 1px solid var(--borda); border-radius: var(--raio-campo);
-  background: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px;
+  background-color: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px;
 }
-.form-tarefa input:focus-visible, .form-tarefa select:focus-visible { outline: 2px solid var(--primaria); outline-offset: -1px; }
 .form-tarefa__par { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); }
 .form-tarefa .form-tarefa__marca { flex-direction: row; align-items: center; align-self: end; min-height: 44px; }
 .form-tarefa__grupo { margin: var(--e2) 0 0; font-size: var(--subtitulo-tam); line-height: var(--subtitulo-alt); font-weight: var(--subtitulo-peso); }
@@ -136,7 +135,7 @@
 .notas { display: flex; gap: var(--e2); }
 .notas label {
   display: grid; place-items: center; min-width: 44px; min-height: 36px; padding: 0 var(--e3);
-  border: 1px solid var(--borda); border-radius: var(--raio-chip); background: var(--superficie);
+  border: 1px solid var(--borda); border-radius: var(--raio-chip); background-color: var(--superficie);
   color: var(--texto); cursor: pointer;
 }
 .notas input { position: absolute; opacity: 0; width: 1px; height: 1px; }
@@ -153,7 +152,7 @@
 .detalhe__acoes > * { flex: 1 1 0; min-width: 0; }
 .detalhe__acoes .botao { width: 100%; }
 .editar[open] ~ .detalhe__acoes .detalhe__concluir .botao--primario {
-  background: var(--superficie); border-color: var(--borda); color: var(--texto);
+  background-color: var(--superficie); border-color: var(--borda); color: var(--texto);
 }
 
 /* Adiar e cancelar (#19): cada ação abre o próprio formulário curto. */
@@ -167,12 +166,12 @@
 }
 .acao-extra__form {
   display: flex; flex-direction: column; gap: var(--e2); margin-top: var(--e3); padding: var(--e4);
-  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card);
+  background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); box-shadow: var(--sombra-1);
 }
 .acao-extra__form label { color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
 .acao-extra__form input {
   width: 100%; padding: var(--e3); border: 1px solid var(--borda); border-radius: var(--raio-campo);
-  background: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px; line-height: 24px;
+  background-color: var(--superficie); color: var(--texto); font-family: inherit; font-size: 16px; line-height: 24px;
 }
 .acao-extra__form .erro { margin: 0; }
 .acao-extra__dica { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
@@ -201,10 +200,10 @@
 .quebra__parte--nova { border-style: dashed; }
 .quebra__rotulo, .quebra__linha label { font-size: var(--legenda-tam); line-height: var(--legenda-alt); color: var(--texto-secundario); }
 .quebra__opcional { font-weight: 400; }
-.quebra__parte input[type="text"] { min-height: 44px; padding: 0 var(--e3); font: inherit; font-size: 16px; color: var(--texto); background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo); }
+.quebra__parte input[type="text"] { min-height: 44px; padding: 0 var(--e3); font: inherit; font-size: 16px; color: var(--texto); background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo); }
 .quebra__linha { display: flex; flex-wrap: wrap; gap: var(--e3); }
 .quebra__linha label { display: flex; align-items: center; gap: var(--e2); }
-.quebra__linha input, .quebra__linha select { min-height: 40px; font: inherit; color: var(--texto); background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo); }
+.quebra__linha input, .quebra__linha select { min-height: 40px; font: inherit; color: var(--texto); background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-campo); }
 .quebra__linha input { width: 72px; padding: 0 var(--e2); }
 .quebra__total { margin: 0; background: var(--fundo); }
 .quebra__acoes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e2); }

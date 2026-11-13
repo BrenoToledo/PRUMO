@@ -7,7 +7,7 @@
   flex: 0 0 auto; scroll-snap-align: center; box-sizing: border-box; height: 100px; min-width: 96px;
   display: flex; flex-direction: column; justify-content: space-between; align-items: center;
   padding: var(--e2) var(--e3) var(--e2); border: 1px solid var(--borda); border-radius: var(--raio-card);
-  background: var(--superficie); color: var(--texto); text-decoration: none;
+  background-color: var(--superficie); color: var(--texto); text-decoration: none;
   transition: border-color var(--transicao), background var(--transicao);
 }
 .financas__mes:hover { border-color: var(--primaria); }

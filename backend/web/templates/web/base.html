@@ -18,10 +18,11 @@
 {% block corpo %}
   <div class="app">
     <nav class="nav" aria-label="Navegação principal">
+      <a class="nav__marca" href="{% url 'web:hoje' %}">{% include "web/_marca.html" %}</a>
       <button class="nav__capturar" type="button" data-abrir-captura aria-keyshortcuts="Control+K Meta+K">
         Capturar ideia… <kbd>Ctrl+K</kbd>
       </button>
-      <ul>
+      <ul class="nav__principal">
         <li>
           <a class="nav__item" href="{% url 'web:hoje' %}"{% if aba == "hoje" %} aria-current="page"{% endif %}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-17.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
@@ -47,6 +48,15 @@
             Projetos
           </a>
         </li>
+        <li class="nav__mais-item">
+          <button class="nav__item nav__mais-botao" type="button" data-nav-mais aria-expanded="false" aria-controls="nav-mais">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+            Mais
+          </button>
+        </li>
+      </ul>
+      <div class="nav__mais" id="nav-mais">
+        <ul>
         <li>
           <a class="nav__item" href="{% url 'web:rotinas' %}"{% if aba == "rotinas" %} aria-current="page"{% endif %}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
@@ -77,19 +87,29 @@
             Finanças
           </a>
         </li>
-      </ul>
-      <div class="nav__tema">
-        <label for="tema-seletor">Tema</label>
-        <select id="tema-seletor" data-tema-seletor>
-          <option value="auto">Automático</option>
-          <option value="claro">Claro</option>
-          <option value="escuro">Escuro</option>
-        </select>
+        </ul>
+        <div class="nav__rodape">
+          <a class="nav__item" href="{% url 'web:perfil' %}"{% if aba == "perfil" %} aria-current="page"{% endif %}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>
+            Ajustes
+          </a>
+          <div class="nav__tema">
+            <label for="tema-seletor">Tema</label>
+            <select id="tema-seletor" data-tema-seletor>
+              <option value="auto">Automático</option>
+              <option value="claro">Claro</option>
+              <option value="escuro">Escuro</option>
+            </select>
+          </div>
+          <form class="nav__sair" method="post" action="{% url 'web:sair' %}">
+            {% csrf_token %}
+            <button class="nav__item" type="submit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              Sair
+            </button>
+          </form>
+        </div>
       </div>
-      <form class="nav__sair" method="post" action="{% url 'web:sair' %}">
-        {% csrf_token %}
-        <button class="botao botao--texto" type="submit">Sair</button>
-      </form>
     </nav>
     <main class="conteudo">
       {% block conteudo %}{% endblock %}

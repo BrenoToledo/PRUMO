@@ -5,7 +5,7 @@
 .tokens__alerta { margin: 0; color: var(--aviso); font-size: var(--legenda-tam); line-height: var(--legenda-alt); font-weight: 600; }
 .tokens__chave {
   width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 var(--e3);
-  border: 1px solid var(--borda); border-radius: var(--raio-card); background: var(--superficie); color: var(--texto);
+  border: 1px solid var(--borda); border-radius: var(--raio-card); background-color: var(--superficie); color: var(--texto);
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: var(--legenda-tam);
 }
 .tokens__uso { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
