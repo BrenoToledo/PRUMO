@@ -196,6 +196,68 @@ def test_aprovar_depois_de_mexer_fica_editada(usuario, tarefas):
     assert sugestao.status == SugestaoIA.Status.EDITADA
 
 
+# ---------------------------------------------------------------- a escolha do usuário vale ao aprovar (#161)
+SEXTA = date(2026, 10, 23)
+
+
+def _blocos_de(usuario, dia):
+    blocos = Bloco.objects.filter(usuario=usuario)
+    return sorted(b.tarefa_id for b in blocos if timezone.localtime(b.inicio_planejado).date() == dia)
+
+
+@freeze_time(SEG)
+def test_encaixe_da_proposta_intacta_e_o_que_ela_mostra(usuario, tarefas):
+    sugestao = services.propor_semana(usuario)
+
+    encaixe = services.encaixe_da_proposta(sugestao)
+
+    assert encaixe == {dia: {a["tarefa"]: a["blocos"] for a in alocadas} for dia, alocadas in _dias(sugestao).items()}
+
+
+@freeze_time(SEG)
+def test_encaixe_poe_na_frente_a_tarefa_trazida_de_nao_couberam(usuario, tarefas):
+    sugestao = services.propor_semana(usuario)
+    resto = {a["tarefa"]: a["blocos"] for a in _dias(sugestao)[SEXTA.isoformat()]}  # {Tarefa 2: 1, Tarefa 3: 2}
+    trazida = tarefas[4]  # 4 blocos em "não couberam"
+    sugestao = services.mover_na_proposta(sugestao, trazida.pk, de=None, para=SEXTA)
+
+    encaixe = services.encaixe_da_proposta(sugestao)[SEXTA.isoformat()]
+
+    assert resto == {tarefas[2].pk: 1, tarefas[3].pk: 2}
+    assert encaixe == {trazida.pk: 2, tarefas[2].pk: 1, tarefas[3].pk: 0}  # 2 por tarefa no dia, 3 de capacidade
+
+
+@freeze_time(SEG)
+def test_aprovar_mantem_no_dia_a_tarefa_trazida_de_nao_couberam(usuario, tarefas):
+    sugestao = services.propor_semana(usuario)
+    trazida = tarefas[4]
+    sugestao = services.mover_na_proposta(sugestao, trazida.pk, de=None, para=SEXTA)
+
+    services.aprovar_semana(sugestao)
+
+    assert _blocos_de(usuario, SEXTA) == sorted([trazida.pk, trazida.pk, tarefas[2].pk])
+    assert len(_blocos_de(usuario, SEXTA)) == 3  # a capacidade do dia não muda
+
+
+@freeze_time(SEG)
+def test_aprovar_avisa_as_que_nao_couberam_por_inteiro(usuario, tarefas):
+    sugestao = services.propor_semana(usuario)
+    trazida = tarefas[4]
+    sugestao = services.mover_na_proposta(sugestao, trazida.pk, de=None, para=SEXTA)
+
+    resultado = services.aprovar_semana(sugestao)
+
+    # a trazida pediu 4 e coube 2; a Tarefa 3 perdeu os 2 blocos da sexta
+    assert sorted(resultado["nao_couberam"]) == sorted([tarefas[3].pk, trazida.pk])
+
+
+@freeze_time(SEG)
+def test_aprovar_sem_mexer_nao_deixa_ninguem_de_fora(usuario, tarefas):
+    resultado = services.aprovar_semana(services.propor_semana(usuario))
+
+    assert resultado["nao_couberam"] == []
+
+
 @freeze_time(SEG)
 def test_aprovar_troca_os_blocos_planejados_mas_nao_os_feitos(usuario, tarefas):
     services.gerar_plano_do_dia(usuario)
