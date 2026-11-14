@@ -15,6 +15,7 @@ def test_tipos_na_ordem_de_prioridade():
         "revisao_diaria",
         "revisao_semanal",
         "caixa_entrada",
+        "gatilho_dia",
     ]
     assert nt.preferencias({}) == dict.fromkeys(nt.TIPOS, True)
     assert nt.preferencias({"caixa_entrada": False, "outro": True})["caixa_entrada"] is False
@@ -119,3 +120,51 @@ def test_limite_por_dia_guarda_os_mais_importantes():
 
     assert [a.tipo for a in escolhidos] == ["inicio_bloco", "revisao_diaria"]
     assert nt.filtrar(_avisos(), ligados=ligados, em_foco=False, nao_perturbe=True, ja_hoje=6, limite=6) == []
+
+
+# ---------------------------------------------------------------- gatilho por dia da semana (#40)
+SEXTA_10_23 = date(2026, 10, 23)
+
+
+def test_gatilho_vira_aviso_do_dia():
+    (aviso,) = nt.avisos_de_gatilho_dia([nt.TarefaParaGatilho(id=7, titulo="Abastecer o carro")], SEXTA_10_23)
+
+    assert aviso.tipo == "gatilho_dia"
+    assert aviso.chave == "gatilho:7:2026-10-23"
+    assert aviso.titulo == "Lembrete do dia"
+    assert aviso.texto == "Hoje é sexta-feira: Abastecer o carro."
+    assert aviso.alvo == 7
+
+
+def test_gatilho_sem_tarefas_nao_avisa():
+    assert nt.avisos_de_gatilho_dia([], SEXTA_10_23) == []
+
+
+def test_nomes_dos_dias_seguem_a_semana_do_python():
+    assert nt.NOMES_DIAS == (
+        "segunda-feira",
+        "terça-feira",
+        "quarta-feira",
+        "quinta-feira",
+        "sexta-feira",
+        "sábado",
+        "domingo",
+    )
+    (aviso,) = nt.avisos_de_gatilho_dia([nt.TarefaParaGatilho(id=1, titulo="Pagar IPVA")], date(2026, 10, 25))
+    assert aviso.texto == "Hoje é domingo: Pagar IPVA."
+
+
+def test_gatilho_perde_o_lugar_para_a_caixa_no_limite_do_dia():
+    caixa = nt.Aviso("caixa_entrada", "caixa:2026-10-23", "Caixa de entrada", "1 item esperando.")
+    gatilho = nt.avisos_de_gatilho_dia([nt.TarefaParaGatilho(id=1, titulo="Lista do mercado")], SEXTA_10_23)
+
+    escolhidos = nt.filtrar(
+        [*gatilho, caixa],
+        ligados=nt.preferencias({}),
+        em_foco=False,
+        nao_perturbe=False,
+        ja_hoje=0,
+        limite=1,
+    )
+
+    assert [a.tipo for a in escolhidos] == ["caixa_entrada"]

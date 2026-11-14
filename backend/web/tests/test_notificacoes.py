@@ -92,10 +92,11 @@ def test_perfil_tem_o_link_das_notificacoes(logado):
 def test_preferencias_mostram_os_tipos_ligados(logado):
     html = logado.get(reverse("web:preferencias_notificacoes")).content.decode()
 
-    for rotulo in ("Início de bloco", "Expectativa em risco", "Revisão do dia", "Revisão semanal", "Caixa de entrada"):
+    rotulos = ("Início de bloco", "Expectativa em risco", "Revisão do dia", "Revisão semanal", "Caixa de entrada")
+    for rotulo in (*rotulos, "Lembrete do dia"):
         assert rotulo in html
-    assert html.count('type="checkbox"') == 6  # 5 tipos + não perturbe
-    assert html.count("checked") == 6
+    assert html.count('type="checkbox"') == 7  # 6 tipos + não perturbe
+    assert html.count("checked") == 7  # os 6 tipos e o não perturbe, todos ligados
     assert 'value="6"' in html
     assert "Notificações no aparelho ainda não estão configuradas" in html
     assert "data-chave-push" not in html
@@ -178,3 +179,9 @@ def test_service_worker_trata_push_e_clique(logado):
     assert 'addEventListener("push"' in js
     assert "showNotification" in js
     assert 'addEventListener("notificationclick"' in js
+
+
+def test_preferencias_incluem_o_lembrete_do_dia(logado):
+    html = logado.get(reverse("web:preferencias_notificacoes")).content.decode()
+
+    assert "Lembrete do dia" in html
