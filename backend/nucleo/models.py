@@ -7,10 +7,16 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
+from . import notificacoes as nt
 from . import prioridade as motor
 from .pessoas import CADENCIA_MAX, CADENCIA_PADRAO
 
 Usuario = settings.AUTH_USER_MODEL
+
+
+# Decisão (DP-GT): o gatilho usa o dia da semana do Python (0 = segunda, como `date.weekday()`); os nomes vêm
+# da regra pura de notificações. Só gatilho por dia nesta história: agenda e pessoa ficam para outras (#40).
+DIAS_DO_GATILHO = list(enumerate(nome.capitalize() for nome in nt.NOMES_DIAS))
 
 
 class Esforco(models.TextChoices):
@@ -191,6 +197,9 @@ class Tarefa(models.Model):
         null=True, blank=True, help_text="Para tarefas curtas (lista rápida)."
     )
     esforco = models.CharField(max_length=5, choices=Esforco.choices, default=Esforco.MEDIO)
+    gatilho_dia = models.PositiveSmallIntegerField(
+        null=True, blank=True, choices=DIAS_DO_GATILHO, help_text="Avisa nesse dia da semana."
+    )
     respostas_importancia = models.JSONField(default=dict, blank=True)
     importancia = models.PositiveSmallIntegerField(default=0)
     urgencia = models.PositiveSmallIntegerField(default=0)

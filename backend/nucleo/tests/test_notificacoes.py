@@ -9,7 +9,7 @@ from freezegun import freeze_time
 
 from nucleo import services
 from nucleo import webpush as wp
-from nucleo.models import Bloco, Notificacao, PushInscricao, Revisao, TarefaPessoa
+from nucleo.models import Bloco, Notificacao, PushInscricao, Revisao, Tarefa, TarefaPessoa
 from nucleo.tests.apoio import nova_tarefa
 
 QUA_9H = "2026-10-21 12:00"  # 09:00 em São Paulo
@@ -242,3 +242,57 @@ def test_falha_de_rede_no_push_nao_perde_o_aviso(usuario, perfil, monkeypatch):
 
     assert len(services.gerar_notificacoes(usuario)) == 1
     assert PushInscricao.objects.count() == 1
+
+
+# ---------------------------------------------------------------- gatilho por dia da semana (#40)
+@freeze_time(SEX_18H)
+def test_gatilho_do_dia_vira_aviso_com_link_para_a_tarefa(usuario, perfil):
+    tarefa = nova_tarefa(usuario, "Lista do mercado", gatilho_dia=4)
+
+    (aviso,) = [n for n in services.gerar_notificacoes(usuario) if n.tipo == "gatilho_dia"]
+
+    assert aviso.titulo == "Lembrete do dia"
+    assert aviso.texto == "Hoje é sexta-feira: Lista do mercado."
+    assert aviso.url == f"/tarefas/{tarefa.pk}/"
+
+
+@freeze_time(SEX_18H)
+def test_gatilho_de_outro_dia_nao_avisa(usuario, perfil):
+    nova_tarefa(usuario, gatilho_dia=0)
+
+    assert "gatilho_dia" not in _tipos(services.gerar_notificacoes(usuario))
+
+
+@freeze_time(SEX_18H)
+def test_gatilho_so_vale_para_tarefa_aberta(usuario, perfil):
+    nova_tarefa(usuario, "Feita", gatilho_dia=4, status=Tarefa.Status.CONCLUIDA)
+    nova_tarefa(usuario, "Cancelada", gatilho_dia=4, status=Tarefa.Status.CANCELADA)
+
+    assert "gatilho_dia" not in _tipos(services.gerar_notificacoes(usuario))
+
+
+@freeze_time(SEX_18H)
+def test_gatilho_avisa_uma_vez_por_dia(usuario, perfil):
+    nova_tarefa(usuario, gatilho_dia=4)
+
+    services.gerar_notificacoes(usuario)
+
+    assert services.gerar_notificacoes(usuario) == []
+    assert Notificacao.objects.filter(usuario=usuario, tipo="gatilho_dia").count() == 1
+
+
+@freeze_time(SEX_18H)
+def test_gatilho_desligado_nao_avisa(usuario, perfil):
+    services.salvar_preferencias_de_avisos(
+        usuario, avisos={"gatilho_dia": False}, nao_perturbe_foco=True, limite_avisos_dia=6
+    )
+    nova_tarefa(usuario, gatilho_dia=4)
+
+    assert "gatilho_dia" not in _tipos(services.gerar_notificacoes(usuario))
+
+
+@freeze_time(SEX_18H)
+def test_gatilho_de_outra_pessoa_nao_avisa_aqui(usuario, outra, perfil):
+    nova_tarefa(outra, gatilho_dia=4)
+
+    assert "gatilho_dia" not in _tipos(services.gerar_notificacoes(usuario))

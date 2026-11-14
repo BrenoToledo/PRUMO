@@ -495,6 +495,19 @@ Tela M27 (épico #39; histórias #157, #158 e #159). Só leitura: nada é aplica
 
 As regras puras ficam em `nucleo/padroes.py` (sem Django); `AderenciaPeriodo`, `Calibracao` e `UltimaHora` são dataclasses de lá.
 
+## Gatilho por dia da semana (#40, Fase 2)
+
+História do épico #40 (gatilhos de contexto, RF21, tela M35). Só o gatilho por dia da semana: uma tarefa com `gatilho_dia` vira um aviso no dia escolhido. Os gatilhos por evento da agenda e por pessoa ficam para outras histórias (o da agenda depende dos eventos do Prumo, #163). Sem rota REST nova: `TarefaSerializer` não muda.
+
+| Parte | Contrato |
+| --- | --- |
+| Modelo | `Tarefa.gatilho_dia`: `PositiveSmallIntegerField(null, blank)`, 0 segunda a 6 domingo (como `date.weekday()`). `None` = sem gatilho. Migração `nucleo.0016_tarefa_gatilho_dia` |
+| Formulário | `TarefaForm` ganha o campo `gatilho_dia` ("Lembrar nesse dia", com a opção vazia "Nenhum"). Gravado pela rota existente `web:editar_tarefa`, sem rota nova |
+| Regra pura | `nucleo/notificacoes.py`: tipo `gatilho_dia` (rótulo "Lembrete do dia"), o último da ordem de prioridade, para o limite do dia cortar primeiro. `NOMES_DIAS` (segunda-feira a domingo), `TarefaParaGatilho(id, titulo)` e `avisos_de_gatilho_dia(tarefas, hoje) -> list[Aviso]` |
+| Aviso | Um por tarefa e dia: chave `gatilho:<id>:<AAAA-MM-DD>`, título "Lembrete do dia", texto "Hoje é <dia da semana>: <título>.", `alvo` = id da tarefa. Link `web:tarefa` |
+| Serviço | `services._avisos_candidatos` junta as tarefas `aberta` do usuário cujo `gatilho_dia` é o dia local de hoje. Passa pelo mesmo filtro de preferências, foco e limite dos demais avisos |
+| Preferência (M34) | O tipo novo aparece sozinho em `web:preferencias_notificacoes`, ligado por padrão |
+
 ## Mudar um contrato
 
 Um contrato só muda num commit próprio na branch `contratos-api` (ou numa nova a partir do main) que altera, juntos, `nucleo/contratos.py`, este arquivo e, se for REST, `docs/api.md`. As branches que dependem dele fazem merge desse commit. Nunca mude uma assinatura ou um campo dentro de uma branch de etapa.
