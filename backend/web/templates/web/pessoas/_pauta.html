@@ -1,0 +1,27 @@
+<section class="pauta-reuniao">
+  <h2 class="pessoa__secao">Pauta para a reunião com {{ p.nome }}</h2>
+
+  <h3 class="pessoa__secao">Entregue nos últimos {{ dias_janela }} dias</h3>
+  {% if pauta.entregues %}<ul class="pessoas__lista">
+    {% for e in pauta.entregues %}<li class="pessoa-item">
+      <a class="pessoa-item__titulo" href="{% url 'web:tarefa' e.tarefa.pk %}">{{ e.tarefa.titulo }}</a>
+      <span class="selo selo--ok">{% if e.de_voce %}Você entregou{% else %}{{ p.nome }} entregou{% endif %} · {{ e.entregue_em|date:"j b" }}</span>
+    </li>{% endfor %}
+  </ul>{% else %}<p class="pessoa__vazio">Nada entregue nos últimos {{ dias_janela }} dias.</p>{% endif %}
+
+  <h3 class="pessoa__secao">Pendente de você ({{ pauta.pendentes_de_voce|length }})</h3>
+  {% if pauta.pendentes_de_voce %}<ul class="pessoas__lista">
+    {% for e in pauta.pendentes_de_voce %}<li class="pessoa-item">
+      <a class="pessoa-item__titulo" href="{% url 'web:tarefa' e.tarefa.pk %}">{{ e.tarefa.titulo }}</a>
+      {% if e.em_risco %}<span class="selo selo--risco">{% if e.prazo < hoje %}venceu {{ e.prazo|date:"j b" }}{% else %}folga {{ e.folga|floatformat:1 }}x{% endif %} · em risco</span>{% elif e.prazo %}<span class="selo selo--ok">{{ e.prazo|date:"j b" }} · no prazo</span>{% else %}<span class="selo">sem prazo</span>{% endif %}
+    </li>{% endfor %}
+  </ul>{% else %}<p class="pessoa__vazio">Nada aberto que {{ p.nome }} espere de você.</p>{% endif %}
+
+  <h3 class="pessoa__secao">O que você espera dela ({{ pauta.espera_de_ela|length }})</h3>
+  {% if pauta.espera_de_ela %}<ul class="pessoas__lista">
+    {% for i in pauta.espera_de_ela %}<li class="pessoa-item">
+      <a class="pessoa-item__titulo" href="{% url 'web:tarefa' i.tarefa.pk %}">{{ i.tarefa.titulo }}</a>
+      <span class="selo selo--espera">{% if i.cobrar_hoje %}cobrar hoje · {% endif %}há {{ i.dias }} dia{{ i.dias|pluralize }}</span>
+    </li>{% endfor %}
+  </ul>{% else %}<p class="pessoa__vazio">Você não está esperando nada de {{ p.nome }}.</p>{% endif %}
+</section>

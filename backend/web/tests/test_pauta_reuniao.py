@@ -8,8 +8,8 @@ from django.utils import timezone
 from freezegun import freeze_time
 
 from nucleo import services
-from nucleo.tests.apoio import nova_tarefa
 from nucleo.models import TarefaPessoa
+from nucleo.tests.apoio import nova_tarefa
 
 HX = {"HTTP_HX_REQUEST": "true"}
 HOJE = "2026-10-19 11:00"  # 08:00 em São Paulo, segunda

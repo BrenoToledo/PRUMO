@@ -13,6 +13,10 @@ Rotas do contrato:
   `vinculos/<pk>/remover/` → `web:desvincular_pessoa`: a lista de pessoas do detalhe da tarefa (M04), no parcial
   `web/pessoas/_vinculos.html`.
 
+Pauta de reunião (#170, RF28; tela M23):
+- GET `pessoas/<pk>/pauta/` → `web:pauta`, chama `services.pauta_da_reuniao`. Com HTMX devolve o parcial
+  `web/pessoas/_pauta.html` (troca em `#pauta-reuniao`, na M23); sem HTMX, a página `web/pessoas/pauta.html`.
+
 Mensagem de follow-up (P17, issue #87; tela M24):
 - POST `mensagens/vinculo/<vinculo>/` → `web:redigir_mensagem` (`novo` = Reescrever), chama `services.redigir_mensagem`
   e leva a `web:mensagem`.
@@ -138,6 +142,22 @@ def pessoa(request, pk):
         "hoje": services.hoje(),
     }
     return render(request, "web/pessoas/detalhe.html", contexto)
+
+
+@require_GET
+@login_required
+def pauta(request, pk):
+    p = _pessoa_do_usuario(request, pk)
+    contexto = {
+        "aba": "pessoas",
+        "p": p,
+        "pauta": services.pauta_da_reuniao(p),
+        "dias_janela": pes.JANELA_ENTREGAS_DIAS,
+        "hoje": services.hoje(),
+    }
+    if eh_htmx(request):
+        return render(request, "web/pessoas/_pauta.html", contexto)
+    return render(request, "web/pessoas/pauta.html", contexto)
 
 
 @require_http_methods(["GET", "POST"])
@@ -297,6 +317,7 @@ urlpatterns = [
     path("pessoas/", pessoas, name="pessoas"),
     path("pessoas/nova/", nova_pessoa, name="nova_pessoa"),
     path("pessoas/<int:pk>/", pessoa, name="pessoa"),
+    path("pessoas/<int:pk>/pauta/", pauta, name="pauta"),
     path("pessoas/<int:pk>/editar/", editar_pessoa, name="editar_pessoa"),
     path("pessoas/<int:pk>/excluir/", excluir_pessoa, name="excluir_pessoa"),
     path("aguardando/<int:pk>/cobrei/", cobrei, name="cobrei"),
