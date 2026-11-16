@@ -495,6 +495,19 @@ Tela M27 (épico #39; histórias #157, #158 e #159). Só leitura: nada é aplica
 
 As regras puras ficam em `nucleo/padroes.py` (sem Django); `AderenciaPeriodo`, `Calibracao` e `UltimaHora` são dataclasses de lá.
 
+## Lançamentos no cartão pela API (#172, finanças)
+
+Rotas REST em `/api/financas/households/{id}/lancamentos/`, no mesmo padrão das rotas de finanças já mescladas (ids inteiros, envelope `results`, erros em `application/problem+json`). Usam `services.criar_lancamento` e `services.lancamentos_visiveis`, sem serviço novo.
+
+| Método e rota | Entrada | Saída | Erros |
+| --- | --- | --- | --- |
+| `GET /financas/households/{id}/lancamentos/` | — | `200 {"results": [Lancamento]}`, só os visíveis ao usuário, mais recentes primeiro (`data_compra` desc, `id` desc) | `404` se não for membro |
+| `POST /financas/households/{id}/lancamentos/` | `{cartao_id, descricao, valor_centavos, data_compra, n_parcelas?, visibilidade?}` | `201 {"results": [Lancamento, uma por parcela]}` | `404` não membro; `403` `Sem permissão` se o usuário não for titular da conta; `422` `Lançamento inválido` para cartão fora do household, campo ausente ou inválido, valor não positivo, data que não é `AAAA-MM-DD`, parcelas abaixo de 1, visibilidade fora de `compartilhado`/`privado` |
+
+Objeto `Lancamento`: `{id, cartao_id, descricao, valor_centavos, data_compra, parcela_numero, total_parcelas, mes_fatura, visibilidade, criado_por_id}`. `data_compra` em `AAAA-MM-DD`; `mes_fatura` em `AAAA-MM`; valores em centavos inteiros.
+
+Padrões: `n_parcelas` vale 1 quando ausente e `visibilidade` vale `compartilhado`. Fora desta entrega: divisão na API, edição, exclusão, filtros e tela web.
+
 ## Mudar um contrato
 
 Um contrato só muda num commit próprio na branch `contratos-api` (ou numa nova a partir do main) que altera, juntos, `nucleo/contratos.py`, este arquivo e, se for REST, `docs/api.md`. As branches que dependem dele fazem merge desse commit. Nunca mude uma assinatura ou um campo dentro de uma branch de etapa.
