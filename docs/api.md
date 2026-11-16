@@ -86,6 +86,8 @@ As preferências da M34 ficam em `GET/PATCH /perfil/`: `avisos` (`{tipo: bool}`;
 | Método e rota | O que faz | Tela |
 | --- | --- | --- |
 | `GET /financas/households/{id}/dashboard/?mes=AAAA-MM` | Início: `total_mes`, `cartoes` (total do mês por cartão), `previsao` (próximas 3 faturas) e `serie` (de 3 meses antes a 6 depois, `[{mes, total_centavos}]`, para o carrossel de meses). Só entram lançamentos que o usuário pode ver. `400` se `mes` não for `AAAA-MM` com mês de 01 a 12; `404` se não for membro do household | Início (em construção) |
+| `GET /financas/households/{id}/lancamentos/` | Lançamentos que o usuário pode ver, mais recentes primeiro. `404` se não for membro | Sem tela ainda |
+| `POST /financas/households/{id}/lancamentos/` | Lança uma compra no cartão da casa (`cartao_id`, `descricao`, `valor_centavos`, `data_compra` `AAAA-MM-DD`, `n_parcelas` padrão 1, `visibilidade` padrão `compartilhado`). Compra parcelada gera uma linha por parcela, cada uma na fatura do mês. `201` com `results`; `403` se não for titular da conta; `422` se algum campo for inválido; `404` se não for membro | Sem tela ainda |
 
 Valores em centavos inteiros. O contrato completo das finanças está em `financas/openapi.yaml`.
 

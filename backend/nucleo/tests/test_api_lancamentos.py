@@ -40,7 +40,9 @@ def casa(breno, paloma):
     """Household com a conta do Breno (titular), Paloma como leitora e um cartão da conta."""
     household = services.criar_household(breno, nome="Casa Toledo")
     services.adicionar_membro(household, paloma, papel="membro", por=breno)
-    conta = services.criar_conta(household, nome="Conta do Breno", propriedade=Conta.Propriedade.INDIVIDUAL, titular=breno)
+    conta = services.criar_conta(
+        household, nome="Conta do Breno", propriedade=Conta.Propriedade.INDIVIDUAL, titular=breno
+    )
     services.conceder_acesso(conta, paloma, papel=AcessoConta.Papel.LEITOR, por=breno)
     cartao = services.criar_cartao(
         conta,
