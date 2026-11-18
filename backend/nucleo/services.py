@@ -2876,6 +2876,13 @@ def households_do_usuario(usuario):
     return list(Household.objects.filter(membros__usuario=usuario).distinct())
 
 
+def listar_membros(household):
+    """Vínculos da casa, na ordem de entrada. Só leitura: não grava nada."""
+    from .models import MembroHousehold
+
+    return MembroHousehold.objects.filter(household=household).select_related("usuario").order_by("pk")
+
+
 class ErroDeNegocio(Exception):
     """Regra de negócio violada (ex.: conta conjunta com um membro só)."""
 
