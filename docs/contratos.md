@@ -521,6 +521,22 @@ Vínculo "envolvida" fica de fora. A regra pura fica em `nucleo/pessoas.py` (sem
 
 Para não repetir código, `detalhe_pessoa` e a pauta dividem `_espera_de_voce(pessoa, dia)`. O retorno de `detalhe_pessoa` não muda.
 
+## Membros do household na API (#176, finanças)
+
+Rota REST nova e aditiva, sem tela e sem migração. Segue o padrão já mesclado da API de finanças (ids inteiros, envelope `results`, erros em `application/problem+json`); o `financas/openapi.yaml` usa UUID e envelope `data`, divergência que segue para decisão separada.
+
+| Método e rota | Serviço | Quem pode |
+| --- | --- | --- |
+| `GET /api/financas/households/{id}/membros/` | `services.listar_membros(household) -> QuerySet[MembroHousehold]` | Qualquer membro do household |
+
+Resposta `200`: `{"results": [{"id", "nome", "papel"}]}`, na ordem de entrada.
+
+- `id`: pk do vínculo `MembroHousehold` (mesmo valor que o `Dono` de um gasto usa para `member`).
+- `nome`: `usuario.get_full_name()`, ou `usuario.username` quando vazio.
+- `papel`: `admin` ou `membro`, os valores de `MembroHousehold.Papel`.
+- Erros: `404` para quem não é membro do household (ou se a casa não existe), sem revelar qual dos dois; como nas demais rotas de finanças, o corpo é o padrão do DRF (`{"detail": "Not found."}`); sem login, a resposta é recusada pelo DRF (`401` ou `403`). `POST` responde `405`.
+
+
 ## Mudar um contrato
 
 Um contrato só muda num commit próprio na branch `contratos-api` (ou numa nova a partir do main) que altera, juntos, `nucleo/contratos.py`, este arquivo e, se for REST, `docs/api.md`. As branches que dependem dele fazem merge desse commit. Nunca mude uma assinatura ou um campo dentro de uma branch de etapa.
