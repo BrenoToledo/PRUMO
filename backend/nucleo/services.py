@@ -2034,7 +2034,7 @@ def trocar_na_proposta(sugestao: SugestaoIA, a: int, b: int, *, de_a: date | Non
 
 
 # --------------------------------------------------------------------------- pessoas e follow-up (P16)
-CAMPOS_PESSOA = ("nome", "papel", "email", "whatsapp", "teams", "cadencia_dias")
+CAMPOS_PESSOA = ("nome", "papel", "email", "whatsapp", "teams", "cadencia_dias", "influencia", "interesse")
 
 
 def filtrar_por_nome(pessoas: QuerySet[Pessoa], busca: str) -> QuerySet[Pessoa]:
@@ -2067,6 +2067,18 @@ def atualizar_pessoa(pessoa: Pessoa, dados: dict) -> Pessoa:
 def excluir_pessoa(pessoa: Pessoa) -> None:
     """Os vínculos saem junto (CASCADE); as tarefas ficam."""
     pessoa.delete()
+
+
+def mapa_de_stakeholders(usuario) -> list[tuple[str, str, list[Pessoa]]]:
+    """Pessoas por quadrante de influência × interesse: (chave, título, pessoas), sempre as cinco entradas.
+
+    Só lê: nada é gravado. Quem não tem as duas classificações cai em `sem`.
+    """
+    titulos = {**dict(pes.QUADRANTES), pes.SEM_QUADRANTE: "Sem classificação"}
+    grupos: dict[str, list[Pessoa]] = {chave: [] for chave in titulos}
+    for pessoa in Pessoa.objects.filter(usuario=usuario).order_by("nome"):
+        grupos[pes.quadrante(pessoa.influencia, pessoa.interesse) or pes.SEM_QUADRANTE].append(pessoa)
+    return [(chave, titulos[chave], pessoas) for chave, pessoas in grupos.items()]
 
 
 def vincular_pessoa(tarefa: Tarefa, pessoa: Pessoa, relacao: str) -> TarefaPessoa:
