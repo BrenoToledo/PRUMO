@@ -510,6 +510,29 @@ Resposta `200`: `{"results": [{"id", "nome", "papel"}]}`, na ordem de entrada.
 - `papel`: `admin` ou `membro`, os valores de `MembroHousehold.Papel`.
 - Erros: `404` para quem não é membro do household (ou se a casa não existe), sem revelar qual dos dois; como nas demais rotas de finanças, o corpo é o padrão do DRF (`{"detail": "Not found."}`); sem login, a resposta é recusada pelo DRF (`401` ou `403`). `POST` responde `405`.
 
+## Mapa de stakeholders (#44, RF36, M22)
+
+Uma pessoa ganha duas classificações opcionais: `influencia` e `interesse`, cada uma `alta` ou `baixa`; vazio significa sem classificação. A regra pura `quadrante(influencia, interesse)` em `nucleo/pessoas.py` (sem Django) devolve a chave do quadrante ou `None`.
+
+| Quadrante | Chave | Influência | Interesse |
+| --- | --- | --- | --- |
+| Gerenciar de perto | `gerenciar` | alta | alta |
+| Manter satisfeito | `satisfeito` | alta | baixa |
+| Manter informado | `informado` | baixa | alta |
+| Monitorar | `monitorar` | baixa | baixa |
+| Sem classificação | `sem` | vazio | ou vazio |
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `mapa_de_stakeholders(usuario)` | `list[tuple[str, str, list[Pessoa]]]` (chave, título, pessoas) | Sempre as cinco entradas, na ordem da tabela; `sem` por último. Pessoas por nome. Só do usuário; não grava nada |
+| `CAMPOS_PESSOA` | acrescenta `influencia` e `interesse` | `criar_pessoa` e `atualizar_pessoa` aceitam os dois; valor fora de `alta`/`baixa`/vazio: `ValidationError` |
+
+Modelo: `Pessoa.influencia` e `Pessoa.interesse` (texto de 5 caracteres, com escolhas, `blank=True`). Migração `nucleo.0016_pessoa_mapa`, só de acréscimo.
+
+Tela: GET `pessoas/mapa/` → `web:mapa_pessoas`, página completa (M22, visão Mapa), usa `services.mapa_de_stakeholders`; POST: 405. Cada nome leva a `web:pessoa`. O formulário de `web:nova_pessoa` e `web:editar_pessoa` ganha os selects "Influência" e "Interesse" (primeira opção "Não classificar").
+
+API REST: sem mudança. `PessoaSerializer` não expõe os campos novos; `docs/api.md` não muda.
+
 ## Mudar um contrato
 
 Um contrato só muda num commit próprio na branch `contratos-api` (ou numa nova a partir do main) que altera, juntos, `nucleo/contratos.py`, este arquivo e, se for REST, `docs/api.md`. As branches que dependem dele fazem merge desse commit. Nunca mude uma assinatura ou um campo dentro de uma branch de etapa.
