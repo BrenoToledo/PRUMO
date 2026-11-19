@@ -1,0 +1,26 @@
+{% extends "web/base.html" %}
+{% block titulo %}Mapa de pessoas{% endblock %}
+{% block estilos %}{% include "web/pessoas/_cabeca.html" %}{% endblock %}
+{% block conteudo %}
+{% include "web/_cabecalho.html" with titulo="Mapa de pessoas" sub="Influência e interesse de cada pessoa." %}
+<a class="pessoas__mapa-link" href="{% url 'web:pessoas' %}">Ver lista de pessoas</a>
+<div class="mapa">
+  <p class="mapa__legenda">Influência: alta em cima. Interesse: alto à direita.</p>
+  {% if not tem_pessoas %}<p class="mapa__vazio">Nenhuma pessoa cadastrada ainda. <a href="{% url 'web:nova_pessoa' %}">Cadastrar pessoa</a></p>{% endif %}
+  <div class="mapa__grade">
+    {% for chave, titulo, pessoas in mapa %}{% if chave != "sem" %}
+    <section class="mapa__quadrante mapa__quadrante--{{ chave }}" data-quadrante="{{ chave }}" aria-labelledby="quadrante-{{ chave }}">
+      <h2 id="quadrante-{{ chave }}" class="mapa__titulo">{{ titulo }}</h2>
+      <ul class="mapa__nomes">{% for pessoa in pessoas %}<li><a href="{% url 'web:pessoa' pessoa.pk %}">{{ pessoa.nome }}</a></li>{% empty %}<li class="mapa__ninguem">Ninguém aqui</li>{% endfor %}</ul>
+    </section>
+    {% endif %}{% endfor %}
+  </div>
+  {% for chave, titulo, pessoas in mapa %}{% if chave == "sem" %}
+  <section class="mapa__quadrante mapa__quadrante--sem" data-quadrante="sem" aria-labelledby="quadrante-sem">
+    <h2 id="quadrante-sem" class="mapa__titulo">{{ titulo }}</h2>
+    <p class="mapa__legenda">Defina influência e interesse no cadastro da pessoa.</p>
+    <ul class="mapa__nomes">{% for pessoa in pessoas %}<li><a href="{% url 'web:pessoa' pessoa.pk %}">{{ pessoa.nome }}</a></li>{% empty %}<li class="mapa__ninguem">Todas as pessoas estão classificadas</li>{% endfor %}</ul>
+  </section>
+  {% endif %}{% endfor %}
+</div>
+{% endblock %}

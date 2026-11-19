@@ -14,6 +14,13 @@
   {% include "web/pessoas/_campo.html" with campo=form.email tipo="email" opcional=True exemplo="gestor@empresa.com" %}
   {% include "web/pessoas/_campo.html" with campo=form.whatsapp tipo="tel" opcional=True exemplo="11 98765-4321" %}
   {% include "web/pessoas/_campo.html" with campo=form.teams tipo="text" opcional=True exemplo="e-mail usado no Teams" %}
+  {% for campo, dica in nivel_campos %}
+  <div class="projeto-form__campo">
+    <label class="projeto-form__rotulo" for="id_{{ campo.name }}">{{ campo.label }}</label>
+    <select id="id_{{ campo.name }}" name="{{ campo.name }}" aria-describedby="dica-{{ campo.name }}">{% for valor, texto in campo.field.choices %}<option value="{{ valor }}"{% if campo.value == valor %} selected{% endif %}>{{ texto }}</option>{% endfor %}</select>
+    <p id="dica-{{ campo.name }}" class="pessoa__dica">{{ dica }}</p>
+  </div>
+  {% endfor %}
   <div class="projeto-form__campo">
     <label class="projeto-form__rotulo" for="id_cadencia_dias">Cobrar a cada (dias)</label>
     <input id="id_cadencia_dias" name="cadencia_dias" type="number" min="1" max="60" inputmode="numeric" required aria-describedby="dica-cadencia{% if form.cadencia_dias.errors %} erro-cadencia_dias{% endif %}"

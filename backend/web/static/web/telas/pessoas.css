@@ -123,3 +123,20 @@ a.pessoa-card:focus-visible { outline: 2px solid var(--primaria); outline-offset
 .mensagem__acoes { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: var(--e3); margin-top: var(--e3); }
 .mensagem__acoes .botao { text-decoration: none; }
 .pessoa__acao { display: inline; }
+
+/* Mapa de pessoas (#178, RF36): quatro quadrantes de influência × interesse; sem classificação embaixo. */
+.pessoas__mapa-link { display: inline-flex; align-items: center; min-height: 44px; margin: var(--e2) 0; color: var(--primaria); font-weight: var(--corpo-peso); }
+.mapa { display: grid; gap: var(--e3); margin: var(--e3) 0; min-width: 0; }
+.mapa__legenda { margin: 0; color: var(--texto-secundario); font-size: var(--legenda-tam); line-height: var(--legenda-alt); }
+.mapa__vazio { margin: 0; color: var(--texto-secundario); }
+.mapa__grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e2); }
+.mapa__quadrante { min-width: 0; padding: var(--e3); background-color: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-card); }
+.mapa__quadrante--satisfeito { order: 1; }
+.mapa__quadrante--gerenciar { order: 2; border-color: var(--primaria); }
+.mapa__quadrante--monitorar { order: 3; }
+.mapa__quadrante--informado { order: 4; }
+.mapa__titulo { margin: 0 0 var(--e2); color: var(--texto); font-size: var(--corpo-tam); line-height: var(--corpo-alt); font-weight: var(--subtitulo-peso); }
+.mapa__nomes { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--e1); }
+.mapa__nomes a { color: var(--texto); overflow-wrap: anywhere; }
+.mapa__ninguem { color: var(--texto-secundario); font-size: var(--legenda-tam); }
+.mapa__quadrante--sem .mapa__nomes { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
