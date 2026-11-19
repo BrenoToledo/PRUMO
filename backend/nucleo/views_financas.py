@@ -39,6 +39,11 @@ def _json_household(h):
     return {"id": h.pk, "nome": h.nome}
 
 
+def _json_membro(vinculo):
+    usuario = vinculo.usuario
+    return {"id": vinculo.pk, "nome": usuario.get_full_name() or usuario.username, "papel": vinculo.papel}
+
+
 def _json_conta(conta, usuario):
     return {
         "id": conta.pk,
@@ -73,6 +78,13 @@ class HouseholdsView(APIView):
             return _problema(422, "Nome inválido", "Informe um nome de até 80 caracteres.")
         household = services.criar_household(request.user, nome=nome)
         return Response(_json_household(household), status=status.HTTP_201_CREATED)
+
+
+class MembrosView(APIView):
+    def get(self, request, household_id):
+        household = _household_do_usuario(request, household_id)
+        membros = services.listar_membros(household)
+        return Response({"results": [_json_membro(m) for m in membros]})
 
 
 class ContasView(APIView):
