@@ -495,6 +495,32 @@ Tela M27 (épico #39; histórias #157, #158 e #159). Só leitura: nada é aplica
 
 As regras puras ficam em `nucleo/padroes.py` (sem Django); `AderenciaPeriodo`, `Calibracao` e `UltimaHora` são dataclasses de lá.
 
+## Pauta de reunião (#42, RF28, M23)
+
+Ação "Gerar pauta" da tela M23 (história #170). Só leitura: nada é gravado nem enviado. Sem migração e sem rota REST, então `docs/api.md` não muda.
+
+| Rota (nome) | Caminho | Método | Serviço |
+| --- | --- | --- | --- |
+| `web:pauta` | `/pessoas/<pk>/pauta/` | GET | `pauta_da_reuniao` |
+
+- Com o cabeçalho `HX-Request`, devolve o parcial `web/pessoas/_pauta.html`. Sem ele, a página `web/pessoas/pauta.html`.
+- Na M23, o botão é um link para `web:pauta` com `hx-get` e `hx-target="#pauta-reuniao"`; o `<div id="pauta-reuniao">` recebe o parcial. Sem JavaScript, o link abre a página.
+- Pessoa de outro usuário: `404`. Método diferente de GET: `405`.
+
+`services.pauta_da_reuniao(pessoa) -> PautaPessoa` (dicionário):
+
+| Chave | Tipo | Regra |
+| --- | --- | --- |
+| `pessoa` | `Pessoa` | A própria pessoa |
+| `inicio` | `date` | Primeiro dia da janela de entregas: `pes.inicio_da_janela(hoje)` |
+| `entregues` | `list[EntregaPauta]` | Tarefas concluídas com `concluida_em` a partir de `inicio`, nos vínculos "depende de mim" (`de_voce=True`) e "eu dependo dela" (`de_voce=False`). Cada item tem `tarefa`, `de_voce` e `entregue_em` (`date`). Mais recentes primeiro |
+| `pendentes_de_voce` | `list[Expectativa]` | Abertas "depende de mim": `tarefa`, `prazo`, `folga`, `em_risco`. Em risco primeiro, depois o prazo |
+| `espera_de_ela` | `list[Aguardando]` | Abertas "eu dependo dela", como `aguardando(usuario, pessoa)`: cobrar hoje primeiro |
+
+Vínculo "envolvida" fica de fora. A regra pura fica em `nucleo/pessoas.py` (sem Django): `JANELA_ENTREGAS_DIAS = 14` e `inicio_da_janela(hoje) -> date`, que devolve `hoje - 14 dias`.
+
+Para não repetir código, `detalhe_pessoa` e a pauta dividem `_espera_de_voce(pessoa, dia)`. O retorno de `detalhe_pessoa` não muda.
+
 ## Membros do household na API (#176, finanças)
 
 Rota REST nova e aditiva, sem tela e sem migração. Segue o padrão já mesclado da API de finanças (ids inteiros, envelope `results`, erros em `application/problem+json`); o `financas/openapi.yaml` usa UUID e envelope `data`, divergência que segue para decisão separada.
@@ -509,6 +535,7 @@ Resposta `200`: `{"results": [{"id", "nome", "papel"}]}`, na ordem de entrada.
 - `nome`: `usuario.get_full_name()`, ou `usuario.username` quando vazio.
 - `papel`: `admin` ou `membro`, os valores de `MembroHousehold.Papel`.
 - Erros: `404` para quem não é membro do household (ou se a casa não existe), sem revelar qual dos dois; como nas demais rotas de finanças, o corpo é o padrão do DRF (`{"detail": "Not found."}`); sem login, a resposta é recusada pelo DRF (`401` ou `403`). `POST` responde `405`.
+
 
 ## Mudar um contrato
 

@@ -108,6 +108,24 @@ class DetalhePessoa(TypedDict):
     proxima_cobranca: date | None  # a mais próxima entre os itens aguardando
 
 
+class EntregaPauta(TypedDict):
+    """Uma entrega concluída dentro da janela da pauta de reunião (#170)."""
+
+    tarefa: Tarefa
+    de_voce: bool  # True: eu entreguei a ela ("depende de mim"); False: ela entregou a mim ("eu dependo dela")
+    entregue_em: date
+
+
+class PautaPessoa(TypedDict):
+    """`services.pauta_da_reuniao`: a pauta antes de uma reunião com a pessoa (#170, RF28; M23)."""
+
+    pessoa: Pessoa
+    inicio: date  # primeiro dia da janela de entregas
+    entregues: list[EntregaPauta]  # mais recentes primeiro
+    pendentes_de_voce: list[Expectativa]  # em risco primeiro, depois pelo prazo
+    espera_de_ela: list[Aguardando]  # cobrar hoje primeiro
+
+
 class ExpectativaEmRisco(TypedDict):
     """`services.expectativas_em_risco`: entregas "depende de mim" em risco (card do Hoje no desktop, D01, #87)."""
 
@@ -383,6 +401,8 @@ SERVICOS: dict[str, str] = {
     "aguardando": "(usuario, pessoa: 'Pessoa | None' = None) -> 'list[Aguardando]'",
     "painel_pessoas": "(usuario, busca: 'str' = '') -> 'PainelPessoas'",
     "detalhe_pessoa": "(pessoa: 'Pessoa') -> 'DetalhePessoa'",
+    # Pauta de reunião (#170, RF28): só leitura
+    "pauta_da_reuniao": "(pessoa: 'Pessoa') -> 'PautaPessoa'",
     "registrar_cobranca": "(vinculo: 'TarefaPessoa') -> 'TarefaPessoa'",
     # Mensagem de follow-up (P17, #87): SugestaoIA tipo "mensagem"; o Prumo só abre o app, nunca envia
     "redigir_mensagem": "(vinculo: 'TarefaPessoa', *, novo: 'bool' = False) -> 'SugestaoIA'",

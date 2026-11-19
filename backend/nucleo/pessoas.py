@@ -50,6 +50,14 @@ def proxima_cobranca(desde: date, ultima: date | None, cadencia: int) -> date:
     return (ultima or desde) + timedelta(days=max(1, cadencia))
 
 
+JANELA_ENTREGAS_DIAS = 14  # a pauta olha duas semanas para trás; mais que isso já não ajuda a reunião
+
+
+def inicio_da_janela(hoje: date) -> date:
+    """O primeiro dia em que uma entrega ainda entra na pauta de reunião."""
+    return hoje - timedelta(days=JANELA_ENTREGAS_DIAS)
+
+
 def canais(*, whatsapp: str, email: str, teams: str) -> list[tuple[str, str]]:
     """Links dos canais cadastrados: WhatsApp (`wa.me`), e-mail (`mailto:`) e Teams (chat pelo e-mail/UPN)."""
     links = []

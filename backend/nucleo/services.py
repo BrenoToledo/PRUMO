@@ -46,6 +46,7 @@ from .contratos import (
     Padroes,
     PainelPessoas,
     PassoRevisao,
+    PautaPessoa,
     PlanoDoDia,
     ProgressoProjeto,
     PropostaReplanejamento,
@@ -2157,26 +2158,61 @@ def _pontualidade(pessoa: Pessoa, relacao: str) -> pes.Pontualidade:
     return pes.pontualidade((t.prazo, timezone.localtime(t.concluida_em).date()) for t in tarefas)
 
 
-def detalhe_pessoa(pessoa: Pessoa) -> DetalhePessoa:
-    """O detalhe da pessoa (M23): o que cada lado espera, pontualidade nos dois sentidos e as cobranças."""
-    dia = hoje()
+def _espera_de_voce(pessoa: Pessoa, dia: date) -> list[Expectativa]:
+    """O que a pessoa espera de mim: tarefas abertas "depende de mim", em risco primeiro, depois pelo prazo."""
     tarefas = [
         v.tarefa for v in _vinculos_abertos(pessoa.usuario, TarefaPessoa.Relacao.DEPENDE_DE_MIM).filter(pessoa=pessoa)
     ]
-    espera = sorted(
+    return sorted(
         (_expectativa(t, dia) for t in tarefas),
         key=lambda e: (not e["em_risco"], e["prazo"] or date.max, e["tarefa"].pk),
     )
+
+
+def detalhe_pessoa(pessoa: Pessoa) -> DetalhePessoa:
+    """O detalhe da pessoa (M23): o que cada lado espera, pontualidade nos dois sentidos e as cobranças."""
+    dia = hoje()
     voce_espera = aguardando(pessoa.usuario, pessoa)
     ultimo = pessoa.vinculos.filter(ultima_cobranca__isnull=False).order_by("-ultima_cobranca").first()
     return {
         "pessoa": pessoa,
-        "espera_de_voce": espera,
+        "espera_de_voce": _espera_de_voce(pessoa, dia),
         "voce_espera": voce_espera,
         "minha_pontualidade": _pontualidade(pessoa, TarefaPessoa.Relacao.DEPENDE_DE_MIM),
         "pontualidade_dela": _pontualidade(pessoa, TarefaPessoa.Relacao.EU_DEPENDO),
         "ultimo_contato": ultimo.ultima_cobranca if ultimo else None,
         "proxima_cobranca": min((i["proxima_cobranca"] for i in voce_espera), default=None),
+    }
+
+
+def pauta_da_reuniao(pessoa: Pessoa) -> PautaPessoa:
+    """A pauta antes de uma reunião com a pessoa (RF28, M23): entregas da janela nos dois sentidos, o que está
+    pendente de mim e o que espero dela. Só lê: nada é gravado nem enviado."""
+    dia = hoje()
+    vinculos = (
+        TarefaPessoa.objects.filter(
+            pessoa=pessoa,
+            relacao__in=[TarefaPessoa.Relacao.DEPENDE_DE_MIM, TarefaPessoa.Relacao.EU_DEPENDO],
+            tarefa__status=Tarefa.Status.CONCLUIDA,
+            tarefa__concluida_em__date__gte=pes.inicio_da_janela(dia),
+        )
+        .select_related("tarefa")
+        .order_by("-tarefa__concluida_em", "-pk")
+    )
+    entregues = [
+        {
+            "tarefa": v.tarefa,
+            "de_voce": v.relacao == TarefaPessoa.Relacao.DEPENDE_DE_MIM,
+            "entregue_em": timezone.localtime(v.tarefa.concluida_em).date(),
+        }
+        for v in vinculos
+    ]
+    return {
+        "pessoa": pessoa,
+        "inicio": pes.inicio_da_janela(dia),
+        "entregues": entregues,
+        "pendentes_de_voce": _espera_de_voce(pessoa, dia),
+        "espera_de_ela": aguardando(pessoa.usuario, pessoa),
     }
 
 
