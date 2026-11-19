@@ -40,6 +40,11 @@ urlpatterns = [
         name="financas-contas",
     ),
     path(
+        "financas/households/<int:household_id>/membros/",
+        views_financas.MembrosView.as_view(),
+        name="financas-membros",
+    ),
+    path(
         "financas/households/<int:household_id>/dashboard/",
         views_financas.DashboardView.as_view(),
         name="financas-dashboard",
