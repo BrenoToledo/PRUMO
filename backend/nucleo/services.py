@@ -2599,6 +2599,8 @@ def _url_do_aviso(aviso: nt.Aviso) -> str:
     if aviso.tipo == "expectativa_em_risco":
         vinculo = TarefaPessoa.objects.filter(pk=aviso.alvo).first()
         return reverse("web:tarefa", args=[vinculo.tarefa_id]) if vinculo else reverse("web:pessoas")
+    if aviso.tipo == "gatilho_dia":
+        return reverse("web:tarefa", args=[aviso.alvo])
     rotas = {
         "inicio_bloco": "web:hoje",
         "revisao_diaria": "web:revisao",
@@ -2643,7 +2645,9 @@ def _avisos_candidatos(usuario, perfil: Perfil, agora: datetime) -> list[nt.Avis
         ultimo=timezone.localtime(ultimo.criada_em).date() if ultimo else None,
         cadencia=perfil.revisao_entrada_dias,
     )
-    return avisos + ([caixa] if caixa else [])
+    gatilhos = Tarefa.objects.filter(usuario=usuario, status=Tarefa.Status.ABERTA, gatilho_dia=dia.weekday())
+    por_gatilho = nt.avisos_de_gatilho_dia([nt.TarefaParaGatilho(t.pk, t.titulo) for t in gatilhos], dia)
+    return avisos + ([caixa] if caixa else []) + por_gatilho
 
 
 def gerar_notificacoes(usuario, agora: datetime | None = None) -> list[Notificacao]:

@@ -36,7 +36,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from nucleo import prioridade as motor
 from nucleo import services
-from nucleo.models import Esforco, PedidoIA, SugestaoIA, Tarefa
+from nucleo.models import DIAS_DO_GATILHO, Esforco, PedidoIA, SugestaoIA, Tarefa
 from web.htmx import eh_htmx
 
 ERRO_DATA_ADIAR = "Escolha uma data depois de hoje."
@@ -51,10 +51,27 @@ class TarefaForm(forms.ModelForm):
     """Campos básicos da tarefa e as 4 respostas de importância (0–4), que vão para `respostas_importancia`."""
 
     blocos_estimados = forms.IntegerField(min_value=1, max_value=50, label="Blocos estimados")
+    gatilho_dia = forms.TypedChoiceField(
+        label="Lembrar nesse dia",
+        required=False,
+        choices=[("", "Nenhum"), *DIAS_DO_GATILHO],
+        coerce=int,
+        empty_value=None,
+    )
 
     class Meta:
         model = Tarefa
-        fields = ["titulo", "proxima_acao", "area", "projeto", "prazo", "prazo_rigido", "blocos_estimados", "esforco"]
+        fields = [
+            "titulo",
+            "proxima_acao",
+            "area",
+            "projeto",
+            "prazo",
+            "prazo_rigido",
+            "blocos_estimados",
+            "esforco",
+            "gatilho_dia",
+        ]
         widgets = {"prazo": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")}
         labels = {
             "titulo": "O quê",
