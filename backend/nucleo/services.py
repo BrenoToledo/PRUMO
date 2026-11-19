@@ -1948,7 +1948,7 @@ def semana_planejada(usuario, dia: date | None = None) -> SemanaPlanejada:
 
 
 def agenda_do_periodo(usuario, desde: date, ate: date) -> list[DiaDaSemana]:
-    """Blocos, capacidade e rotinas de cada dia de `desde` a `ate` (semana, dias úteis ou mês; #99, #100)."""
+    """Blocos, capacidade, rotinas e entregas de cada dia de `desde` a `ate` (semana, dias úteis ou mês; #99, #100)."""
     ini, _ = _limites_do_dia(desde)
     _, fim = _limites_do_dia(ate)
     blocos = Bloco.objects.filter(usuario=usuario, inicio_planejado__gte=ini, inicio_planejado__lt=fim).exclude(
@@ -1959,6 +1959,7 @@ def agenda_do_periodo(usuario, desde: date, ate: date) -> list[DiaDaSemana]:
         por_dia[timezone.localtime(b.inicio_planejado).date()].append(b)
     compromissos = _compromissos(usuario, desde, ate)
     rotinas = _rotinas_da_semana(usuario, desde, ate)
+    entregas = _entregas_do_periodo(usuario, desde, ate)
     dias = [desde + timedelta(days=n) for n in range((ate - desde).days + 1)]
     return [
         {
@@ -1967,9 +1968,22 @@ def agenda_do_periodo(usuario, desde: date, ate: date) -> list[DiaDaSemana]:
             "planejados": len(por_dia[d]),
             "blocos": por_dia[d],
             "rotinas": rotinas[d],
+            "entregas": entregas[d],
         }
         for d in dias
     ]
+
+
+def _entregas_do_periodo(usuario, desde: date, ate: date) -> dict[date, list[Tarefa]]:
+    """As tarefas abertas com prazo em cada dia de `desde` a `ate`, em ordem de prazo (TC-09).
+    Só mostram; não entram na capacidade. Ocorrências de rotina ficam de fora: já aparecem como rotinas."""
+    por_dia: dict[date, list[Tarefa]] = defaultdict(list)
+    tarefas = Tarefa.objects.filter(
+        usuario=usuario, rotina__isnull=True, status=Tarefa.Status.ABERTA, prazo__range=(desde, ate)
+    ).select_related("area")
+    for tarefa in tarefas.order_by("prazo", "pk"):
+        por_dia[tarefa.prazo].append(tarefa)
+    return por_dia
 
 
 def _conferir_horario(bloco: Bloco, inicio: datetime, outros: set[int], extra: list[plan.Intervalo]) -> None:

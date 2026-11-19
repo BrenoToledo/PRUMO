@@ -52,6 +52,7 @@ class DiaDaSemana(TypedDict):
     planejados: int  # blocos não adiados do dia
     blocos: list[Bloco]  # em ordem de início
     rotinas: list[RotinaNaSemana]  # pelo horário preferido (as sem horário no fim)
+    entregas: list[Tarefa]  # tarefas abertas com prazo nesse dia, sem as de rotina; não entram na capacidade (TC-09)
 
 
 class SemanaPlanejada(TypedDict):
