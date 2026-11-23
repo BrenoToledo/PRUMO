@@ -1552,7 +1552,8 @@ def _guardar_eventos(calendario: Calendario, eventos: list[cal.EventoLido]) -> N
 
 
 def calendarios_de(usuario) -> list[Calendario]:
-    return list(Calendario.objects.filter(usuario=usuario).annotate(n_eventos=Count("eventos")))
+    externos = Calendario.objects.filter(usuario=usuario, proprio=False)
+    return list(externos.annotate(n_eventos=Count("eventos")))
 
 
 def conectar_calendario(usuario, nome: str, url: str) -> Calendario:
@@ -1571,6 +1572,8 @@ def conectar_calendario(usuario, nome: str, url: str) -> Calendario:
 
 def sincronizar_calendario(calendario: Calendario) -> Calendario:
     """Relê o calendário; se falhar, guarda o erro e mantém os eventos que já havia."""
+    if calendario.proprio:  # Decisão: o calendário do Prumo não tem link para ler (#163)
+        return calendario
     try:
         eventos = _eventos_lidos(calendario.url)
     except ValueError as erro:
@@ -1584,7 +1587,7 @@ def sincronizar_calendario(calendario: Calendario) -> Calendario:
 def sincronizar_se_preciso(usuario) -> None:
     """Relê os calendários lidos há mais de 30 minutos (no worker, se houver fila)."""
     limite = timezone.now() - SINCRONIZAR_A_CADA
-    velhos = Calendario.objects.filter(usuario=usuario).exclude(sincronizado_em__gt=limite)
+    velhos = Calendario.objects.filter(usuario=usuario, proprio=False).exclude(sincronizado_em__gt=limite)
     if fila_assincrona():
         from . import fila
 
@@ -1596,6 +1599,8 @@ def sincronizar_se_preciso(usuario) -> None:
 
 
 def remover_calendario(calendario: Calendario) -> None:
+    if calendario.proprio:
+        raise ErroDeNegocio("O calendário do próprio Prumo não se remove; apague os eventos um a um.")
     calendario.delete()
 
 
@@ -1604,6 +1609,85 @@ def eventos_do_dia(usuario, dia: date | None = None) -> list[EventoCalendario]:
     # inclui o evento sem duração que começa à meia-noite (fim == início)
     no_dia = Q(inicio__lt=fim) & (Q(fim__gt=ini) | Q(inicio__gte=ini))
     return list(EventoCalendario.objects.filter(no_dia, calendario__usuario=usuario).select_related("calendario"))
+
+
+# --------------------------------------------------------------------------- eventos próprios (P23, #163)
+EVENTO_TITULO_MAX = 200
+EVENTO_LOCAL_MAX = 200
+NOME_CALENDARIO_PROPRIO = "Prumo"
+
+
+def _calendario_proprio(usuario) -> Calendario:
+    # Decisão: um calendário `proprio` por usuário, criado na primeira vez. Os eventos vão na mesma tabela dos lidos,
+    # então a capacidade, o plano e o MCP os veem sem regra nova.
+    calendario, _ = Calendario.objects.get_or_create(
+        usuario=usuario, proprio=True, defaults={"nome": NOME_CALENDARIO_PROPRIO}
+    )
+    return calendario
+
+
+def _campos_do_evento(titulo: str, inicio: datetime, fim: datetime, local: str) -> tuple[str, str]:
+    titulo, local = (titulo or "").strip(), (local or "").strip()
+    if not titulo:
+        raise ValueError("Dê um título ao evento.")
+    if len(titulo) > EVENTO_TITULO_MAX:
+        raise ValueError(f"O título pode ter até {EVENTO_TITULO_MAX} caracteres.")
+    if len(local) > EVENTO_LOCAL_MAX:
+        raise ValueError(f"O local pode ter até {EVENTO_LOCAL_MAX} caracteres.")
+    if fim <= inicio:
+        raise ValueError("O fim precisa ser depois do início.")
+    return titulo, local
+
+
+def _evento_editavel(usuario, evento: EventoCalendario) -> None:
+    """Outro usuário não encontra o evento; o de calendário externo é só de leitura."""
+    if evento.calendario.usuario_id != usuario.pk:
+        raise EventoCalendario.DoesNotExist("Evento não encontrado.")
+    if not evento.calendario.proprio:
+        raise ErroDeNegocio("Evento de calendário externo é só de leitura.")
+
+
+def evento_proprio(usuario, pk: int) -> EventoCalendario:
+    return EventoCalendario.objects.select_related("calendario").get(
+        pk=pk, calendario__usuario=usuario, calendario__proprio=True
+    )
+
+
+def criar_evento(
+    usuario, *, titulo: str, inicio: datetime, fim: datetime, dia_inteiro: bool = False, local: str = ""
+) -> EventoCalendario:
+    titulo, local = _campos_do_evento(titulo, inicio, fim, local)
+    return EventoCalendario.objects.create(
+        calendario=_calendario_proprio(usuario),
+        uid=f"prumo-{secrets.token_hex(16)}",
+        titulo=titulo,
+        inicio=inicio,
+        fim=fim,
+        dia_inteiro=dia_inteiro,
+        local=local,
+    )
+
+
+def editar_evento(
+    usuario,
+    evento: EventoCalendario,
+    *,
+    titulo: str,
+    inicio: datetime,
+    fim: datetime,
+    dia_inteiro: bool = False,
+    local: str = "",
+) -> EventoCalendario:
+    _evento_editavel(usuario, evento)
+    evento.titulo, evento.local = _campos_do_evento(titulo, inicio, fim, local)
+    evento.inicio, evento.fim, evento.dia_inteiro = inicio, fim, dia_inteiro
+    evento.save(update_fields=["titulo", "inicio", "fim", "dia_inteiro", "local"])
+    return evento
+
+
+def excluir_evento(usuario, evento: EventoCalendario) -> None:
+    _evento_editavel(usuario, evento)
+    evento.delete()
 
 
 # --------------------------------------------------------------------------- rotinas (P14, #75–#77)

@@ -444,7 +444,10 @@ class PedidoIA(models.Model):
 
 
 class Calendario(models.Model):
-    """Calendário externo lido pelo link iCal secreto (Google Agenda, Outlook). Só leitura (#71)."""
+    """Calendário externo lido pelo link iCal secreto (Google Agenda, Outlook). Só leitura (#71).
+
+    Com `proprio=True` é o calendário do próprio Prumo (#163): guarda os eventos criados aqui, sem link.
+    """
 
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="calendarios")
     nome = models.CharField(max_length=60)
@@ -452,6 +455,7 @@ class Calendario(models.Model):
     sincronizado_em = models.DateTimeField(null=True, blank=True)
     erro = models.CharField(max_length=300, blank=True)
     criado_em = models.DateTimeField(default=timezone.now)
+    proprio = models.BooleanField(default=False, help_text="Eventos criados no próprio Prumo; não sincroniza.")
 
     class Meta:
         ordering = ["nome", "id"]
