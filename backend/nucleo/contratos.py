@@ -351,6 +351,13 @@ SERVICOS: dict[str, str] = {
     "sincronizar_se_preciso": "(usuario) -> 'None'",
     "remover_calendario": "(calendario: 'Calendario') -> 'None'",
     "eventos_do_dia": "(usuario, dia: 'date | None' = None) -> 'list[EventoCalendario]'",
+    # Eventos próprios (#163, P23): criados no Prumo, no calendário `proprio` do usuário; não sincronizam
+    "criar_evento": "(usuario, *, titulo: 'str', inicio: 'datetime', fim: 'datetime', dia_inteiro: 'bool' = False, "
+    "local: 'str' = '') -> 'EventoCalendario'",
+    "editar_evento": "(usuario, evento: 'EventoCalendario', *, titulo: 'str', inicio: 'datetime', fim: 'datetime', "
+    "dia_inteiro: 'bool' = False, local: 'str' = '') -> 'EventoCalendario'",
+    "excluir_evento": "(usuario, evento: 'EventoCalendario') -> 'None'",
+    "evento_proprio": "(usuario, pk: 'int') -> 'EventoCalendario'",
     # Rotinas (P14, #75–#77): a recorrência é uma RRULE; cada dia vira uma tarefa (ocorrência) fora do plano em blocos
     "rotinas_de": "(usuario) -> 'list[Rotina]'",
     "criar_rotina": "(usuario, dados: 'dict') -> 'Rotina'",

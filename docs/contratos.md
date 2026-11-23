@@ -311,6 +311,19 @@ O usuário cola o link iCal secreto do Google Agenda ou do Outlook (só leitura;
 
 Regras do plano: eventos com horário descontam da capacidade (sobreposições contam uma vez, só o que cai na jornada) e nenhum bloco é posto em cima deles (`planejamento.montar_plano_do_dia(..., ocupados=[(início, fim)])`); eventos de dia inteiro não descontam. `blocos_livres_ate` (folga até o prazo) também desconta. `PlanoDoDia` ganhou `eventos`; `CAMPOS_HOJE` ganhou `eventos` (campos em `CAMPOS_EVENTO`), também no `ver_hoje` do MCP. O link é segredo: a tela mostra só `url_mascarada` e a exportação de dados não o inclui.
 
+## Eventos próprios (#163, P23, Fase 1)
+
+O usuário cria eventos dentro do Prumo, como no Google Agenda. Cada usuário tem um `Calendario` com `proprio=True` (criado sob demanda, nome "Prumo", `url` vazia). Ele fica fora de `calendarios_de`, de `sincronizar_se_preciso` e de `sincronizar_calendario`/`remover_calendario` (que recusam o calendário próprio), e nunca é apagado pela releitura dos calendários externos. Os eventos são `EventoCalendario` com `uid` gerado (`prumo-<hex>`), então valem em `eventos_do_dia`, nos compromissos da capacidade e no `ver_hoje` do MCP sem mudança nesses serviços.
+
+| Serviço | Devolve | Regras |
+| --- | --- | --- |
+| `criar_evento(usuario, *, titulo, inicio, fim, dia_inteiro=False, local='')` | `EventoCalendario` | `titulo` obrigatório (até 200) e `local` opcional (até 200), ambos sem espaços nas pontas. `fim` precisa ser depois de `inicio`; senão `ValueError` e nada é gravado. Dia inteiro: `inicio` e `fim` são meia-noite do primeiro e do último dia (o `fim` é o início do dia seguinte) |
+| `evento_proprio(usuario, pk)` | `EventoCalendario` | Só eventos do calendário próprio do usuário; senão `EventoCalendario.DoesNotExist` (a tela responde 404) |
+| `editar_evento(usuario, evento, *, titulo, inicio, fim, dia_inteiro=False, local='')` | `EventoCalendario` | Troca os campos editáveis (mesmas regras do `criar_evento`). Evento de outro usuário: `EventoCalendario.DoesNotExist`; de calendário externo: `ErroDeNegocio` |
+| `excluir_evento(usuario, evento)` | `None` | Apaga. Mesmas recusas de `editar_evento` |
+
+Eventos próprios com horário descontam da capacidade e recebem bloco por cima como os lidos; os de dia inteiro não descontam. `ErroDeNegocio` está em `nucleo/services.py`.
+
 ## Rotinas (P14, Fase 1)
 
 A recorrência é uma RRULE do iCalendar (`FREQ=WEEKLY;BYDAY=MO,WE,FR`), contada a partir de `Rotina.inicio` (o dia em que foi criada). As regras puras ficam em `nucleo/rotinas.py`: `montar_rrule`/`ler_rrule` (o formulário M21 oferece diária, semanal, dias específicos, a cada N dias e "personalizada"), `validar_rrule`, `descrever` ("seg, qua, sex · 06:30") e `datas`.
