@@ -91,6 +91,9 @@
         {% if d.resumo %}<ul class="mes__itens">
           {% for item in d.resumo %}{% if item.bloco %}<li class="mes__item" style="--cor-area: {{ item.bloco.tarefa.area.cor }}"><span class="mes__hora">{{ item.bloco.inicio_planejado|time:"H:i" }}</span> {{ item.bloco.tarefa.titulo }}</li>{% else %}<li class="mes__item mes__item--rotina" style="--cor-area: {{ item.rotina.rotina.area.cor }}">{% if item.rotina.horario %}<span class="mes__hora">{{ item.rotina.horario|time:"H:i" }}</span> {% endif %}{{ item.rotina.rotina.nome }}</li>{% endif %}{% endfor %}
         </ul>{% endif %}
+        {% if d.entregas %}<ul class="mes__itens" aria-label="Entregas">
+          {% for t in d.entregas %}<li class="mes__item" style="--cor-area: {{ t.area.cor }}">Entrega: {{ t.titulo }}</li>{% endfor %}
+        </ul>{% endif %}
         {% if d.mais %}<span class="mes__mais">+{{ d.mais }}</span>{% endif %}
       </li>{% endfor %}
     </ol>
@@ -109,6 +112,9 @@
           {% if d.fim_de_semana and not d.capacidade %}<span class="dia__pct dia__pct--fim-de-semana">Fim de semana</span>
           {% else %}<span class="dia__pct{% if d.acima %} dia__pct--acima{% elif d.pct >= 80 %} dia__pct--cheio{% endif %}" title="{{ d.planejados }} de {{ d.capacidade }} blocos">{{ d.planejados }} de {{ d.capacidade }} blocos</span>{% endif %}
         </div>
+        {% if d.entregas %}<ul class="dia__tarefas dia__entregas" aria-label="Entregas">
+          {% for t in d.entregas %}<li class="tarefa-semana" style="--cor-area: {{ t.area.cor }}" title="Entrega: {{ t.titulo }}"><span class="dia__pct">Entrega</span> {{ t.titulo }}</li>{% endfor %}
+        </ul>{% endif %}
         <ul class="dia__tarefas dia__agenda">
           {% if d.hoje and grade.agora is not None %}<li class="agora" style="--agora: {{ grade.agora }}" aria-hidden="true"></li>{% endif %}
           {% for item in d.com_horario %}{% if item.bloco %}<li class="tarefa-semana{% if item.movel %} tarefa-semana--movel{% endif %}{% if item.dur <= 30 %} tarefa-semana--curta{% elif item.dur < 60 %} tarefa-semana--media{% endif %}{% if item.passou %} tarefa-semana--passou{% endif %}" title="{{ item.bloco.tarefa.titulo }}, {{ item.bloco.inicio_planejado|time:'H:i' }}" style="--cor-area: {{ item.bloco.tarefa.area.cor }}; --ini: {{ item.ini }}; --dur: {{ item.dur }}; --coluna: {{ item.coluna }}; --colunas: {{ item.colunas }}"{% if item.movel %} draggable="true" data-bloco="{{ item.bloco.pk }}" data-hora="{{ item.bloco.inicio_planejado|time:'H:i' }}"{% endif %}>{% include "web/semana/_bloco.html" with item=item d=d %}</li>{% else %}<li class="tarefa-semana tarefa-semana--rotina{% if item.rotina.concluida %} tarefa-semana--feita{% endif %}{% if item.dur <= 30 %} tarefa-semana--curta{% elif item.dur < 60 %} tarefa-semana--media{% endif %}{% if item.passou %} tarefa-semana--passou{% endif %}" title="{{ item.rotina.rotina.nome }}, {{ item.rotina.horario|time:'H:i' }}" style="--cor-area: {{ item.rotina.rotina.area.cor }}; --ini: {{ item.ini }}; --dur: {{ item.dur }}; --coluna: {{ item.coluna }}; --colunas: {{ item.colunas }}">{% include "web/semana/_rotina.html" with r=item.rotina %}</li>{% endif %}{% empty %}<li class="dia__vazio">Sem blocos</li>{% endfor %}
