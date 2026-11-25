@@ -413,3 +413,38 @@ def test_voltar_sobrevive_a_edicao_htmx(logado, tcc):
 
     assert resp.status_code == 200
     assert _href_voltar(resp.content.decode()) == origem
+
+
+# ---------------------------------------------------------------- gatilho por dia da semana (#40)
+def test_detalhe_tem_o_campo_lembrar_nesse_dia(logado, tcc):
+    html = logado.get(reverse("web:tarefa", args=[tcc.pk])).content.decode()
+
+    assert 'name="gatilho_dia"' in html
+    assert "Lembrar nesse dia" in html
+
+
+def test_editar_grava_o_dia_do_gatilho(logado, tcc):
+    resp = logado.post(reverse("web:editar_tarefa", args=[tcc.pk]), _dados_edicao(tcc, gatilho_dia=4), **HTMX)
+
+    assert resp.status_code == 200
+    tcc.refresh_from_db()
+    assert tcc.gatilho_dia == 4
+
+
+def test_editar_sem_o_campo_tira_o_gatilho(logado, tcc):
+    tcc.gatilho_dia = 2
+    tcc.save()
+
+    logado.post(reverse("web:editar_tarefa", args=[tcc.pk]), _dados_edicao(tcc), **HTMX)
+
+    tcc.refresh_from_db()
+    assert tcc.gatilho_dia is None
+
+
+@pytest.mark.parametrize("dia", [7, "sabado"])
+def test_editar_dia_de_gatilho_invalido_volta_422_sem_salvar(logado, tcc, dia):
+    resp = logado.post(reverse("web:editar_tarefa", args=[tcc.pk]), _dados_edicao(tcc, gatilho_dia=dia), **HTMX)
+
+    assert resp.status_code == 422
+    tcc.refresh_from_db()
+    assert tcc.gatilho_dia is None

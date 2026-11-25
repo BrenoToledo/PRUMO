@@ -15,6 +15,7 @@ TIPOS = {
     "revisao_diaria": "Revisão do dia",
     "revisao_semanal": "Revisão semanal",
     "caixa_entrada": "Caixa de entrada",
+    "gatilho_dia": "Lembrete do dia",
 }
 ANTECEDENCIA_BLOCO = timedelta(minutes=5)
 LIMITE_PADRAO = 6
@@ -125,3 +126,28 @@ def filtrar(
     ordem = list(TIPOS)
     escolhidos = sorted((a for a in avisos if ligados.get(a.tipo)), key=lambda a: ordem.index(a.tipo))
     return escolhidos[: max(limite - ja_hoje, 0)]
+
+
+# ---------------------------------------------------------------- gatilho por dia da semana (#40, RF21)
+NOMES_DIAS = ("segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo")
+
+
+@dataclass(frozen=True)
+class TarefaParaGatilho:
+    id: int
+    titulo: str
+
+
+def avisos_de_gatilho_dia(tarefas: list[TarefaParaGatilho], hoje: date) -> list[Aviso]:
+    """Uma tarefa com gatilho no dia de hoje vira um aviso, uma vez por dia (a chave impede repetir)."""
+    dia = NOMES_DIAS[hoje.weekday()]
+    return [
+        Aviso(
+            "gatilho_dia",
+            f"gatilho:{t.id}:{hoje.isoformat()}",
+            "Lembrete do dia",
+            f"Hoje é {dia}: {t.titulo}.",
+            alvo=t.id,
+        )
+        for t in tarefas
+    ]
