@@ -4,6 +4,8 @@ Rotas do contrato:
 - GET `pessoas/` → `web:pessoas` (`q` busca pelo nome; com HTMX devolve só o parcial `#pessoas`), usa
   `services.painel_pessoas`.
 - GET e POST `pessoas/nova/` → `web:nova_pessoa`, chama `services.criar_pessoa`.
+- GET `pessoas/mapa/` → `web:mapa_pessoas` (visão Mapa da M22, #178): quadrantes de influência × interesse, chama
+  `services.mapa_de_stakeholders`.
 - GET `pessoas/<pk>/` → `web:pessoa` (M23), usa `services.detalhe_pessoa`.
 - GET e POST `pessoas/<pk>/editar/` → `web:editar_pessoa`, chama `services.atualizar_pessoa`.
 - POST `pessoas/<pk>/excluir/` → `web:excluir_pessoa`, chama `services.excluir_pessoa`.
@@ -43,6 +45,9 @@ ROTA_TAREFA = "web:tarefa"
 PAGINA_FORM = "web/pessoas/form.html"
 
 
+NIVEIS_FORM = [("", "Não classificar"), ("alta", "Alta"), ("baixa", "Baixa")]
+
+
 class PessoaForm(forms.Form):
     nome = forms.CharField(label="Nome", max_length=120, error_messages={"required": "Dê um nome à pessoa."})
     papel = forms.CharField(label="Papel", max_length=60, required=False)
@@ -51,6 +56,8 @@ class PessoaForm(forms.Form):
     )
     whatsapp = forms.CharField(label="WhatsApp", max_length=20, required=False)
     teams = forms.CharField(label="Teams", max_length=120, required=False)
+    influencia = forms.ChoiceField(label="Influência", choices=NIVEIS_FORM, required=False)
+    interesse = forms.ChoiceField(label="Interesse", choices=NIVEIS_FORM, required=False)
     cadencia_dias = forms.IntegerField(
         label="Cobrar a cada",
         min_value=1,
@@ -76,8 +83,16 @@ def _pessoa_do_usuario(request, pk) -> Pessoa:
     return get_object_or_404(Pessoa, pk=pk, usuario=request.user)
 
 
+DICAS_NIVEL = {
+    "influencia": "Quanto a pessoa pode mudar o que você faz. Usada no mapa de pessoas.",
+    "interesse": "Quanto a pessoa se importa com o que você entrega. Vazio: sem classificação.",
+}
+
+
 def _form(request, form, pessoa=None, status=200):
-    return render(request, PAGINA_FORM, {"aba": "pessoas", "form": form, "pessoa": pessoa}, status=status)
+    nivel_campos = [(form[campo], dica) for campo, dica in DICAS_NIVEL.items()]
+    contexto = {"aba": "pessoas", "form": form, "pessoa": pessoa, "nivel_campos": nivel_campos}
+    return render(request, PAGINA_FORM, contexto, status=status)
 
 
 def _salvar(form, gravar):
@@ -106,6 +121,17 @@ def pessoas(request):
     if eh_htmx(request):
         return render(request, "web/pessoas/_pessoas.html", contexto)
     return render(request, "web/pessoas/lista.html", contexto)
+
+
+@require_GET
+@login_required
+def mapa_pessoas(request):
+    contexto = {
+        "aba": "pessoas",
+        "mapa": services.mapa_de_stakeholders(request.user),
+        "tem_pessoas": Pessoa.objects.filter(usuario=request.user).exists(),
+    }
+    return render(request, "web/pessoas/mapa.html", contexto)
 
 
 @require_http_methods(["GET", "POST"])
@@ -296,6 +322,7 @@ def enviar_mensagem(request, pk):
 urlpatterns = [
     path("pessoas/", pessoas, name="pessoas"),
     path("pessoas/nova/", nova_pessoa, name="nova_pessoa"),
+    path("pessoas/mapa/", mapa_pessoas, name="mapa_pessoas"),
     path("pessoas/<int:pk>/", pessoa, name="pessoa"),
     path("pessoas/<int:pk>/editar/", editar_pessoa, name="editar_pessoa"),
     path("pessoas/<int:pk>/excluir/", excluir_pessoa, name="excluir_pessoa"),

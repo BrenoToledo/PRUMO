@@ -156,6 +156,18 @@ class Pessoa(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(CADENCIA_MAX)],
         help_text="De quantos em quantos dias cobrar o que se espera desta pessoa.",
     )
+    influencia = models.CharField(
+        max_length=5,
+        choices=[("alta", "Alta"), ("baixa", "Baixa")],
+        blank=True,
+        help_text="Quanto a pessoa pode mudar o que você faz. Vazio: sem classificação.",
+    )
+    interesse = models.CharField(
+        max_length=5,
+        choices=[("alta", "Alta"), ("baixa", "Baixa")],
+        blank=True,
+        help_text="Quanto a pessoa se importa com o que você entrega. Vazio: sem classificação.",
+    )
 
     class Meta:
         ordering = ["nome"]

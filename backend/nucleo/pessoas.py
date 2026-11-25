@@ -108,3 +108,24 @@ def link_mensagem(canal: str, texto: str, *, assunto: str, whatsapp: str, email:
     if canal == "teams" and teams:
         return f"{links['Teams']}&message={quote(texto, safe='')}"
     return ""
+
+
+# Mapa de stakeholders (#178, RF36): influência e interesse, cada um "alta" ou "baixa". Sem as duas, não há quadrante.
+QUADRANTES = (
+    ("gerenciar", "Gerenciar de perto"),  # influência alta, interesse alto
+    ("satisfeito", "Manter satisfeito"),  # influência alta, interesse baixo
+    ("informado", "Manter informado"),  # influência baixa, interesse alto
+    ("monitorar", "Monitorar"),  # influência baixa, interesse baixo
+)
+SEM_QUADRANTE = "sem"
+_QUADRANTE_DE = {
+    ("alta", "alta"): "gerenciar",
+    ("alta", "baixa"): "satisfeito",
+    ("baixa", "alta"): "informado",
+    ("baixa", "baixa"): "monitorar",
+}
+
+
+def quadrante(influencia: str, interesse: str) -> str | None:
+    """Chave do quadrante do mapa; None quando falta alguma das duas classificações."""
+    return _QUADRANTE_DE.get((influencia, interesse))
