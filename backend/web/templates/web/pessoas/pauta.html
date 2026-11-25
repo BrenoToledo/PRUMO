@@ -1,0 +1,12 @@
+{% extends "web/base.html" %}
+{% block titulo %}Pauta · {{ p.nome }}{% endblock %}
+{% block estilos %}{% include "web/pessoas/_cabeca.html" %}{% endblock %}
+{% block conteudo %}
+<div class="pessoa__topo">
+  <a class="voltar" href="{% url 'web:pessoa' p.pk %}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+    {{ p.nome }}
+  </a>
+</div>
+{% include "web/pessoas/_pauta.html" %}
+{% endblock %}

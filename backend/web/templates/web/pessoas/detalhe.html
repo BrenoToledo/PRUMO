@@ -29,6 +29,11 @@
   {% include "web/pessoas/_pontualidade.html" with titulo="Entregas de "|add:p.nome|add:" para você" pont=d.pontualidade_dela %}
 </section>
 
+<div class="pessoa__pauta">
+  <a class="botao botao--pequeno" href="{% url 'web:pauta' p.pk %}" hx-get="{% url 'web:pauta' p.pk %}" hx-target="#pauta-reuniao" hx-swap="innerHTML">Gerar pauta</a>
+  <div id="pauta-reuniao"></div>
+</div>
+
 <section aria-labelledby="titulo-espera">
   <h2 id="titulo-espera" class="pessoa__secao">Espera de você ({{ d.espera_de_voce|length }})</h2>
   {% if d.espera_de_voce %}<ul class="pessoas__lista">
