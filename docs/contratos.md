@@ -508,6 +508,19 @@ História do épico #40 (gatilhos de contexto, RF21, tela M35). Só o gatilho po
 | Serviço | `services._avisos_candidatos` junta as tarefas `aberta` do usuário cujo `gatilho_dia` é o dia local de hoje. Passa pelo mesmo filtro de preferências, foco e limite dos demais avisos |
 | Preferência (M34) | O tipo novo aparece sozinho em `web:preferencias_notificacoes`, ligado por padrão |
 
+## Lançamentos no cartão pela API (#172, finanças)
+
+Rotas REST em `/api/financas/households/{id}/lancamentos/`, no mesmo padrão das rotas de finanças já mescladas (ids inteiros, envelope `results`, erros em `application/problem+json`). Usam `services.criar_lancamento` e `services.lancamentos_visiveis`, sem serviço novo.
+
+| Método e rota | Entrada | Saída | Erros |
+| --- | --- | --- | --- |
+| `GET /financas/households/{id}/lancamentos/` | — | `200 {"results": [Lancamento]}`, só os visíveis ao usuário, mais recentes primeiro (`data_compra` desc, `id` desc) | `404` se não for membro |
+| `POST /financas/households/{id}/lancamentos/` | `{cartao_id, descricao, valor_centavos, data_compra, n_parcelas?, visibilidade?}` | `201 {"results": [Lancamento, uma por parcela]}` | `404` não membro; `403` `Sem permissão` se o usuário não for titular da conta; `422` `Lançamento inválido` para cartão fora do household, campo ausente ou inválido, valor não positivo, data que não é `AAAA-MM-DD`, parcelas abaixo de 1, visibilidade fora de `compartilhado`/`privado` |
+
+Objeto `Lancamento`: `{id, cartao_id, descricao, valor_centavos, data_compra, parcela_numero, total_parcelas, mes_fatura, visibilidade, criado_por_id}`. `data_compra` em `AAAA-MM-DD`; `mes_fatura` em `AAAA-MM`; valores em centavos inteiros.
+
+Padrões: `n_parcelas` vale 1 quando ausente e `visibilidade` vale `compartilhado`. Fora desta entrega: divisão na API, edição, exclusão, filtros e tela web.
+
 ## Membros do household na API (#176, finanças)
 
 Rota REST nova e aditiva, sem tela e sem migração. Segue o padrão já mesclado da API de finanças (ids inteiros, envelope `results`, erros em `application/problem+json`); o `financas/openapi.yaml` usa UUID e envelope `data`, divergência que segue para decisão separada.
