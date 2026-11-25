@@ -2876,6 +2876,25 @@ def households_do_usuario(usuario):
     return list(Household.objects.filter(membros__usuario=usuario).distinct())
 
 
+def criar_categoria(household, nome, pai=None):
+    """Cria categoria do household. Uma `pai` precisa ser do mesmo household."""
+    from .models import Categoria
+
+    nome = str(nome or "").strip()
+    if not nome or len(nome) > 60:
+        raise ErroDeNegocio("Informe um nome de até 60 caracteres.")
+    if pai is not None and pai.household_id != household.pk:
+        raise ErroDeNegocio("A categoria pai precisa ser deste household.")
+    return Categoria.objects.create(household=household, nome=nome, pai=pai)
+
+
+def listar_categorias(household):
+    """Categorias do household, na ordem de criação."""
+    from .models import Categoria
+
+    return list(Categoria.objects.filter(household=household))
+
+
 def listar_membros(household):
     """Vínculos da casa, na ordem de entrada. Só leitura: não grava nada."""
     from .models import MembroHousehold

@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from . import services
-from .models import AcessoConta, Cartao, Conta, Household, Lancamento, MembroHousehold
+from .models import AcessoConta, Cartao, Categoria, Conta, Household, Lancamento, MembroHousehold
 
 Usuario = get_user_model()
 
@@ -52,6 +52,10 @@ def _json_conta(conta, usuario):
         "propriedade": conta.propriedade,
         "my_access": services.papel_na_conta(usuario, conta),
     }
+
+
+def _json_categoria(categoria):
+    return {"id": categoria.pk, "nome": categoria.nome, "pai_id": categoria.pai_id}
 
 
 def _json_cartao(cartao):
@@ -231,6 +235,26 @@ class LancamentosView(APIView):
         except services.ErroDeNegocio as erro:
             return _erro_lancamento(str(erro))
         return Response({"results": [_json_lancamento(lc) for lc in criados]}, status=status.HTTP_201_CREATED)
+
+
+class CategoriasView(APIView):
+    def get(self, request, household_id):
+        household = _household_do_usuario(request, household_id)
+        return Response({"results": [_json_categoria(c) for c in services.listar_categorias(household)]})
+
+    def post(self, request, household_id):
+        household = _household_do_usuario(request, household_id)
+        dados = request.data
+        pai = None
+        if dados.get("pai_id") is not None:
+            pai = Categoria.objects.filter(household=household, pk=dados["pai_id"]).first()
+            if pai is None:
+                return _problema(422, "Categoria inválida", "A categoria pai precisa ser deste household.")
+        try:
+            categoria = services.criar_categoria(household, nome=dados.get("nome", ""), pai=pai)
+        except services.ErroDeNegocio as erro:
+            return _problema(422, "Categoria inválida", str(erro))
+        return Response(_json_categoria(categoria), status=status.HTTP_201_CREATED)
 
 
 MES_RE = re.compile(r"\d{4}-(0[1-9]|1[0-2])")

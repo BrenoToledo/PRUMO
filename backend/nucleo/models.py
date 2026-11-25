@@ -631,3 +631,17 @@ class Lancamento(models.Model):
 
     def __str__(self):
         return f"{self.descricao} ({self.parcela_numero}/{self.total_parcelas})"
+
+
+class Categoria(models.Model):
+    """Categoria de gasto do household. Subcategoria aponta para a pai, que precisa ser do mesmo household."""
+
+    household = models.ForeignKey(Household, on_delete=models.CASCADE, related_name="categorias")
+    nome = models.CharField(max_length=60)
+    pai = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="subcategorias")
+
+    class Meta:
+        verbose_name_plural = "categorias"
+
+    def __str__(self):
+        return self.nome
